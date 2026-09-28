@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "CareerGuide_LK",
+    "slug": "careerguide-lk",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.careerguide.lk"
+    },
+    "android": {
+      "package": "com.careerguide.lk"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
