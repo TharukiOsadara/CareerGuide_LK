@@ -6,7 +6,7 @@ export default function MainScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <Text style={styles.title}>CareerGuide LK</Text>
-      <Text style={styles.successText}>✓ App is successfully running</Text>
+      <Text style={styles.successText}>✓ App is successfully running version 2.0</Text>
     </View>
   );
 }
