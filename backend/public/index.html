@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareerGuide LK</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .healthy {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .unhealthy {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <h1>CareerGuide LK - Development View</h1>
+  <div id="status" class="status">Loading...</div>
+  <div id="info"></div>
+
+  <script>
+    async function checkHealth() {
+      try {
+        const response = await fetch('/health');
+        const data = await response.json();
+        
+        const statusDiv = document.getElementById('status');
+        const infoDiv = document.getElementById('info');
+        
+        if (data.status === 'healthy') {
+          statusDiv.className = 'status healthy';
+          statusDiv.textContent = '✓ Server Healthy';
+          infoDiv.innerHTML = `
+            <p><strong>Database:</strong> ${data.database}</p>
+            <p><strong>Server Time:</strong> ${data.time}</p>
+          `;
+        } else {
+          statusDiv.className = 'status unhealthy';
+          statusDiv.textContent = '✗ Server Unhealthy';
+          infoDiv.innerHTML = `<p><strong>Error:</strong> ${data.error}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('status').className = 'status unhealthy';
+        document.getElementById('status').textContent = '✗ Connection Failed';
+        document.getElementById('info').innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+      }
+    }
+
+    checkHealth();
+    setInterval(checkHealth, 5000);
+  </script>
+</body>
+</html>
