@@ -13,6 +13,7 @@ const utilities = [
 
 export default function Onboarding({ navigation }) {
   const openMain = () => navigation.replace('Main');
+  const openPrivacyConsent = () => navigation.navigate('PrivacyConsent');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -23,7 +24,7 @@ export default function Onboarding({ navigation }) {
           <View style={styles.badge}><Text style={styles.badgeText}>UPDATED FOR 2026/2027 INTAKE</Text></View>
           <Text style={styles.heading}>Discover Your Ideal{'\n'}Degree &amp; Career Path</Text>
           <Text style={styles.subtitle}>Empowering students in Sri Lanka with trusted{'\n'}insights, course matching, and real-time job market{'\n'}indicators.</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Get Started Now" onPress={openMain} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Get Started Now" onPress={openPrivacyConsent} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
             <Text style={styles.primaryButtonText}>Get Started Now</Text><Text style={styles.arrow}>→</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Learn More" onPress={openMain} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
