@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from './components/Button';
 import Chip from './components/Chip';
@@ -30,7 +30,7 @@ function Stat({ label, value, hint, onPress }) {
 export default function ParentHome({ active, goToTab }) {
   const { data, error, loading, refreshing, reload, refresh } = useParentData(parentApi.getDashboard, { active });
 
-  if (loading) return <Screen><LoadingState message="Loading your child's summaryâ€¦" /></Screen>;
+  if (loading) return <Screen><LoadingState message="Loading your child's summary…" /></Screen>;
   if (error && !data) return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
   if (!data) return <Screen />;
 
@@ -59,7 +59,7 @@ export default function ParentHome({ active, goToTab }) {
                 {assessment.zScore !== null ? (
                   <View style={styles.zBox}>
                     <Text style={styles.zLabel}>
-                      Predicted Z-score{assessment.district ? ` Â· ${assessment.district} district` : ''}
+                      Predicted Z-score{assessment.district ? ` · ${assessment.district} district` : ''}
                     </Text>
                     <Text style={styles.zValue}>{formatZ(assessment.zScore)}</Text>
                   </View>
@@ -85,7 +85,7 @@ export default function ParentHome({ active, goToTab }) {
             )}
             <Button
               label="View academic progress"
-              icon="â†’"
+              icon="→"
               onPress={() => goToTab('progress')}
               style={styles.cardAction}
             />
@@ -122,7 +122,7 @@ export default function ParentHome({ active, goToTab }) {
         {counsellor.summary ? (
           <SectionCard
             title="Latest from the counsellor"
-            subtitle={counsellor.lastReviewedAt ? `${counsellor.name} Â· ${formatRelative(counsellor.lastReviewedAt)}` : counsellor.name}
+            subtitle={counsellor.lastReviewedAt ? `${counsellor.name} · ${formatRelative(counsellor.lastReviewedAt)}` : counsellor.name}
           >
             <Text style={styles.body} numberOfLines={4}>
               {counsellor.summary}
@@ -203,4 +203,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
   },
 });
-

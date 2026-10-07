@@ -1,4 +1,4 @@
-﻿import { colors as baseColors } from '../../../styles/colors';
+import { colors as baseColors } from '../../styles/colors';
 
 // Parent module theme: the shared palette plus the few extra tokens this module needs.
 // Text sizes are larger than the rest of the app on purpose (NFR01, finding DR-06):
@@ -36,4 +36,3 @@ export const cardShadow = {
   shadowOffset: { width: 0, height: 3 },
   elevation: 2,
 };
-

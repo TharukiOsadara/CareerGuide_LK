@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from './components/Button';
 import Chip from './components/Chip';
@@ -19,15 +19,15 @@ function CourseCard({ course }) {
 
       {/* FR02 / UI-02 / DR-03: verification and freshness sit together, never hidden. */}
       <View style={styles.badges}>
-        {course.ugcApproved ? <Chip label="âœ“ UGC approved" tone="success" /> : null}
+        {course.ugcApproved ? <Chip label="✓ UGC approved" tone="success" /> : null}
         {course.nvqLevel ? <Chip label={course.nvqLevel} tone="info" /> : null}
         <Chip label={`Updated ${formatDate(course.lastUpdated)}`} tone="neutral" />
       </View>
 
       <View style={styles.facts}>
         <Fact label="Minimum Z-score" value={formatZ(course.minZScore)} note={course.cutOffLabel} />
-        <Fact label="Duration" value={course.duration || 'â€”'} />
-        <Fact label="Fees" value={course.tuitionFee || 'â€”'} />
+        <Fact label="Duration" value={course.duration || '—'} />
+        <Fact label="Fees" value={course.tuitionFee || '—'} />
         {course.matchPercent !== null ? <Fact label="Match" value={`${course.matchPercent}%`} /> : null}
       </View>
 
@@ -58,7 +58,7 @@ function Fact({ label, value, note }) {
 export default function AcademicProgress({ active, goToTab }) {
   const { data, error, loading, refreshing, reload, refresh } = useParentData(parentApi.getProgress, { active });
 
-  if (loading) return <Screen><LoadingState message="Loading academic progressâ€¦" /></Screen>;
+  if (loading) return <Screen><LoadingState message="Loading academic progress…" /></Screen>;
   if (error && !data) {
     if (error.code === 'MONITORING_OFF') {
       return (
@@ -223,4 +223,3 @@ const styles = StyleSheet.create({
   disclaimer: { color: colors.muted, fontSize: font.small, textAlign: 'center', lineHeight: 19 },
   ask: { marginTop: space.md, alignSelf: 'stretch' },
 });
-

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -43,7 +43,7 @@ export default function CounsellorGuidance({ active, navigation }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
-  if (loading) return <Screen><LoadingState message="Loading guidanceâ€¦" /></Screen>;
+  if (loading) return <Screen><LoadingState message="Loading guidance…" /></Screen>;
   if (error && !data) return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
   if (!data) return <Screen />;
 
@@ -79,7 +79,7 @@ export default function CounsellorGuidance({ active, navigation }) {
             title={counsellor ? counsellor.name : 'No counsellor assigned'}
             subtitle={
               counsellor
-                ? `${childName}'s school counsellor${note?.lastReviewedAt ? ` Â· Last reviewed ${formatRelative(note.lastReviewedAt)}` : ''}`
+                ? `${childName}'s school counsellor${note?.lastReviewedAt ? ` · Last reviewed ${formatRelative(note.lastReviewedAt)}` : ''}`
                 : `A counsellor hasn't been assigned to ${childName} yet.`
             }
           >
@@ -92,7 +92,7 @@ export default function CounsellorGuidance({ active, navigation }) {
                     <Text style={[styles.label, styles.gapTop]}>Next steps</Text>
                     {note.nextSteps.map((step) => (
                       <View key={step} style={styles.stepRow}>
-                        <Text style={styles.stepDot}>â€¢</Text>
+                        <Text style={styles.stepDot}>•</Text>
                         <Text style={styles.stepText}>{step}</Text>
                       </View>
                     ))}
@@ -126,7 +126,7 @@ export default function CounsellorGuidance({ active, navigation }) {
               </Text>
               <Button
                 label={`Send to ${counsellorName}`}
-                icon="â†’"
+                icon="→"
                 onPress={send}
                 busy={sending}
                 disabled={!trimmed}
@@ -204,4 +204,3 @@ const styles = StyleSheet.create({
   counter: { alignSelf: 'flex-end', color: colors.muted, fontSize: font.tiny, marginTop: 4, marginBottom: space.md },
   viewAll: { minHeight: 36, paddingHorizontal: 12 },
 });
-
