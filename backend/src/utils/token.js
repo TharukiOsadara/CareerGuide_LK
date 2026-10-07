@@ -17,6 +17,7 @@ const publicUser = (u) => ({
   email: u.email,
   role: u.role,
   alStream: u.al_stream,
+  zScore: u.z_score === null || u.z_score === undefined ? null : Number(u.z_score),
   status: u.status,
   adminApproved: u.admin_approved,
   isSuperAdmin: u.is_super_admin,

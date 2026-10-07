@@ -19,6 +19,10 @@ async function run() {
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS admin_rejected BOOLEAN NOT NULL DEFAULT FALSE
   `);
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS z_score NUMERIC(5, 4)
+  `);
 
   // Seed the primary (super) admin.
   const hash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);

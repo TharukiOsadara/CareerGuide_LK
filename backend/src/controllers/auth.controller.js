@@ -59,12 +59,25 @@ router.get('/role-lookup', async (req, res) => {
 // --- Sign up ---
 router.post('/signup', async (req, res) => {
   try {
-    const { fullName, email, password, role = 'student', alStream } = req.body;
+    const {
+      fullName, email, password, role = 'student', alStream, zScore,
+      childEmail1, childEmail2,
+    } = req.body;
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: 'Full name, email and password are required.' });
     }
     if (!['student', 'parent', 'counsellor'].includes(role)) {
       return res.status(400).json({ message: 'Public signup is only for student, parent or counsellor.' });
+    }
+    if (role === 'student' && zScore !== undefined && zScore !== null
+      && (!Number.isFinite(Number(zScore)) || Number(zScore) < 0 || Number(zScore) > 4)) {
+      return res.status(400).json({ message: 'Z-score must be a number between 0 and 4.' });
+    }
+    const childEmails = role === 'parent'
+      ? [...new Set([childEmail1, childEmail2].map((value) => (value || '').toLowerCase().trim()).filter(Boolean))]
+      : [];
+    if (role === 'parent' && childEmails.length === 0) {
+      return res.status(400).json({ message: 'Enter at least one existing student email address.' });
     }
     const normEmail = email.toLowerCase().trim();
     const exists = await query('SELECT id FROM users WHERE email = $1', [normEmail]);
@@ -72,11 +85,32 @@ router.post('/signup', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await query(
-      `INSERT INTO users (full_name, email, password_hash, role, al_stream, avatar_initials, status, admin_approved, profile_completion)
-       VALUES ($1, $2, $3, $4, $5, $6, 'active', TRUE, 45) RETURNING *`,
-      [fullName.trim(), normEmail, hash, role, alStream || null, initials(fullName)]
+      `INSERT INTO users (full_name, email, password_hash, role, al_stream, z_score, avatar_initials, status, admin_approved, profile_completion)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', TRUE, 45) RETURNING *`,
+      [fullName.trim(), normEmail, hash, role, alStream || null,
+        role === 'student' && zScore !== undefined && zScore !== '' ? Number(zScore) : null,
+        initials(fullName)]
     );
     const user = rows[0];
+    if (role === 'parent') {
+      const { rows: children } = await query(
+        'SELECT id, email FROM users WHERE lower(email) = ANY($1::text[]) AND role = $2 AND status = $3',
+        [childEmails, 'student', 'active']
+      );
+      const found = new Set(children.map((child) => child.email.toLowerCase()));
+      const missing = childEmails.filter((childEmail) => !found.has(childEmail));
+      if (missing.length) {
+        await query('DELETE FROM users WHERE id = $1', [user.id]);
+        return res.status(400).json({
+          message: `These student email(s) are not valid active student accounts: ${missing.join(', ')}`,
+        });
+      }
+      await Promise.all(children.map((child) => query(
+        `INSERT INTO parent_student_links (parent_id, student_id)
+         VALUES ($1, $2) ON CONFLICT (parent_id, student_id) DO NOTHING`,
+        [user.id, child.id]
+      )));
+    }
     await logAccess(user, 'login', req);
     await openSession(user, req);
     await query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);

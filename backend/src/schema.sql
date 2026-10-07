@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   role            VARCHAR(20) NOT NULL DEFAULT 'student'
                     CHECK (role IN ('student', 'parent', 'counsellor', 'admin')),
   al_stream       VARCHAR(60),
+  z_score         NUMERIC(5, 4),
   provider        VARCHAR(20) NOT NULL DEFAULT 'local'
                     CHECK (provider IN ('local', 'google')),
   google_id       VARCHAR(120),

@@ -21,6 +21,7 @@ function toChild(row) {
     fullName: row.student_name,
     initials: row.avatar_initials || initialsOf(row.student_name),
     alStream: row.al_stream,
+    zScore: row.z_score,
     relationship: row.relationship,
     counsellor: row.counsellor_id ? { id: row.counsellor_id, name: row.counsellor_name } : null,
   };
@@ -31,6 +32,7 @@ function initialsOf(name = '') {
 }
 
 function toInquiry(row) {
+  const zScore = child.zScore ?? quiz.zScore ?? null;
   return {
     id: row.id,
     studentId: row.student_id,
@@ -124,13 +126,13 @@ async function buildProgress(child) {
     assessment: {
       status: quiz.status,
       completedAt: quiz.completedAt,
-      zScore: quiz.zScore,
+      zScore,
       district: quiz.district,
       scores: quiz.scores,
       source: quiz.source,
     },
     matchedCareers: quiz.matchedCareers,
-    matchedCourses: courseRows.map((c) => toCourse(c, quiz.zScore)),
+    matchedCourses: courseRows.map((c) => toCourse(c, zScore)),
     disclaimer: DISCLAIMER,
   };
 }
@@ -140,7 +142,7 @@ async function buildProgress(child) {
 async function listChildren(req, res) {
   const { rows } = await pool.query(
     `SELECT l.student_id, l.counsellor_id, l.relationship,
-            s.full_name AS student_name, s.al_stream, s.avatar_initials,
+            s.full_name AS student_name, s.al_stream, s.z_score, s.avatar_initials,
             c.full_name AS counsellor_name
      FROM parent_student_links l
      JOIN users s ON s.id = l.student_id

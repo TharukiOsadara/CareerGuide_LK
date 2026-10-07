@@ -16,6 +16,9 @@ export default function SignUp({ navigation }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [stream, setStream] = useState('');
+  const [zScore, setZScore] = useState('');
+  const [childEmail1, setChildEmail1] = useState('');
+  const [childEmail2, setChildEmail2] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [agree, setAgree] = useState(true);
@@ -26,6 +29,15 @@ export default function SignUp({ navigation }) {
     setError('');
     if (!fullName.trim()) return setError('Please enter your full name.');
     if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Please enter a valid email address.');
+    if (role === 'student' && zScore && (!/^\d+(\.\d+)?$/.test(zScore) || Number(zScore) > 4)) {
+      return setError('Please enter a valid Z-score between 0 and 4.');
+    }
+    if (role === 'parent' && !/^\S+@\S+\.\S+$/.test(childEmail1.trim())) {
+      return setError('Please enter a valid email address for Child 1.');
+    }
+    if (role === 'parent' && childEmail2.trim() && !/^\S+@\S+\.\S+$/.test(childEmail2.trim())) {
+      return setError('Please enter a valid email address for Child 2.');
+    }
     if (scorePassword(password) < 3) return setError('Please choose a stronger password.');
     if (!agree) return setError('Please accept the privacy agreement to continue.');
 
@@ -33,7 +45,13 @@ export default function SignUp({ navigation }) {
     try {
       await api('/api/auth/signup', {
         method: 'POST', auth: false,
-        body: { fullName: fullName.trim(), email: email.trim(), password, role, alStream: role === 'student' ? stream : null },
+        body: {
+          fullName: fullName.trim(), email: email.trim(), password, role,
+          alStream: role === 'student' ? stream : null,
+          zScore: role === 'student' && zScore ? Number(zScore) : null,
+          childEmail1: role === 'parent' ? childEmail1.trim() : null,
+          childEmail2: role === 'parent' ? childEmail2.trim() : null,
+        },
       });
       navigation.navigate('SignIn', { email: email.trim(), role, justSignedUp: true });
     } catch (e) {
@@ -81,6 +99,27 @@ export default function SignUp({ navigation }) {
             <>
               <Text style={styles.label}>A/L Examination Stream</Text>
               <Dropdown value={stream} options={AL_STREAMS} onSelect={setStream} placeholder="Select your stream" icon="ðŸ“˜" />
+              <Text style={styles.label}>Z-Score</Text>
+              <View style={styles.inputBox}>
+                <Text style={styles.inputIcon}>Z</Text>
+                <TextInput style={styles.input} value={zScore} onChangeText={setZScore} placeholder="e.g. 1.8542" placeholderTextColor={colors.slate400} keyboardType="decimal-pad" />
+              </View>
+            </>
+          )}
+
+          {role === 'parent' && (
+            <>
+              <Text style={styles.label}>Child 1 Student Email</Text>
+              <View style={styles.inputBox}>
+                <Text style={styles.inputIcon}>@</Text>
+                <TextInput style={styles.input} value={childEmail1} onChangeText={setChildEmail1} placeholder="child1@example.com" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+              </View>
+              <Text style={styles.label}>Child 2 Student Email (optional)</Text>
+              <View style={styles.inputBox}>
+                <Text style={styles.inputIcon}>@</Text>
+                <TextInput style={styles.input} value={childEmail2} onChangeText={setChildEmail2} placeholder="child2@example.com" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+              </View>
+              <Text style={styles.helper}>The student must already have an active account.</Text>
             </>
           )}
 
@@ -135,6 +174,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12.5, lineHeight: 18, color: colors.muted, textAlign: 'center', marginTop: 8, paddingHorizontal: 10 },
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 16, marginTop: 16, borderWidth: 1, borderColor: colors.border },
   label: { fontSize: 12.5, fontWeight: '700', color: colors.slateDark, marginBottom: 7, marginTop: 14 },
+  helper: { fontSize: 11, color: colors.muted, marginTop: 6 },
   inputBox: { flexDirection: 'row', alignItems: 'center', height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12 },
   inputIcon: { fontSize: 15, marginRight: 9 },
   input: { flex: 1, fontSize: 13.5, color: colors.navy, paddingVertical: 0 },
@@ -159,4 +199,3 @@ const styles = StyleSheet.create({
   haveAccount: { fontSize: 12.5, color: colors.muted },
   link: { color: colors.blue, fontWeight: '800' },
 });
-
