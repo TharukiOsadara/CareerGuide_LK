@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import InquiryCard from './components/InquiryCard';
 import ParentHeader from './components/ParentHeader';
@@ -90,3 +90,4 @@ const styles = StyleSheet.create({
   filterTextOn: { color: colors.white },
   content: { paddingHorizontal: space.lg, paddingBottom: space.xl },
 });
+

@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Switch, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../components/AdminHeader';
-import AdminNav from '../components/AdminNav';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../api/client';
-import { colors } from '../styles/colors';
+import AdminHeader from '../../components/AdminHeader';
+import AdminNav from '../../components/AdminNav';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
+import { colors } from '../../styles/colors';
 
 export default function AdminSettings({ navigation }) {
   const { user, signOut } = useAuth();
@@ -125,3 +125,4 @@ const styles = StyleSheet.create({
   signOutText: { color: colors.redStrong, fontSize: 13, fontWeight: '800' },
   pressed: { opacity: 0.78 },
 });
+

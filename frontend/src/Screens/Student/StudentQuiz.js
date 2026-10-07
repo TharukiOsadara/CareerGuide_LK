@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -8,10 +8,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../components/StudentHeader';
-import StudentNav from '../components/StudentNav';
-import { useAuth } from '../context/AuthContext';
-import { colors } from '../styles/colors';
+import StudentHeader from '../../components/StudentHeader';
+import StudentNav from '../../components/StudentNav';
+import { useAuth } from '../../context/AuthContext';
+import { colors } from '../../styles/colors';
 
 const QUESTIONS = [
   {
@@ -21,17 +21,17 @@ const QUESTIONS = [
   },
   {
     id: 'q2',
-    prompt: 'When you learn something new, you prefer to…',
+    prompt: 'When you learn something new, you prefer toâ€¦',
     options: ['Understand the underlying theory', 'Try it hands-on right away', 'Discuss it with others', 'See real-world examples first'],
   },
   {
     id: 'q3',
-    prompt: 'A project you would enjoy the most is…',
+    prompt: 'A project you would enjoy the most isâ€¦',
     options: ['Analysing data to find a pattern', 'Running a community awareness drive', 'Prototyping a mobile app', 'Starting a small business'],
   },
   {
     id: 'q4',
-    prompt: 'Your friends would describe you as…',
+    prompt: 'Your friends would describe you asâ€¦',
     options: ['Logical and precise', 'Caring and empathetic', 'Creative and curious', 'Practical and reliable'],
   },
 ];
@@ -60,7 +60,7 @@ export default function StudentQuiz({ navigation }) {
 
         <View style={styles.introCard}>
           <View style={styles.introHead}>
-            <View style={styles.introIcon}><Text style={styles.introIconText}>🧠</Text></View>
+            <View style={styles.introIcon}><Text style={styles.introIconText}>ðŸ§ </Text></View>
             <Text style={styles.introTitle}>10-minute AI quiz</Text>
           </View>
           <Text style={styles.introText}>
@@ -103,7 +103,7 @@ export default function StudentQuiz({ navigation }) {
 
         {submitted && (
           <View style={styles.resultCard}>
-            <Text style={styles.resultTitle}>🎯 Your Results</Text>
+            <Text style={styles.resultTitle}>ðŸŽ¯ Your Results</Text>
             <Text style={styles.resultText}>
               Your strengths: <Text style={styles.resultStrong}>Analytical & Technical</Text>
             </Text>
@@ -115,7 +115,7 @@ export default function StudentQuiz({ navigation }) {
               onPress={() => navigation.navigate('StudentCourses')}
               style={({ pressed }) => [styles.resultButton, pressed && styles.pressed]}
             >
-              <Text style={styles.resultButtonText}>Explore Matching Courses  →</Text>
+              <Text style={styles.resultButtonText}>Explore Matching Courses  â†’</Text>
             </Pressable>
           </View>
         )}
@@ -186,3 +186,4 @@ const styles = StyleSheet.create({
 
   pressed: { opacity: 0.78 },
 });
+

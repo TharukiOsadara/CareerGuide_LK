@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentHeader from './components/ParentHeader';
 import { EmptyState, ErrorState, LoadingState } from './components/StateViews';
@@ -70,3 +70,4 @@ const styles = StyleSheet.create({
   detail: { color: colors.muted, fontSize: font.small, lineHeight: 19, marginTop: 2 },
   date: { color: colors.muted, fontSize: font.tiny, marginTop: space.xs },
 });
+

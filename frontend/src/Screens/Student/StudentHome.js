@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,12 +10,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../components/StudentHeader';
-import StudentNav from '../components/StudentNav';
-import WelcomeToast from '../components/WelcomeToast';
-import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { colors } from '../styles/colors';
+import StudentHeader from '../../components/StudentHeader';
+import StudentNav from '../../components/StudentNav';
+import WelcomeToast from '../../components/WelcomeToast';
+import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { colors } from '../../styles/colors';
 
 export default function StudentHome({ navigation, route }) {
   const { user } = useAuth();
@@ -70,10 +70,10 @@ export default function StudentHome({ navigation, route }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
         {/* Search bar */}
         <View style={styles.searchCard}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchIcon}>ðŸ”</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search courses, careers, or institutes…"
+            placeholder="Search courses, careers, or institutesâ€¦"
             placeholderTextColor={colors.slate400}
             value={query}
             onChangeText={setQuery}
@@ -100,7 +100,7 @@ export default function StudentHome({ navigation, route }) {
         {/* Aptitude card */}
         <View style={styles.aptitudeCard}>
           <View style={styles.aptitudeHead}>
-            <View style={styles.aptitudeIcon}><Text style={styles.aptitudeIconText}>🧠</Text></View>
+            <View style={styles.aptitudeIcon}><Text style={styles.aptitudeIconText}>ðŸ§ </Text></View>
             <View style={styles.aptitudeCopy}>
               <Text style={styles.aptitudeTitle}>Aptitude Assessment</Text>
               <Text style={styles.aptitudeText}>10-minute AI quiz to map your personality & strengths.</Text>
@@ -111,7 +111,7 @@ export default function StudentHome({ navigation, route }) {
             onPress={() => navigation.navigate('StudentQuiz')}
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
           >
-            <Text style={styles.primaryButtonText}>Start Quiz Now  →</Text>
+            <Text style={styles.primaryButtonText}>Start Quiz Now  â†’</Text>
           </Pressable>
         </View>
 
@@ -253,3 +253,4 @@ const styles = StyleSheet.create({
 
   pressed: { opacity: 0.78 },
 });
+

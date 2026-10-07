@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from './components/Button';
 import ConfirmDialog from './components/ConfirmDialog';
@@ -50,7 +50,7 @@ export default function ParentPrivacy({ active, navigation }) {
     return () => setLeaveGuard(null);
   }, [active, dirty, setLeaveGuard]);
 
-  if (loading || (data && formSource !== data)) return <Screen><LoadingState message="Loading privacy settings…" /></Screen>;
+  if (loading || (data && formSource !== data)) return <Screen><LoadingState message="Loading privacy settingsâ€¦" /></Screen>;
   if (error && !data) return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
   if (!data) return <Screen />;
 
@@ -162,7 +162,7 @@ export default function ParentPrivacy({ active, navigation }) {
           onPress={() => navigation.navigate('AccessHistory')}
           style={({ pressed }) => [styles.link, pressed && styles.pressed]}
         >
-          <Text style={styles.linkText}>View data access history  ›</Text>
+          <Text style={styles.linkText}>View data access history  â€º</Text>
         </Pressable>
 
         {exists ? (
@@ -223,3 +223,4 @@ const styles = StyleSheet.create({
   linkText: { color: colors.blue, fontSize: font.body, fontWeight: '700' },
   pressed: { opacity: 0.6 },
 });
+

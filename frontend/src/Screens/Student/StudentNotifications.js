@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { colors } from '../styles/colors';
+import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { colors } from '../../styles/colors';
 
 export default function StudentNotifications({ navigation }) {
   const { user } = useAuth(); // eslint-disable-line no-unused-vars
@@ -63,7 +63,7 @@ export default function StudentNotifications({ navigation }) {
           onPress={() => navigation.goBack()}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         >
-          <Text style={styles.back}>←</Text>
+          <Text style={styles.back}>â†</Text>
         </Pressable>
         <Text style={styles.title}>Notifications</Text>
         {hasUnread ? (
@@ -84,7 +84,7 @@ export default function StudentNotifications({ navigation }) {
           <ActivityIndicator color={colors.blue} style={{ marginTop: 24 }} />
         ) : items.length === 0 && !error ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>🔔</Text>
+            <Text style={styles.emptyIcon}>ðŸ””</Text>
             <Text style={styles.empty}>No notifications yet</Text>
           </View>
         ) : (
@@ -192,3 +192,4 @@ const styles = StyleSheet.create({
 
   pressed: { opacity: 0.78 },
 });
+

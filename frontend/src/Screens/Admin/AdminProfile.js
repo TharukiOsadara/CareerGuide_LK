@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../api/client';
-import { colors } from '../styles/colors';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
+import { colors } from '../../styles/colors';
 
 function formatDate(iso) {
   if (!iso) return 'Never';
@@ -47,7 +47,7 @@ export default function AdminProfile({ navigation }) {
     navigation.reset({ index: 0, routes: [{ name: 'AdminPortal' }] });
   };
 
-  const initials = (user && user.avatarInitials) || '🎓';
+  const initials = (user && user.avatarInitials) || 'ðŸŽ“';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -55,7 +55,7 @@ export default function AdminProfile({ navigation }) {
 
       <View style={styles.header}>
         <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
-          <Text style={styles.hIcon}>←</Text>
+          <Text style={styles.hIcon}>â†</Text>
         </Pressable>
         <Text style={styles.hTitle}>Admin Profile</Text>
         <View style={styles.hBtn} />
@@ -147,3 +147,4 @@ const styles = StyleSheet.create({
   signOutText: { color: colors.redStrong, fontSize: 13, fontWeight: '800' },
   pressed: { opacity: 0.78 },
 });
+

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import AcademicProgress from './AcademicProgress';
 import CounsellorGuidance from './CounsellorGuidance';
@@ -90,3 +90,4 @@ const styles = StyleSheet.create({
   page: { ...StyleSheet.absoluteFillObject },
   hidden: { display: 'none' },
 });
+

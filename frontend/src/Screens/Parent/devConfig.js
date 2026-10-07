@@ -1,4 +1,4 @@
-import { NativeModules, Platform } from 'react-native';
+﻿import { NativeModules, Platform } from 'react-native';
 
 // TEMPORARY until login is ready: the signed-in parent (seed user 4, Nimal Perera).
 // When login exists, read the user/token from the auth session instead.
@@ -24,3 +24,4 @@ function devServerHost() {
 }
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || `http://${devServerHost()}:${API_PORT}`;
+

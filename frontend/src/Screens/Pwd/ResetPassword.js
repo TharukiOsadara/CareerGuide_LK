@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../components/Brand';
-import PasswordStrength, { scorePassword } from '../components/PasswordStrength';
-import { api } from '../api/client';
-import { colors } from '../styles/colors';
+import Brand from '../../components/Brand';
+import PasswordStrength, { scorePassword } from '../../components/PasswordStrength';
+import { api } from '../../api/client';
+import { colors } from '../../styles/colors';
 
 export default function ResetPassword({ navigation, route }) {
   const { email, resetToken } = route.params || {};
@@ -42,47 +42,47 @@ export default function ResetPassword({ navigation, route }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.bgSoft} />
       <View style={styles.topbar}>
         <Pressable hitSlop={10} onPress={() => navigation.navigate('ForgotPassword')} style={styles.backRow}>
-          <Text style={styles.back}>‹</Text><Text style={styles.backText}>Back</Text>
+          <Text style={styles.back}>â€¹</Text><Text style={styles.backText}>Back</Text>
         </Pressable>
         <Brand size="sm" />
       </View>
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <View style={styles.iconTile}><Text style={styles.icon}>🛡️</Text></View>
+          <View style={styles.iconTile}><Text style={styles.icon}>ðŸ›¡ï¸</Text></View>
           <Text style={styles.title}>Reset New Password</Text>
           <Text style={styles.subtitle}>Create a strong, new password for your CareerGuide LK account</Text>
 
           <Text style={styles.label}>New Password</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Text style={styles.inputIcon}>ðŸ”’</Text>
             <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="New password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
-            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Text style={styles.eye}>{showPw ? '🙈' : '👁️'}</Text></Pressable>
+            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Text style={styles.eye}>{showPw ? 'ðŸ™ˆ' : 'ðŸ‘ï¸'}</Text></Pressable>
           </View>
           <PasswordStrength value={password} />
 
           <Text style={styles.label}>Confirm New Password</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Text style={styles.inputIcon}>ðŸ”’</Text>
             <TextInput style={styles.input} value={confirm} onChangeText={setConfirm} placeholder="Re-enter new password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
-            {confirm.length > 0 && <Text style={styles.matchMark}>{match ? '✅' : '❌'}</Text>}
+            {confirm.length > 0 && <Text style={styles.matchMark}>{match ? 'âœ…' : 'âŒ'}</Text>}
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy || success} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy || success) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Updating…' : 'Reset Password & Sign In'}</Text>
-            {!busy && <Text style={styles.arrow}>→</Text>}
+            <Text style={styles.primaryText}>{busy ? 'Updatingâ€¦' : 'Reset Password & Sign In'}</Text>
+            {!busy && <Text style={styles.arrow}>â†’</Text>}
           </Pressable>
 
           {success && (
             <View style={styles.successBox}>
-              <Text style={styles.successText}>✅  Password updated successfully! Redirecting to Sign In…</Text>
+              <Text style={styles.successText}>âœ…  Password updated successfully! Redirecting to Sign Inâ€¦</Text>
             </View>
           )}
         </View>
 
-        <Text style={styles.footer}>🛡️  Your data is protected under Sri Lankan educational privacy standards</Text>
+        <Text style={styles.footer}>ðŸ›¡ï¸  Your data is protected under Sri Lankan educational privacy standards</Text>
       </View>
     </SafeAreaView>
   );
@@ -115,3 +115,4 @@ const styles = StyleSheet.create({
   successText: { color: colors.greenDark, fontSize: 12.5, fontWeight: '700', textAlign: 'center' },
   footer: { fontSize: 10.5, color: colors.slate400, textAlign: 'center', marginTop: 20, paddingHorizontal: 20 },
 });
+

@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../components/Brand';
-import RoleTabs from '../components/RoleTabs';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../api/client';
-import { ROLES_WITH_ADMIN } from '../config';
-import { colors } from '../styles/colors';
+import Brand from '../../components/Brand';
+import RoleTabs from '../../components/RoleTabs';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
+import { ROLES_WITH_ADMIN } from '../../config';
+import { colors } from '../../styles/colors';
 
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', counsellor: 'Counsellor', admin: 'Admin' };
 
@@ -71,7 +71,7 @@ export default function SignIn({ navigation, route }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.bgSoft} />
       <View style={styles.topbar}>
         <Pressable hitSlop={10} onPress={() => navigation.navigate('Onboarding')} style={styles.backRow}>
-          <Text style={styles.back}>‹</Text><Text style={styles.backText}>Back</Text>
+          <Text style={styles.back}>â€¹</Text><Text style={styles.backText}>Back</Text>
         </Pressable>
         <Brand size="sm" />
       </View>
@@ -87,7 +87,7 @@ export default function SignIn({ navigation, route }) {
 
           <Text style={styles.label}>Email Address</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>✉️</Text>
+            <Text style={styles.inputIcon}>âœ‰ï¸</Text>
             <TextInput
               style={styles.input} value={email} onChangeText={setEmail}
               placeholder="studying.lk@gmail.com" placeholderTextColor={colors.slate400}
@@ -100,17 +100,17 @@ export default function SignIn({ navigation, route }) {
 
           <Text style={styles.label}>Password</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Text style={styles.inputIcon}>ðŸ”’</Text>
             <TextInput
               style={styles.input} value={password} onChangeText={setPassword}
               placeholder="Enter your password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw}
             />
-            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Text style={styles.eye}>{showPw ? '🙈' : '👁️'}</Text></Pressable>
+            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Text style={styles.eye}>{showPw ? 'ðŸ™ˆ' : 'ðŸ‘ï¸'}</Text></Pressable>
           </View>
 
           <View style={styles.row}>
             <Pressable style={styles.keepRow} onPress={() => setKeep((k) => !k)}>
-              <View style={[styles.checkbox, keep && styles.checkboxOn]}>{keep && <Text style={styles.check}>✓</Text>}</View>
+              <View style={[styles.checkbox, keep && styles.checkboxOn]}>{keep && <Text style={styles.check}>âœ“</Text>}</View>
               <Text style={styles.keepText}>Keep me signed in</Text>
             </Pressable>
             <Pressable hitSlop={8} onPress={() => navigation.navigate('ForgotPassword')}>
@@ -122,7 +122,7 @@ export default function SignIn({ navigation, route }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Signing in…' : 'Sign In'}</Text>
+            <Text style={styles.primaryText}>{busy ? 'Signing inâ€¦' : 'Sign In'}</Text>
           </Pressable>
 
           <View style={styles.divider}><View style={styles.line} /><Text style={styles.or}>OR CONTINUE WITH</Text><View style={styles.line} /></View>
@@ -133,7 +133,7 @@ export default function SignIn({ navigation, route }) {
         </View>
 
         <View style={styles.secureNote}>
-          <Text style={styles.secureText}>🛡️  Your data is encrypted &amp; processed according to UGC / Sri Lankan Privacy Standards.</Text>
+          <Text style={styles.secureText}>ðŸ›¡ï¸  Your data is encrypted &amp; processed according to UGC / Sri Lankan Privacy Standards.</Text>
         </View>
 
         <Pressable onPress={() => navigation.navigate('SignUp')} style={{ marginTop: 18, alignSelf: 'center' }}>
@@ -183,3 +183,4 @@ const styles = StyleSheet.create({
   secureText: { fontSize: 11, color: colors.greenDark, lineHeight: 16, textAlign: 'center' },
   bottomText: { fontSize: 13, color: colors.muted },
 });
+

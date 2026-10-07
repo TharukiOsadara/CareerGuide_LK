@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Field from '../components/Field';
-import PasswordStrength, { scorePassword } from '../components/PasswordStrength';
-import { api } from '../api/client';
-import { colors } from '../styles/colors';
+import Field from '../../components/Field';
+import PasswordStrength, { scorePassword } from '../../components/PasswordStrength';
+import { api } from '../../api/client';
+import { colors } from '../../styles/colors';
 
 export default function AdminCreateAccount({ navigation }) {
   const [fullName, setFullName] = useState('');
@@ -42,7 +42,7 @@ export default function AdminCreateAccount({ navigation }) {
 
       <View style={styles.header}>
         <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
-          <Text style={styles.hIcon}>←</Text>
+          <Text style={styles.hIcon}>â†</Text>
         </Pressable>
         <Text style={styles.hTitle}>Create Admin Account</Text>
         <View style={styles.hBtn} />
@@ -56,7 +56,7 @@ export default function AdminCreateAccount({ navigation }) {
 
         {message ? (
           <View style={styles.okBanner}>
-            <Text style={styles.okTitle}>✓ Request Submitted</Text>
+            <Text style={styles.okTitle}>âœ“ Request Submitted</Text>
             <Text style={styles.okText}>{message}</Text>
             <Text style={styles.okNote}>
               You cannot sign in as admin until a super admin approves this request.
@@ -67,13 +67,13 @@ export default function AdminCreateAccount({ navigation }) {
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         <View style={styles.card}>
-          <Field label="Full Name" icon="👤" value={fullName} onChangeText={setFullName} placeholder="Your full name" autoCapitalize="words" />
-          <Field label="Email" icon="✉️" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" />
-          <Field label="Password" icon="🔑" value={password} onChangeText={setPassword} placeholder="Create a password" secure />
+          <Field label="Full Name" icon="ðŸ‘¤" value={fullName} onChangeText={setFullName} placeholder="Your full name" autoCapitalize="words" />
+          <Field label="Email" icon="âœ‰ï¸" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" />
+          <Field label="Password" icon="ðŸ”‘" value={password} onChangeText={setPassword} placeholder="Create a password" secure />
           <PasswordStrength value={password} />
 
           <Pressable disabled={submitting} onPress={submit} style={({ pressed }) => [styles.submitBtn, (pressed || submitting) && styles.pressed]}>
-            <Text style={styles.submitText}>{submitting ? 'Submitting…' : 'Request Admin Account'}</Text>
+            <Text style={styles.submitText}>{submitting ? 'Submittingâ€¦' : 'Request Admin Account'}</Text>
           </Pressable>
         </View>
 
@@ -116,3 +116,4 @@ const styles = StyleSheet.create({
 
   pressed: { opacity: 0.78 },
 });
+

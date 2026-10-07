@@ -4,32 +4,32 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 
 // Auth / onboarding
-import SplashScreen from './src/Screens/SplashScreen';
-import Onboarding from './src/Screens/Onboarding';
-import About from './src/Screens/About';
-import PrivacyConsent from './src/Screens/PrivacyConsent';
-import SignUp from './src/Screens/SignUp';
-import SignIn from './src/Screens/SignIn';
-import ForgotPassword from './src/Screens/ForgotPassword';
-import ResetPassword from './src/Screens/ResetPassword';
-import AdminPortal from './src/Screens/AdminPortal';
-import AdminCreateAccount from './src/Screens/AdminCreateAccount';
+import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
+import Onboarding from './src/Screens/Onboarding/Onboarding';
+import About from './src/Screens/Onboarding/About';
+import PrivacyConsent from './src/Screens/Onboarding/PrivacyConsent';
+import SignUp from './src/Screens/Auth/SignUp';
+import SignIn from './src/Screens/Auth/SignIn';
+import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
+import ResetPassword from './src/Screens/Pwd/ResetPassword';
+import AdminPortal from './src/Screens/Admin/AdminPortal';
+import AdminCreateAccount from './src/Screens/Admin/AdminCreateAccount';
 
 // Student area
-import StudentHome from './src/Screens/StudentHome';
-import StudentQuiz from './src/Screens/StudentQuiz';
-import StudentCourses from './src/Screens/StudentCourses';
-import StudentProfile from './src/Screens/StudentProfile';
-import StudentNotifications from './src/Screens/StudentNotifications';
+import StudentHome from './src/Screens/Student/StudentHome';
+import StudentQuiz from './src/Screens/Student/StudentQuiz';
+import StudentCourses from './src/Screens/Student/StudentCourses';
+import StudentProfile from './src/Screens/Student/StudentProfile';
+import StudentNotifications from './src/Screens/Student/StudentNotifications';
 
 // Admin area
-import AdminOverview from './src/Screens/AdminOverview';
-import AdminCourses from './src/Screens/AdminCourses';
-import AdminZScores from './src/Screens/AdminZScores';
-import AdminLogs from './src/Screens/AdminLogs';
-import AdminSettings from './src/Screens/AdminSettings';
-import AdminProfile from './src/Screens/AdminProfile';
-import AdminNotifications from './src/Screens/AdminNotifications';
+import AdminOverview from './src/Screens/Admin/AdminOverview';
+import AdminCourses from './src/Screens/Admin/AdminCourses';
+import AdminZScores from './src/Screens/Admin/AdminZScores';
+import AdminLogs from './src/Screens/Admin/AdminLogs';
+import AdminSettings from './src/Screens/Admin/AdminSettings';
+import AdminProfile from './src/Screens/Admin/AdminProfile';
+import AdminNotifications from './src/Screens/Admin/AdminNotifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,9 +38,9 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+          <Stack.Navigator initialRouteName="Loading" screenOptions={{ headerShown: false }}>
             {/* Onboarding + auth */}
-            <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Loading" component={LoadingScreen} />
             <Stack.Screen name="Onboarding" component={Onboarding} />
             <Stack.Screen name="About" component={About} />
             <Stack.Screen

@@ -1,14 +1,14 @@
-import React from 'react';
+﻿import React from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../components/Brand';
-import { colors } from '../styles/colors';
+import Brand from '../../components/Brand';
+import { colors } from '../../styles/colors';
 
 const FEATURES = [
-  { icon: '🎓', title: 'Verified UGC Degrees', text: 'Only accredited programs from recognised Sri Lankan universities and institutes.' },
-  { icon: '🧠', title: 'AI Aptitude Matching', text: 'A 10-minute quiz maps your strengths to the right degree and career path.' },
-  { icon: '📊', title: 'Z-Score Intelligence', text: 'Live cut-off marks by district and intake year so you apply with confidence.' },
-  { icon: '🧭', title: 'Clear Career Paths', text: 'See where each degree leads — roles, industries and earning potential.' },
+  { icon: 'ðŸŽ“', title: 'Verified UGC Degrees', text: 'Only accredited programs from recognised Sri Lankan universities and institutes.' },
+  { icon: 'ðŸ§ ', title: 'AI Aptitude Matching', text: 'A 10-minute quiz maps your strengths to the right degree and career path.' },
+  { icon: 'ðŸ“Š', title: 'Z-Score Intelligence', text: 'Live cut-off marks by district and intake year so you apply with confidence.' },
+  { icon: 'ðŸ§­', title: 'Clear Career Paths', text: 'See where each degree leads â€” roles, industries and earning potential.' },
 ];
 
 export default function About({ navigation }) {
@@ -17,7 +17,7 @@ export default function About({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
         <Pressable hitSlop={10} onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>←</Text>
+          <Text style={styles.back}>â†</Text>
         </Pressable>
         <Brand size="sm" />
         <View style={{ width: 20 }} />
@@ -25,11 +25,11 @@ export default function About({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.logoTile}><Text style={styles.logoEmoji}>🎓</Text></View>
+          <View style={styles.logoTile}><Text style={styles.logoEmoji}>ðŸŽ“</Text></View>
           <Text style={styles.title}>About CareerGuide LK</Text>
           <Text style={styles.subtitle}>
             CareerGuide LK helps Sri Lankan A/L students turn their results into a confident
-            next step — matching them with UGC-approved and accredited university programs.
+            next step â€” matching them with UGC-approved and accredited university programs.
           </Text>
         </View>
 
@@ -54,7 +54,7 @@ export default function About({ navigation }) {
           <Text style={styles.missionTitle}>Our mission</Text>
           <Text style={styles.missionText}>
             To make higher-education decisions transparent and data-driven for every student in
-            Sri Lanka — regardless of district, school or background.
+            Sri Lanka â€” regardless of district, school or background.
           </Text>
         </View>
 
@@ -63,10 +63,10 @@ export default function About({ navigation }) {
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
         >
           <Text style={styles.primaryText}>Get Started</Text>
-          <Text style={styles.arrow}>→</Text>
+          <Text style={styles.arrow}>â†’</Text>
         </Pressable>
 
-        <Text style={styles.footer}>🛡️  Protected under Sri Lankan educational privacy standards</Text>
+        <Text style={styles.footer}>ðŸ›¡ï¸  Protected under Sri Lankan educational privacy standards</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -112,3 +112,4 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   footer: { fontSize: 10.5, color: colors.slate400, textAlign: 'center', marginTop: 20 },
 });
+

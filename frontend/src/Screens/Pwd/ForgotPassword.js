@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../components/Brand';
-import { api } from '../api/client';
-import { colors } from '../styles/colors';
+import Brand from '../../components/Brand';
+import { api } from '../../api/client';
+import { colors } from '../../styles/colors';
 
 export default function ForgotPassword({ navigation }) {
   const [email, setEmail] = useState('');
@@ -30,14 +30,14 @@ export default function ForgotPassword({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.bgSoft} />
       <View style={styles.topbar}>
         <Pressable hitSlop={10} onPress={() => navigation.navigate('SignIn')} style={styles.backRow}>
-          <Text style={styles.back}>‹</Text><Text style={styles.backText}>Back</Text>
+          <Text style={styles.back}>â€¹</Text><Text style={styles.backText}>Back</Text>
         </Pressable>
         <Brand size="sm" />
       </View>
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <View style={styles.iconTile}><Text style={styles.icon}>🔑</Text></View>
+          <View style={styles.iconTile}><Text style={styles.icon}>ðŸ”‘</Text></View>
           <Text style={styles.title}>Forgot Password?</Text>
           <Text style={styles.subtitle}>
             Enter your registered email address to receive a secure password reset link.
@@ -45,7 +45,7 @@ export default function ForgotPassword({ navigation }) {
 
           <Text style={styles.label}>Email Address</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>✉️</Text>
+            <Text style={styles.inputIcon}>âœ‰ï¸</Text>
             <TextInput
               style={styles.input} value={email} onChangeText={setEmail}
               placeholder="student@example.lk" placeholderTextColor={colors.slate400}
@@ -56,16 +56,16 @@ export default function ForgotPassword({ navigation }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Sending…' : 'Send Reset Instructions'}</Text>
-            {!busy && <Text style={styles.arrow}>→</Text>}
+            <Text style={styles.primaryText}>{busy ? 'Sendingâ€¦' : 'Send Reset Instructions'}</Text>
+            {!busy && <Text style={styles.arrow}>â†’</Text>}
           </Pressable>
 
           <Pressable onPress={() => navigation.navigate('SignIn')} style={{ marginTop: 16, alignSelf: 'center' }}>
-            <Text style={styles.link}>← Back to Sign In</Text>
+            <Text style={styles.link}>â† Back to Sign In</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.footer}>🛡️  Your data is protected under Sri Lankan educational privacy standards</Text>
+        <Text style={styles.footer}>ðŸ›¡ï¸  Your data is protected under Sri Lankan educational privacy standards</Text>
       </View>
     </SafeAreaView>
   );
@@ -95,3 +95,4 @@ const styles = StyleSheet.create({
   link: { color: colors.blue, fontWeight: '800', fontSize: 13 },
   footer: { fontSize: 10.5, color: colors.slate400, textAlign: 'center', marginTop: 20, paddingHorizontal: 20 },
 });
+

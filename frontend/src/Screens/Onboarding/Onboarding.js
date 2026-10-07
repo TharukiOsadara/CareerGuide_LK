@@ -1,14 +1,14 @@
-import React from 'react';
+﻿import React from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { colors } from '../styles/colors';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import { colors } from '../../styles/colors';
 
 const utilities = [
-  { icon: '▤', iconStyle: 'databaseIcon', iconTextStyle: 'databaseIconText', tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
-  { icon: '♧', iconStyle: 'quizIcon', iconTextStyle: 'quizIconText', tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
-  { icon: '▥', iconStyle: 'jobsIcon', iconTextStyle: 'jobsIconText', tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
+  { icon: 'â–¤', iconStyle: 'databaseIcon', iconTextStyle: 'databaseIconText', tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
+  { icon: 'â™§', iconStyle: 'quizIcon', iconTextStyle: 'quizIconText', tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
+  { icon: 'â–¥', iconStyle: 'jobsIcon', iconTextStyle: 'jobsIconText', tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
 ];
 
 export default function Onboarding({ navigation }) {
@@ -26,7 +26,7 @@ export default function Onboarding({ navigation }) {
           <Text style={styles.heading}>Discover Your Ideal{'\n'}Degree &amp; Career Path</Text>
           <Text style={styles.subtitle}>Empowering students in Sri Lanka with trusted{'\n'}insights, course matching, and real-time job market{'\n'}indicators.</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Get Started Now" onPress={openPrivacyConsent} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
-            <Text style={styles.primaryButtonText}>Get Started Now</Text><Text style={styles.arrow}>→</Text>
+            <Text style={styles.primaryButtonText}>Get Started Now</Text><Text style={styles.arrow}>â†’</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Learn More" onPress={openAbout} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
             <Text style={styles.secondaryButtonText}>Learn More</Text>
@@ -41,7 +41,7 @@ export default function Onboarding({ navigation }) {
             <Pressable key={utility.title} accessibilityRole="button" onPress={openSignIn} style={({ pressed }) => [styles.utilityCard, pressed && styles.pressed]}>
               <View style={[styles.utilityIcon, styles[utility.iconStyle]]}><Text style={[styles.utilityIconText, styles[utility.iconTextStyle]]}>{utility.icon}</Text></View>
               <View style={styles.utilityCopy}><View style={styles.utilityMeta}><Text style={[styles.utilityTag, styles[utility.tagStyle]]}>{utility.tag}</Text><Text style={styles.utilityDescription}>{utility.description}</Text></View><Text style={styles.utilityTitle}>{utility.title}</Text></View>
-              <Text style={styles.utilityArrow}>›</Text>
+              <Text style={styles.utilityArrow}>â€º</Text>
             </Pressable>
           ))}
         </View>
@@ -73,7 +73,7 @@ export default function Onboarding({ navigation }) {
 }
 
 function Benefit({ text }) {
-  return <View style={styles.benefit}><View style={styles.check}><Text style={styles.checkText}>✓</Text></View><Text style={styles.benefitText}>{text}</Text></View>;
+  return <View style={styles.benefit}><View style={styles.check}><Text style={styles.checkText}>âœ“</Text></View><Text style={styles.benefitText}>{text}</Text></View>;
 }
 
 const styles = StyleSheet.create({
@@ -123,3 +123,4 @@ const styles = StyleSheet.create({
   exploreCardTitle: { color: colors.navy, fontSize: 13, fontWeight: '800' },
   exploreCardText: { color: colors.muted, fontSize: 11, lineHeight: 17, marginTop: 6 },
 });
+

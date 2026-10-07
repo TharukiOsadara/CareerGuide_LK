@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../components/Brand';
-import RoleTabs from '../components/RoleTabs';
-import Dropdown from '../components/Dropdown';
-import PasswordStrength, { scorePassword } from '../components/PasswordStrength';
-import { api } from '../api/client';
-import { AL_STREAMS, ROLES } from '../config';
-import { colors } from '../styles/colors';
+import Brand from '../../components/Brand';
+import RoleTabs from '../../components/RoleTabs';
+import Dropdown from '../../components/Dropdown';
+import PasswordStrength, { scorePassword } from '../../components/PasswordStrength';
+import { api } from '../../api/client';
+import { AL_STREAMS, ROLES } from '../../config';
+import { colors } from '../../styles/colors';
 
 export default function SignUp({ navigation }) {
   const [role, setRole] = useState('student');
@@ -48,7 +48,7 @@ export default function SignUp({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.bgSoft} />
       <View style={styles.topbar}>
         <Pressable hitSlop={10} onPress={() => navigation.navigate('Onboarding')}>
-          <Text style={styles.back}>←</Text>
+          <Text style={styles.back}>â†</Text>
         </Pressable>
         <Brand size="sm" />
         <Text style={styles.help}>?</Text>
@@ -67,35 +67,35 @@ export default function SignUp({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.label}>Full Name</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>👤</Text>
+            <Text style={styles.inputIcon}>ðŸ‘¤</Text>
             <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Name" placeholderTextColor={colors.slate400} autoCapitalize="words" />
           </View>
 
           <Text style={styles.label}>Email Address</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>✉️</Text>
+            <Text style={styles.inputIcon}>âœ‰ï¸</Text>
             <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="student@example.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
           </View>
 
           {role === 'student' && (
             <>
               <Text style={styles.label}>A/L Examination Stream</Text>
-              <Dropdown value={stream} options={AL_STREAMS} onSelect={setStream} placeholder="Select your stream" icon="📘" />
+              <Dropdown value={stream} options={AL_STREAMS} onSelect={setStream} placeholder="Select your stream" icon="ðŸ“˜" />
             </>
           )}
 
           <Text style={styles.label}>Create Password</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Text style={styles.inputIcon}>ðŸ”’</Text>
             <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Create a strong password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
             <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}>
-              <Text style={styles.eye}>{showPw ? '🙈' : '👁️'}</Text>
+              <Text style={styles.eye}>{showPw ? 'ðŸ™ˆ' : 'ðŸ‘ï¸'}</Text>
             </Pressable>
           </View>
           <PasswordStrength value={password} />
 
           <Pressable style={styles.agreeRow} onPress={() => setAgree((a) => !a)}>
-            <View style={[styles.checkbox, agree && styles.checkboxOn]}>{agree && <Text style={styles.check}>✓</Text>}</View>
+            <View style={[styles.checkbox, agree && styles.checkboxOn]}>{agree && <Text style={styles.check}>âœ“</Text>}</View>
             <Text style={styles.agreeText}>
               I agree to the processing of my academic profile under local educational privacy guidelines.
             </Text>
@@ -104,8 +104,8 @@ export default function SignUp({ navigation }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Creating…' : 'Create Free Account'}</Text>
-            {!busy && <Text style={styles.arrow}>→</Text>}
+            <Text style={styles.primaryText}>{busy ? 'Creatingâ€¦' : 'Create Free Account'}</Text>
+            {!busy && <Text style={styles.arrow}>â†’</Text>}
           </Pressable>
 
           <View style={styles.divider}><View style={styles.line} /><Text style={styles.or}>OR SIGN UP WITH</Text><View style={styles.line} /></View>
@@ -116,7 +116,7 @@ export default function SignUp({ navigation }) {
           </Pressable>
         </View>
 
-        <Text style={styles.footer}>🛡️  Your data is protected under Sri Lankan educational privacy standards</Text>
+        <Text style={styles.footer}>ðŸ›¡ï¸  Your data is protected under Sri Lankan educational privacy standards</Text>
         <Pressable onPress={() => navigation.navigate('SignIn')} style={{ marginTop: 14, alignSelf: 'center' }}>
           <Text style={styles.haveAccount}>Already have an account? <Text style={styles.link}>Sign In</Text></Text>
         </Pressable>
@@ -159,3 +159,4 @@ const styles = StyleSheet.create({
   haveAccount: { fontSize: 12.5, color: colors.muted },
   link: { color: colors.blue, fontWeight: '800' },
 });
+

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../components/Brand';
-import RoleTabs from '../components/RoleTabs';
-import { useAuth } from '../context/AuthContext';
-import { ROLES_WITH_ADMIN } from '../config';
-import { colors } from '../styles/colors';
+import Brand from '../../components/Brand';
+import RoleTabs from '../../components/RoleTabs';
+import { useAuth } from '../../context/AuthContext';
+import { ROLES_WITH_ADMIN } from '../../config';
+import { colors } from '../../styles/colors';
 
 export default function AdminPortal({ navigation }) {
   const { signIn } = useAuth();
@@ -42,7 +42,7 @@ export default function AdminPortal({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bgSoft} />
       <View style={styles.topbar}>
-        <Pressable hitSlop={10} onPress={() => navigation.navigate('Onboarding')}><Text style={styles.back}>←</Text></Pressable>
+        <Pressable hitSlop={10} onPress={() => navigation.navigate('Onboarding')}><Text style={styles.back}>â†</Text></Pressable>
         <Brand size="sm" />
         <Text style={styles.help}>?</Text>
       </View>
@@ -56,43 +56,43 @@ export default function AdminPortal({ navigation }) {
               <Text style={styles.title}>Administrative Portal</Text>
               <Text style={styles.subtitle}>Secure staff authentication required.</Text>
             </View>
-            <Text style={styles.shield}>🛡️</Text>
+            <Text style={styles.shield}>ðŸ›¡ï¸</Text>
           </View>
 
           <Text style={styles.label}>Administrator Email or Staff ID</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🧑‍💼</Text>
+            <Text style={styles.inputIcon}>ðŸ§‘â€ðŸ’¼</Text>
             <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="admin@careerguide.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
           </View>
 
           <Text style={styles.label}>Admin Password</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Text style={styles.inputIcon}>ðŸ”’</Text>
             <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Enter admin password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
-            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Text style={styles.eye}>{showPw ? '🙈' : '👁️'}</Text></Pressable>
+            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Text style={styles.eye}>{showPw ? 'ðŸ™ˆ' : 'ðŸ‘ï¸'}</Text></Pressable>
           </View>
 
           <Text style={styles.label}>Security Token / 2FA Pin</Text>
           <View style={styles.inputBox}>
-            <Text style={styles.inputIcon}>🔑</Text>
+            <Text style={styles.inputIcon}>ðŸ”‘</Text>
             <TextInput style={styles.input} value={token2fa} onChangeText={setToken2fa} placeholder="Enter 6-digit code" placeholderTextColor={colors.slate400} keyboardType="number-pad" maxLength={6} />
           </View>
 
           <Pressable style={styles.rememberRow} onPress={() => setRemember((r) => !r)}>
-            <View style={[styles.checkbox, remember && styles.checkboxOn]}>{remember && <Text style={styles.check}>✓</Text>}</View>
+            <View style={[styles.checkbox, remember && styles.checkboxOn]}>{remember && <Text style={styles.check}>âœ“</Text>}</View>
             <Text style={styles.rememberText}>Remember this device</Text>
           </Pressable>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Authenticating…' : 'Authenticate Admin Access'}</Text>
-            {!busy && <Text style={styles.arrow}>→</Text>}
+            <Text style={styles.primaryText}>{busy ? 'Authenticatingâ€¦' : 'Authenticate Admin Access'}</Text>
+            {!busy && <Text style={styles.arrow}>â†’</Text>}
           </Pressable>
         </View>
 
         <Pressable onPress={() => navigation.navigate('AdminCreateAccount')} style={{ marginTop: 18, alignSelf: 'center' }}>
-          <Text style={styles.bottom}>🛡️  Are you a portal administrator? <Text style={styles.link}>Staff Login Here</Text></Text>
+          <Text style={styles.bottom}>ðŸ›¡ï¸  Are you a portal administrator? <Text style={styles.link}>Staff Login Here</Text></Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -128,3 +128,4 @@ const styles = StyleSheet.create({
   bottom: { fontSize: 12, color: colors.muted },
   link: { color: colors.blue, fontWeight: '800' },
 });
+

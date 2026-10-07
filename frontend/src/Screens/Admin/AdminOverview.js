@@ -1,13 +1,13 @@
-import React, { useCallback, useState } from 'react';
+﻿import React, { useCallback, useState } from 'react';
 import {
   Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../components/AdminHeader';
-import AdminNav from '../components/AdminNav';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../api/client';
-import { colors } from '../styles/colors';
+import AdminHeader from '../../components/AdminHeader';
+import AdminNav from '../../components/AdminNav';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
+import { colors } from '../../styles/colors';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -68,10 +68,10 @@ export default function AdminOverview({ navigation }) {
   const recent = courses.slice(0, 3);
 
   const statCards = [
-    { icon: '🎓', value: courses.length ? `${courses.length}` : '—', label: 'Total Courses', note: `${courses.length || 0} Programs` },
-    { icon: '📊', value: '2026', label: 'Z-Score Updates', note: 'Ingested' },
-    { icon: '🏛️', value: '28', label: 'Active Unis', note: 'Institutes' },
-    { icon: '👥', value: userCount != null ? `${userCount}` : '—', label: 'Registered Users', note: `${userCount || 0} Active` },
+    { icon: 'ðŸŽ“', value: courses.length ? `${courses.length}` : 'â€”', label: 'Total Courses', note: `${courses.length || 0} Programs` },
+    { icon: 'ðŸ“Š', value: '2026', label: 'Z-Score Updates', note: 'Ingested' },
+    { icon: 'ðŸ›ï¸', value: '28', label: 'Active Unis', note: 'Institutes' },
+    { icon: 'ðŸ‘¥', value: userCount != null ? `${userCount}` : 'â€”', label: 'Registered Users', note: `${userCount || 0} Active` },
   ];
 
   return (
@@ -85,7 +85,7 @@ export default function AdminOverview({ navigation }) {
         {/* Feature card */}
         <View style={styles.feature}>
           <View style={styles.featureHead}>
-            <Text style={styles.featureIcon}>🛡️</Text>
+            <Text style={styles.featureIcon}>ðŸ›¡ï¸</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.featureTitle}>User Management & Audit</Text>
               <Text style={styles.featureSub}>Active Sessions & Security Logs</Text>
@@ -99,7 +99,7 @@ export default function AdminOverview({ navigation }) {
             onPress={() => navigation.navigate('AdminLogs')}
             style={({ pressed }) => [styles.featureBtn, pressed && styles.pressed]}
           >
-            <Text style={styles.featureBtnText}>Open User Access Logs Dashboard →</Text>
+            <Text style={styles.featureBtnText}>Open User Access Logs Dashboard â†’</Text>
           </Pressable>
         </View>
 
@@ -130,7 +130,7 @@ export default function AdminOverview({ navigation }) {
         />
         <ActionCard
           title="NVQ & Accreditation Mapping"
-          desc="Link course profiles to NVQ Level 1–7 frameworks and TVEC approvals."
+          desc="Link course profiles to NVQ Level 1â€“7 frameworks and TVEC approvals."
           onPress={() => navigation.navigate('AdminCourses')}
         />
 
@@ -143,7 +143,7 @@ export default function AdminOverview({ navigation }) {
             <View style={{ flex: 1 }}>
               <Text style={styles.courseName} numberOfLines={1}>{c.degreeName}</Text>
               <Text style={styles.courseMeta} numberOfLines={1}>
-                {c.uniName}{c.createdAt ? ` · ${timeAgo(c.createdAt)}` : ''}
+                {c.uniName}{c.createdAt ? ` Â· ${timeAgo(c.createdAt)}` : ''}
               </Text>
             </View>
             <Pressable
@@ -151,14 +151,14 @@ export default function AdminOverview({ navigation }) {
               onPress={() => navigation.navigate('AdminCourses', { editId: c.id })}
               style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
             >
-              <Text style={styles.iconBtnText}>✏️</Text>
+              <Text style={styles.iconBtnText}>âœï¸</Text>
             </Pressable>
             <Pressable
               hitSlop={8}
               onPress={() => deleteCourse(c)}
               style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
             >
-              <Text style={styles.iconBtnText}>🗑️</Text>
+              <Text style={styles.iconBtnText}>ðŸ—‘ï¸</Text>
             </Pressable>
           </View>
         ))}
@@ -179,7 +179,7 @@ function ActionCard({ title, desc, onPress }) {
         onPress={onPress}
         style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
       >
-        <Text style={styles.actionBtnText}>Manage Criteria →</Text>
+        <Text style={styles.actionBtnText}>Manage Criteria â†’</Text>
       </Pressable>
     </View>
   );
@@ -241,3 +241,4 @@ const styles = StyleSheet.create({
   iconBtnText: { fontSize: 15 },
   pressed: { opacity: 0.78 },
 });
+

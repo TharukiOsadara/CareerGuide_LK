@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colors } from '../styles/colors';
+import { colors } from '../../styles/colors';
 
 export default function PrivacyConsent({ navigation }) {
   const [isChecked, setIsChecked] = useState(true);
@@ -37,12 +37,12 @@ export default function PrivacyConsent({ navigation }) {
             onPress={() => navigation.replace('Onboarding')}
             style={styles.closeButton}
           >
-            <Text style={styles.closeText}>×</Text>
+            <Text style={styles.closeText}>Ã—</Text>
           </Pressable>
         </View>
 
         <View style={styles.infoBox}>
-          <Text style={styles.lock}>♙</Text>
+          <Text style={styles.lock}>â™™</Text>
           <Text style={styles.infoText}>
             All academic entries, including A/L results, are strictly encrypted. They are only
             utilized to simulate eligibility boundaries for course matchmaking.
@@ -56,7 +56,7 @@ export default function PrivacyConsent({ navigation }) {
           style={styles.consentRow}
         >
           <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
-            {isChecked && <Text style={styles.checkmark}>✓</Text>}
+            {isChecked && <Text style={styles.checkmark}>âœ“</Text>}
           </View>
           <View style={styles.consentCopy}>
             <Text style={styles.consentText}>
@@ -92,7 +92,7 @@ export default function PrivacyConsent({ navigation }) {
           ]}
         >
           <Text style={styles.acceptText}>Accept &amp; Continue</Text>
-          <Text style={styles.acceptArrow}>→</Text>
+          <Text style={styles.acceptArrow}>â†’</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -231,3 +231,4 @@ const styles = StyleSheet.create({
   declineText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   pressed: { opacity: 0.78 },
 });
+

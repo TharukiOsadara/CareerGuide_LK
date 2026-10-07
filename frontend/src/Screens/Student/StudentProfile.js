@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,13 +9,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../components/StudentHeader';
-import StudentNav from '../components/StudentNav';
-import Dropdown from '../components/Dropdown';
-import { api } from '../api/client';
-import { AL_STREAMS } from '../config';
-import { useAuth } from '../context/AuthContext';
-import { colors } from '../styles/colors';
+import StudentHeader from '../../components/StudentHeader';
+import StudentNav from '../../components/StudentNav';
+import Dropdown from '../../components/Dropdown';
+import { api } from '../../api/client';
+import { AL_STREAMS } from '../../config';
+import { useAuth } from '../../context/AuthContext';
+import { colors } from '../../styles/colors';
 
 export default function StudentProfile({ navigation }) {
   const { user, refresh, signOut } = useAuth();
@@ -56,14 +56,14 @@ export default function StudentProfile({ navigation }) {
         {/* Profile summary */}
         <View style={styles.card}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.avatarInitials || '👤'}</Text>
+            <Text style={styles.avatarText}>{user?.avatarInitials || 'ðŸ‘¤'}</Text>
           </View>
           <Text style={styles.name}>{user?.fullName || 'Student'}</Text>
           <Text style={styles.email}>{user?.email || ''}</Text>
           <View style={styles.pillRow}>
             <Text style={styles.rolePill}>STUDENT</Text>
           </View>
-          {user?.alStream ? <Text style={styles.stream}>🎓 {user.alStream}</Text> : null}
+          {user?.alStream ? <Text style={styles.stream}>ðŸŽ“ {user.alStream}</Text> : null}
 
           <View style={styles.progressRow}>
             <Text style={styles.progressLabel}>Profile Completion</Text>
@@ -97,7 +97,7 @@ export default function StudentProfile({ navigation }) {
               options={AL_STREAMS}
               onSelect={setAlStream}
               placeholder="Select your A/L stream"
-              icon="📘"
+              icon="ðŸ“˜"
             />
           </View>
 
@@ -107,7 +107,7 @@ export default function StudentProfile({ navigation }) {
             onPress={save}
             style={({ pressed }) => [styles.saveButton, saving && styles.saveDisabled, pressed && styles.pressed]}
           >
-            <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
+            <Text style={styles.saveText}>{saving ? 'Savingâ€¦' : 'Save Changes'}</Text>
           </Pressable>
         </View>
 
@@ -181,3 +181,4 @@ const styles = StyleSheet.create({
 
   pressed: { opacity: 0.78 },
 });
+
