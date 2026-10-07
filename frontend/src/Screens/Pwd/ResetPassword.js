@@ -2,11 +2,13 @@
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Brand from '../../components/Brand';
-import PasswordStrength, { scorePassword } from '../../components/PasswordStrength';
+import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import { collectErrors, hasErrors, validateNewPassword } from '../../utils/validation';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 export default function ResetPassword({ navigation, route }) {
   const { email, resetToken } = route.params || {};
@@ -16,13 +18,18 @@ export default function ResetPassword({ navigation, route }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const match = password.length > 0 && password === confirm;
 
   const submit = async () => {
     setError('');
-    if (scorePassword(password) < 3) return setError('Please choose a stronger password.');
-    if (!match) return setError('Passwords do not match.');
+    const errs = collectErrors({
+      password: validateNewPassword(password, 'New password'),
+      confirm: !confirm ? 'Please confirm your new password.' : !match ? 'Passwords do not match.' : '',
+    });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
 
     setBusy(true);
     try {
@@ -54,19 +61,21 @@ export default function ResetPassword({ navigation, route }) {
           <Text style={styles.subtitle}>Create a strong, new password for your CareerGuide LK account</Text>
 
           <Text style={styles.label}>New Password</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.password && errorBorder]}>
             <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="New password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
+            <TextInput style={styles.input} value={password} onChangeText={(v) => { setPassword(v); setErrors((e) => ({ ...e, password: '' })); }} placeholder="New password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} maxLength={128} />
             <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} /></Pressable>
           </View>
+          <FieldError message={errors.password} />
           <PasswordStrength value={password} />
 
           <Text style={styles.label}>Confirm New Password</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.confirm && errorBorder]}>
             <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={confirm} onChangeText={setConfirm} placeholder="Re-enter new password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
+            <TextInput style={styles.input} value={confirm} onChangeText={(v) => { setConfirm(v); setErrors((e) => ({ ...e, confirm: '' })); }} maxLength={128} placeholder="Re-enter new password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
             {confirm.length > 0 && <Icon name={match ? 'check-circle' : 'x-circle'} size={18} color={match ? colors.greenDark : colors.redStrong} style={styles.matchMark} />}
           </View>
+          <FieldError message={errors.confirm} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 

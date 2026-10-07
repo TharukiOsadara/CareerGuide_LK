@@ -4,9 +4,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Field from '../../components/Field';
-import PasswordStrength, { scorePassword } from '../../components/PasswordStrength';
+import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import { collectErrors, hasErrors, validateEmail, validateName, validateNewPassword } from '../../utils/validation';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
 
@@ -17,12 +18,21 @@ export default function AdminCreateAccount({ navigation }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const change = (setter, key) => (v) => {
+    setter(v);
+    setErrors((e) => (e[key] ? { ...e, [key]: '' } : e));
+  };
 
   const submit = async () => {
     setError(''); setMessage('');
-    if (!fullName.trim()) { setError('Full name is required.'); return; }
-    if (!email.trim()) { setError('Email is required.'); return; }
-    if (scorePassword(password) < 3) { setError('Please choose a stronger password.'); return; }
+    const errs = collectErrors({
+      fullName: validateName(fullName),
+      email: validateEmail(email),
+      password: validateNewPassword(password),
+    });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
     setSubmitting(true);
     try {
       const res = await api('/api/auth/admin/register', {
@@ -67,9 +77,9 @@ export default function AdminCreateAccount({ navigation }) {
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         <View style={styles.card}>
-          <Field label="Full Name" icon="user" value={fullName} onChangeText={setFullName} placeholder="Your full name" autoCapitalize="words" />
-          <Field label="Email" icon="mail" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" />
-          <Field label="Password" icon="key" value={password} onChangeText={setPassword} placeholder="Create a password" secure />
+          <Field label="Full Name" icon="user" value={fullName} onChangeText={change(setFullName, 'fullName')} placeholder="Your full name" autoCapitalize="words" maxLength={100} error={errors.fullName} />
+          <Field label="Email" icon="mail" value={email} onChangeText={change(setEmail, 'email')} placeholder="you@example.com" keyboardType="email-address" maxLength={254} error={errors.email} />
+          <Field label="Password" icon="key" value={password} onChangeText={change(setPassword, 'password')} placeholder="Create a password" secure maxLength={128} error={errors.password} />
           <PasswordStrength value={password} />
 
           <Pressable disabled={submitting} onPress={submit} style={({ pressed }) => [styles.submitBtn, (pressed || submitting) && styles.pressed]}>

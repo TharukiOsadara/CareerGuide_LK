@@ -12,7 +12,9 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { colors } from '../../styles/colors';
+import { hasErrors, validateCourse } from '../../utils/validation';
 import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 const NUMERIC = ['zScore', 'minZScore', 'islandRank', 'districtRank', 'intakeYear', 'tuitionFee', 'nvqLevel', 'matchPercent'];
 
@@ -51,6 +53,8 @@ export default function AdminCourses({ navigation, route }) {
   const [editing, setEditing] = useState(null); // course id or null
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState({}); // per-field messages in the popup
+  const [formError, setFormError] = useState('');   // server error shown in the popup
 
   const load = useCallback(async () => {
     setError('');
@@ -84,14 +88,19 @@ export default function AdminCourses({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route?.params?.create, route?.params?.editId]);
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY); setModalOpen(true); };
-  const openEdit = (c) => { setEditing(c.id); setForm(toForm(c)); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(EMPTY); setFormErrors({}); setFormError(''); setModalOpen(true); };
+  const openEdit = (c) => { setEditing(c.id); setForm(toForm(c)); setFormErrors({}); setFormError(''); setModalOpen(true); };
 
-  const setField = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+  const setField = (k) => (v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setFormErrors((e) => (e[k] ? { ...e, [k]: '' } : e));
+  };
 
   const save = async () => {
-    if (!form.degreeName.trim()) { setError('Degree name is required.'); return; }
-    setSaving(true); setError('');
+    const errs = validateCourse(form);
+    setFormErrors(errs);
+    if (hasErrors(errs)) { setFormError('Please fix the highlighted fields.'); return; }
+    setSaving(true); setFormError('');
     try {
       const payload = toPayload(form);
       if (editing) await api(`/api/courses/${editing}`, { method: 'PUT', body: payload });
@@ -99,7 +108,7 @@ export default function AdminCourses({ navigation, route }) {
       setModalOpen(false);
       await load();
     } catch (e) {
-      setError(e.message || 'Save failed.');
+      setFormError(e.message || 'Save failed.');
     } finally {
       setSaving(false);
     }
@@ -168,6 +177,8 @@ export default function AdminCourses({ navigation, route }) {
         onClose={() => setModalOpen(false)}
         onSave={save}
         saving={saving}
+        errors={formErrors}
+        formError={formError}
       />
 
       <AdminNav active="AdminCourses" navigation={navigation} />
@@ -179,7 +190,9 @@ function Chip({ text }) {
   return <View style={styles.chip}><Text style={styles.chipText}>{text}</Text></View>;
 }
 
-export function CourseModal({ visible, editing, form, setField, onClose, onSave, saving, emphasis = 'degree' }) {
+export function CourseModal({
+  visible, editing, form, setField, onClose, onSave, saving, emphasis = 'degree', errors = {}, formError = '',
+}) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.mBackdrop}>
@@ -189,37 +202,39 @@ export function CourseModal({ visible, editing, form, setField, onClose, onSave,
             <Pressable hitSlop={10} onPress={onClose}><Icon name="close" size={22} color={colors.slate} /></Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator>
+          <ScrollView contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
+            {formError ? <View style={styles.mErr}><Text style={styles.mErrText}>{formError}</Text></View> : null}
+            <Text style={styles.mReq}>All fields are required except NVQ Level.</Text>
             {emphasis === 'zscore' && (
               <Text style={styles.mSection}>Z-Score & Ranking</Text>
             )}
-            <Field label="Degree Name" icon="graduation-cap" value={form.degreeName} onChangeText={setField('degreeName')} placeholder="e.g. BSc in Computer Science" autoCapitalize="words" />
-            <Field label="University" icon="landmark" value={form.uniName} onChangeText={setField('uniName')} placeholder="e.g. University of Colombo" autoCapitalize="words" />
+            <Field label="Degree Name" icon="graduation-cap" value={form.degreeName} onChangeText={setField('degreeName')} placeholder="e.g. BSc in Computer Science" autoCapitalize="words" maxLength={200} error={errors.degreeName} />
+            <Field label="University" icon="landmark" value={form.uniName} onChangeText={setField('uniName')} placeholder="e.g. University of Colombo" autoCapitalize="words" maxLength={200} error={errors.uniName} />
 
             <Text style={styles.fLabel}>A/L Stream</Text>
-            <Dropdown value={form.alStream} options={AL_STREAMS} onSelect={setField('alStream')} placeholder="Select A/L stream" icon="book" />
+            <Dropdown value={form.alStream} options={AL_STREAMS} onSelect={setField('alStream')} placeholder="Select A/L stream" icon="book" error={errors.alStream} />
 
             <View style={styles.two}>
-              <View style={styles.col}><Field label="Z-Score" icon="chart" value={form.zScore} onChangeText={setField('zScore')} placeholder="1.8542" keyboardType="numeric" /></View>
-              <View style={styles.col}><Field label="Min Z-Score" icon="trending-down" value={form.minZScore} onChangeText={setField('minZScore')} placeholder="1.6000" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Z-Score" icon="chart" value={form.zScore} onChangeText={setField('zScore')} placeholder="1.8542" keyboardType="numeric" maxLength={6} error={errors.zScore} /></View>
+              <View style={styles.col}><Field label="Min Z-Score" icon="trending-down" value={form.minZScore} onChangeText={setField('minZScore')} placeholder="1.6000" keyboardType="numeric" maxLength={6} error={errors.minZScore} /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="Island Rank" icon="medal" value={form.islandRank} onChangeText={setField('islandRank')} placeholder="120" keyboardType="numeric" /></View>
-              <View style={styles.col}><Field label="District Rank" icon="map-pin" value={form.districtRank} onChangeText={setField('districtRank')} placeholder="12" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Island Rank" icon="medal" value={form.islandRank} onChangeText={setField('islandRank')} placeholder="120" keyboardType="numeric" maxLength={7} error={errors.islandRank} /></View>
+              <View style={styles.col}><Field label="District Rank" icon="map-pin" value={form.districtRank} onChangeText={setField('districtRank')} placeholder="12" keyboardType="numeric" maxLength={7} error={errors.districtRank} /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="District" icon="map" value={form.district} onChangeText={setField('district')} placeholder="Colombo" autoCapitalize="words" /></View>
-              <View style={styles.col}><Field label="Intake Year" icon="calendar" value={form.intakeYear} onChangeText={setField('intakeYear')} placeholder="2026" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="District" icon="map" value={form.district} onChangeText={setField('district')} placeholder="Colombo" autoCapitalize="words" maxLength={60} error={errors.district} /></View>
+              <View style={styles.col}><Field label="Intake Year" icon="calendar" value={form.intakeYear} onChangeText={setField('intakeYear')} placeholder="2026" keyboardType="numeric" maxLength={4} error={errors.intakeYear} /></View>
             </View>
 
             {emphasis === 'zscore' && <Text style={styles.mSection}>Program Details</Text>}
             <View style={styles.two}>
-              <View style={styles.col}><Field label="Duration" icon="hourglass" value={form.duration} onChangeText={setField('duration')} placeholder="4 years" autoCapitalize="none" /></View>
-              <View style={styles.col}><Field label="Tuition Fee" icon="wallet" value={form.tuitionFee} onChangeText={setField('tuitionFee')} placeholder="0" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Duration" icon="hourglass" value={form.duration} onChangeText={setField('duration')} placeholder="4 years" autoCapitalize="none" maxLength={20} error={errors.duration} /></View>
+              <View style={styles.col}><Field label="Tuition Fee" icon="wallet" value={form.tuitionFee} onChangeText={setField('tuitionFee')} placeholder="0" keyboardType="numeric" maxLength={12} error={errors.tuitionFee} /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="NVQ Level" icon="tag" value={form.nvqLevel} onChangeText={setField('nvqLevel')} placeholder="1–7" keyboardType="numeric" /></View>
-              <View style={styles.col}><Field label="Match %" icon="target" value={form.matchPercent} onChangeText={setField('matchPercent')} placeholder="85" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="NVQ Level (optional)" icon="tag" value={form.nvqLevel} onChangeText={setField('nvqLevel')} placeholder="1–7" keyboardType="numeric" maxLength={1} error={errors.nvqLevel} /></View>
+              <View style={styles.col}><Field label="Match %" icon="target" value={form.matchPercent} onChangeText={setField('matchPercent')} placeholder="85" keyboardType="numeric" maxLength={3} error={errors.matchPercent} /></View>
             </View>
 
             <View style={styles.switchRow}>
@@ -237,16 +252,18 @@ export function CourseModal({ visible, editing, form, setField, onClose, onSave,
 
             <Text style={styles.fLabel}>Description</Text>
             <TextInput
-              style={styles.multiline} multiline value={form.description}
+              style={[styles.multiline, !!errors.description && errorBorder]} multiline value={form.description}
               onChangeText={setField('description')} placeholder="Short description of the program…"
-              placeholderTextColor={colors.slate400}
+              placeholderTextColor={colors.slate400} maxLength={1000}
             />
+            <FieldError message={errors.description} />
             <Text style={styles.fLabel}>Career Path</Text>
             <TextInput
-              style={styles.multiline} multiline value={form.careerPath}
+              style={[styles.multiline, !!errors.careerPath && errorBorder]} multiline value={form.careerPath}
               onChangeText={setField('careerPath')} placeholder="Typical roles & career outcomes…"
-              placeholderTextColor={colors.slate400}
+              placeholderTextColor={colors.slate400} maxLength={1000}
             />
+            <FieldError message={errors.careerPath} />
           </ScrollView>
 
           <View style={styles.mActions}>
@@ -273,6 +290,9 @@ const styles = StyleSheet.create({
   note: { color: colors.slate, fontSize: 11, marginTop: 6, marginBottom: 4 },
 
   errBanner: { backgroundColor: colors.redLight, borderRadius: 8, padding: 10, marginTop: 10 },
+  mErr: { backgroundColor: colors.redLight, borderRadius: 8, padding: 10, marginBottom: 4 },
+  mErrText: { color: colors.redStrong, fontSize: 12, fontWeight: '700' },
+  mReq: { color: colors.slate, fontSize: 11, marginTop: 2 },
   errText: { color: colors.redStrong, fontSize: 11.5 },
   empty: { color: colors.slate, fontSize: 12, fontStyle: 'italic', marginTop: 18 },
 

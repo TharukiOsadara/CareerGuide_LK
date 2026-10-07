@@ -8,7 +8,7 @@ import Icon, { IconText } from '../../components/Icon';
 
 const utilities = [
   { icon: 'database', route: 'CourseDatabase', iconStyle: 'databaseIcon', tint: colors.blue, tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
-  { icon: 'brain', iconStyle: 'quizIcon', tint: colors.teal, tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
+  { icon: 'brain', route: 'AptitudeInfo', iconStyle: 'quizIcon', tint: colors.teal, tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
   { icon: 'chart', route: 'JobMarket', iconStyle: 'jobsIcon', tint: colors.orange, tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
 ];
 

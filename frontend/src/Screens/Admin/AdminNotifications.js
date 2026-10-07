@@ -7,6 +7,8 @@ import Field from '../../components/Field';
 import Dropdown from '../../components/Dropdown';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import { hasErrors, validateNotification } from '../../utils/validation';
+import FieldError, { errorBorder } from '../../components/FieldError';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
 
@@ -41,6 +43,11 @@ export default function AdminNotifications({ navigation }) {
   const [success, setSuccess] = useState('');
   const [sending, setSending] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [errors, setErrors] = useState({});
+  const change = (setter, key) => (v) => {
+    setter(v);
+    setErrors((e) => (e[key] ? { ...e, [key]: '' } : e));
+  };
 
   const load = useCallback(async () => {
     try {
@@ -51,10 +58,12 @@ export default function AdminNotifications({ navigation }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const resetForm = () => { setTitle(''); setBodyText(''); setAudience('All Users'); setEditingId(null); };
+  const resetForm = () => { setTitle(''); setBodyText(''); setAudience('All Users'); setEditingId(null); setErrors({}); };
 
   const submit = async () => {
-    if (!title.trim() || !bodyText.trim()) { setError('Title and message are required.'); return; }
+    const errs = validateNotification({ title, body: bodyText, audience });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
     setSending(true); setError(''); setSuccess('');
     const payload = { title: title.trim(), body: bodyText.trim(), targetRole: roleForLabel(audience) };
     try {
@@ -105,17 +114,18 @@ export default function AdminNotifications({ navigation }) {
         {/* Compose */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{editingId ? 'Edit Notification' : 'Compose Notification'}</Text>
-          <Field label="Title" icon="megaphone" value={title} onChangeText={setTitle} placeholder="Notification title" autoCapitalize="sentences" />
+          <Field label="Title" icon="megaphone" value={title} onChangeText={change(setTitle, 'title')} placeholder="Notification title" autoCapitalize="sentences" maxLength={120} error={errors.title} />
 
           <Text style={styles.fLabel}>Message</Text>
           <TextInput
-            style={styles.multiline} multiline value={bodyText}
-            onChangeText={setBodyText} placeholder="Write your message…"
-            placeholderTextColor={colors.slate400}
+            style={[styles.multiline, !!errors.body && errorBorder]} multiline value={bodyText}
+            onChangeText={change(setBodyText, 'body')} placeholder="Write your message…"
+            placeholderTextColor={colors.slate400} maxLength={1000}
           />
+          <FieldError message={errors.body} />
 
           <Text style={styles.fLabel}>Target Audience</Text>
-          <Dropdown value={audience} options={LABELS} onSelect={setAudience} placeholder="Select audience" icon="users" />
+          <Dropdown value={audience} options={LABELS} onSelect={change(setAudience, 'audience')} placeholder="Select audience" icon="users" error={errors.audience} />
 
           <View style={styles.formBtns}>
             {editingId ? (

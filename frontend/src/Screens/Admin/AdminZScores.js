@@ -9,6 +9,7 @@ import { CourseModal } from './AdminCourses';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import { hasErrors, validateCourse } from '../../utils/validation';
 import Icon, { IconText } from '../../components/Icon';
 
 const NUMERIC = ['zScore', 'minZScore', 'islandRank', 'districtRank', 'intakeYear', 'tuitionFee', 'nvqLevel', 'matchPercent'];
@@ -48,6 +49,8 @@ export default function AdminZScores({ navigation }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState({}); // per-field messages in the popup
+  const [formError, setFormError] = useState('');   // server error shown in the popup
 
   const load = useCallback(async () => {
     setError('');
@@ -63,13 +66,18 @@ export default function AdminZScores({ navigation }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY); setModalOpen(true); };
-  const openEdit = (c) => { setEditing(c.id); setForm(toForm(c)); setModalOpen(true); };
-  const setField = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
+  const openCreate = () => { setEditing(null); setForm(EMPTY); setFormErrors({}); setFormError(''); setModalOpen(true); };
+  const openEdit = (c) => { setEditing(c.id); setForm(toForm(c)); setFormErrors({}); setFormError(''); setModalOpen(true); };
+  const setField = (k) => (v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setFormErrors((e) => (e[k] ? { ...e, [k]: '' } : e));
+  };
 
   const save = async () => {
-    if (!form.degreeName.trim()) { setError('Degree name is required.'); return; }
-    setSaving(true); setError('');
+    const errs = validateCourse(form);
+    setFormErrors(errs);
+    if (hasErrors(errs)) { setFormError('Please fix the highlighted fields.'); return; }
+    setSaving(true); setFormError('');
     try {
       const payload = toPayload(form);
       if (editing) await api(`/api/courses/${editing}`, { method: 'PUT', body: payload });
@@ -77,7 +85,7 @@ export default function AdminZScores({ navigation }) {
       setModalOpen(false);
       await load();
     } catch (e) {
-      setError(e.message || 'Save failed.');
+      setFormError(e.message || 'Save failed.');
     } finally {
       setSaving(false);
     }
@@ -158,6 +166,8 @@ export default function AdminZScores({ navigation }) {
         onClose={() => setModalOpen(false)}
         onSave={save}
         saving={saving}
+        errors={formErrors}
+        formError={formError}
         emphasis="zscore"
       />
 

@@ -9,10 +9,12 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { ROLES_WITH_ADMIN, homeRouteFor } from '../../config';
 import { getGoogleIdToken } from '../../auth/googleSignIn';
+import { collectErrors, hasErrors, validateEmail, validateLoginPassword } from '../../utils/validation';
 import { colors } from '../../styles/colors';
 import GoogleLogo from '../../components/GoogleLogo';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', counsellor: 'Counsellor', admin: 'Admin' };
 
@@ -28,6 +30,12 @@ export default function SignIn({ navigation, route }) {
   const [info, setInfo] = useState(route.params?.justSignedUp ? 'Account created! Please sign in.' : '');
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [errors, setErrors] = useState({});
+  // Updates a field and clears its error message as the user types.
+  const change = (setter, key) => (v) => {
+    setter(v);
+    setErrors((e) => (e[key] ? { ...e, [key]: '' } : e));
+  };
   const lookupTimer = useRef(null);
 
   // Selecting the Admin tab sends the user to the dedicated admin portal.
@@ -70,8 +78,9 @@ export default function SignIn({ navigation, route }) {
 
   const submit = async () => {
     setError(''); setInfo('');
-    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Please enter a valid email address.');
-    if (!password) return setError('Please enter your password.');
+    const errs = collectErrors({ email: validateEmail(email), password: validateLoginPassword(password) });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
 
     setBusy(true);
     try {
@@ -104,10 +113,10 @@ export default function SignIn({ navigation, route }) {
           </View>
 
           <Text style={styles.label}>Email Address</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.email && errorBorder]}>
             <Icon name="mail" size={17} color={colors.blue} style={styles.inputIcon} />
             <TextInput
-              style={styles.input} value={email} onChangeText={setEmail}
+              style={styles.input} value={email} onChangeText={change(setEmail, 'email')} maxLength={254}
               placeholder="studying.lk@gmail.com" placeholderTextColor={colors.slate400}
               keyboardType="email-address" autoCapitalize="none"
             />
@@ -115,16 +124,18 @@ export default function SignIn({ navigation, route }) {
               <View style={styles.roleBadge}><Text style={styles.roleBadgeText}>{ROLE_LABEL[detectedRole]}</Text></View>
             ) : null}
           </View>
+          <FieldError message={errors.email} />
 
           <Text style={styles.label}>Password</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.password && errorBorder]}>
             <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
             <TextInput
-              style={styles.input} value={password} onChangeText={setPassword}
+              style={styles.input} value={password} onChangeText={change(setPassword, 'password')} maxLength={128}
               placeholder="Enter your password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw}
             />
             <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} /></Pressable>
           </View>
+          <FieldError message={errors.password} />
 
           <View style={styles.row}>
             <Pressable style={styles.keepRow} onPress={() => setKeep((k) => !k)}>

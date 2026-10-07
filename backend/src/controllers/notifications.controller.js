@@ -2,6 +2,8 @@ const express = require('express');
 const { query } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
+const v = require('../utils/validate');
+
 const router = express.Router();
 
 const mapNotif = (n) => ({
@@ -67,7 +69,8 @@ router.post('/read-all', authenticate, async (req, res) => {
 // --- Admin: create / update / delete broadcasts ---
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   const { title, body, targetRole = 'all', targetUserId = null } = req.body;
-  if (!title || !body) return res.status(400).json({ message: 'Title and message are required.' });
+  const invalid = v.notification({ title, body, targetRole });
+  if (invalid) return res.status(400).json({ message: invalid });
   const { rows } = await query(
     `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
      VALUES ($1, $2, $3, $4, $5) RETURNING *`,
@@ -86,6 +89,8 @@ router.get('/sent', authenticate, requireAdmin, async (req, res) => {
 
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   const { title, body, targetRole } = req.body;
+  const invalid = v.notification({ title, body, targetRole });
+  if (invalid) return res.status(400).json({ message: invalid });
   const { rows } = await query(
     `UPDATE notifications SET title = COALESCE($1, title), body = COALESCE($2, body),
        target_role = COALESCE($3, target_role) WHERE id = $4 RETURNING *`,

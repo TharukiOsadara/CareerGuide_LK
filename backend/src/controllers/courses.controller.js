@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const v = require('../utils/validate');
 
 const router = express.Router();
 
@@ -55,9 +56,8 @@ router.get('/:id', authenticate, async (req, res) => {
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const b = req.body;
-    if (!b.degreeName || !b.uniName) {
-      return res.status(400).json({ message: 'Degree name and university name are required.' });
-    }
+    const invalid = v.course(b);
+    if (invalid) return res.status(400).json({ message: invalid });
     const { rows } = await query(
       `INSERT INTO courses (degree_name, uni_name, al_stream, z_score, min_z_score, island_rank, district_rank, district, intake_year, duration, tuition_fee, ugc_approved, nvq_level, match_percent, description, career_path, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
@@ -77,6 +77,8 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const b = req.body;
+    const invalid = v.course(b);
+    if (invalid) return res.status(400).json({ message: invalid });
     const { rows } = await query(
       `UPDATE courses SET
         degree_name = COALESCE($1, degree_name),

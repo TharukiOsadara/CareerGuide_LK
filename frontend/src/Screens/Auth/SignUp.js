@@ -6,15 +6,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Brand from '../../components/Brand';
 import RoleTabs from '../../components/RoleTabs';
 import Dropdown from '../../components/Dropdown';
-import PasswordStrength, { scorePassword } from '../../components/PasswordStrength';
+import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { AL_STREAMS, ROLES, homeRouteFor } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { getGoogleIdToken } from '../../auth/googleSignIn';
+import {
+  collectErrors, hasErrors, required, validateEmail, validateName, validateNewPassword, validateNumber,
+} from '../../utils/validation';
 import { colors } from '../../styles/colors';
 import GoogleLogo from '../../components/GoogleLogo';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 export default function SignUp({ navigation }) {
   const { googleAuth } = useAuth();
@@ -31,6 +35,12 @@ export default function SignUp({ navigation }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [errors, setErrors] = useState({});
+  // Updates a field and clears its error message as the user types.
+  const change = (setter, key) => (v) => {
+    setter(v);
+    setErrors((e) => (e[key] ? { ...e, [key]: '' } : e));
+  };
 
   // Google sign-up: creates the account with the selected role, then opens that role's dashboard.
   const continueWithGoogle = async () => {
@@ -51,19 +61,27 @@ export default function SignUp({ navigation }) {
 
   const submit = async () => {
     setError('');
-    if (!fullName.trim()) return setError('Please enter your full name.');
-    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Please enter a valid email address.');
-    if (role === 'student' && zScore && (!/^\d+(\.\d+)?$/.test(zScore) || Number(zScore) > 4)) {
-      return setError('Please enter a valid Z-score between 0 and 4.');
-    }
-    if (role === 'parent' && !/^\S+@\S+\.\S+$/.test(childEmail1.trim())) {
-      return setError('Please enter a valid email address for Child 1.');
-    }
-    if (role === 'parent' && childEmail2.trim() && !/^\S+@\S+\.\S+$/.test(childEmail2.trim())) {
-      return setError('Please enter a valid email address for Child 2.');
-    }
-    if (scorePassword(password) < 3) return setError('Please choose a stronger password.');
-    if (!agree) return setError('Please accept the privacy agreement to continue.');
+    const own = email.trim().toLowerCase();
+    const c1 = childEmail1.trim().toLowerCase();
+    const c2 = childEmail2.trim().toLowerCase();
+    const errs = collectErrors({
+      fullName: validateName(fullName),
+      email: validateEmail(email),
+      stream: role === 'student' ? required(stream, 'A/L stream') : '',
+      zScore: role === 'student' ? validateNumber(zScore, 'Z-score', { min: 0, max: 4, decimals: 4 }) : '',
+      childEmail1: role === 'parent'
+        ? (validateEmail(childEmail1, 'Child 1 email') || (c1 === own ? 'Use your child\'s email, not your own.' : ''))
+        : '',
+      childEmail2: role === 'parent' && c2
+        ? (validateEmail(childEmail2, 'Child 2 email')
+          || (c2 === own ? 'Use your child\'s email, not your own.' : '')
+          || (c2 === c1 ? 'Child 2 email must be different from Child 1.' : ''))
+        : '',
+      password: validateNewPassword(password),
+      agree: agree ? '' : 'Please accept the privacy agreement to continue.',
+    });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
 
     setBusy(true);
     try {
@@ -101,66 +119,73 @@ export default function SignUp({ navigation }) {
         </Text>
 
         <View style={{ marginTop: 16 }}>
-          <RoleTabs roles={ROLES} value={role} onChange={setRole} />
+          <RoleTabs roles={ROLES} value={role} onChange={(r) => { setRole(r); setErrors({}); }} />
         </View>
 
         <View style={styles.card}>
           <Text style={styles.label}>Full Name</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.fullName && errorBorder]}>
             <Icon name="user" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Name" placeholderTextColor={colors.slate400} autoCapitalize="words" />
+            <TextInput style={styles.input} value={fullName} onChangeText={change(setFullName, 'fullName')} placeholder="Name" placeholderTextColor={colors.slate400} autoCapitalize="words" maxLength={100} />
           </View>
+          <FieldError message={errors.fullName} />
 
           <Text style={styles.label}>Email Address</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.email && errorBorder]}>
             <Icon name="mail" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="student@example.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+            <TextInput style={styles.input} value={email} onChangeText={change(setEmail, 'email')} placeholder="student@example.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" maxLength={254} />
           </View>
+          <FieldError message={errors.email} />
 
           {role === 'student' && (
             <>
               <Text style={styles.label}>A/L Examination Stream</Text>
-              <Dropdown value={stream} options={AL_STREAMS} onSelect={setStream} placeholder="Select your stream" icon="book" />
+              <Dropdown value={stream} options={AL_STREAMS} onSelect={change(setStream, 'stream')} placeholder="Select your stream" icon="book" error={errors.stream} />
               <Text style={styles.label}>Z-Score</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, !!errors.zScore && errorBorder]}>
                 <Icon name="chart" size={17} color={colors.blue} style={styles.inputIcon} />
-                <TextInput style={styles.input} value={zScore} onChangeText={setZScore} placeholder="e.g. 1.8542" placeholderTextColor={colors.slate400} keyboardType="decimal-pad" />
+                <TextInput style={styles.input} value={zScore} onChangeText={change(setZScore, 'zScore')} placeholder="e.g. 1.8542" placeholderTextColor={colors.slate400} keyboardType="decimal-pad" maxLength={7} />
               </View>
+              <FieldError message={errors.zScore} />
             </>
           )}
 
           {role === 'parent' && (
             <>
               <Text style={styles.label}>Child 1 Student Email</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, !!errors.childEmail1 && errorBorder]}>
                 <Icon name="mail" size={17} color={colors.blue} style={styles.inputIcon} />
-                <TextInput style={styles.input} value={childEmail1} onChangeText={setChildEmail1} placeholder="child1@example.com" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+                <TextInput style={styles.input} value={childEmail1} onChangeText={change(setChildEmail1, 'childEmail1')} placeholder="child1@example.com" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" maxLength={254} />
               </View>
+              <FieldError message={errors.childEmail1} />
               <Text style={styles.label}>Child 2 Student Email (optional)</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, !!errors.childEmail2 && errorBorder]}>
                 <Icon name="mail" size={17} color={colors.blue} style={styles.inputIcon} />
-                <TextInput style={styles.input} value={childEmail2} onChangeText={setChildEmail2} placeholder="child2@example.com" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+                <TextInput style={styles.input} value={childEmail2} onChangeText={change(setChildEmail2, 'childEmail2')} placeholder="child2@example.com" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" maxLength={254} />
               </View>
+              <FieldError message={errors.childEmail2} />
               <Text style={styles.helper}>The student must already have an active account.</Text>
             </>
           )}
 
           <Text style={styles.label}>Create Password</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!errors.password && errorBorder]}>
             <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Create a strong password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
+            <TextInput style={styles.input} value={password} onChangeText={change(setPassword, 'password')} placeholder="Create a strong password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} maxLength={128} />
             <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}>
               <Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} />
             </Pressable>
           </View>
+          <FieldError message={errors.password} />
           <PasswordStrength value={password} />
 
-          <Pressable style={styles.agreeRow} onPress={() => setAgree((a) => !a)}>
+          <Pressable style={styles.agreeRow} onPress={() => { setAgree((a) => !a); setErrors((e) => ({ ...e, agree: '' })); }}>
             <View style={[styles.checkbox, agree && styles.checkboxOn]}>{agree && <Icon name="check" size={13} color={colors.white} strokeWidth={3} />}</View>
             <Text style={styles.agreeText}>
               I agree to the processing of my academic profile under local educational privacy guidelines.
             </Text>
           </Pressable>
+          <FieldError message={errors.agree} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
