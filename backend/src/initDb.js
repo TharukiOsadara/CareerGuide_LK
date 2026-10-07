@@ -11,8 +11,10 @@ const initials = (name) =>
 
 async function run() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+  const parentSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'parent_module.sql'), 'utf8');
   console.log('Applying schema...');
   await pool.query(schema);
+  await pool.query(parentSchema);
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS admin_rejected BOOLEAN NOT NULL DEFAULT FALSE
