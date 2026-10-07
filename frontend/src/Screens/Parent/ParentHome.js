@@ -85,7 +85,7 @@ export default function ParentHome({ active, goToTab }) {
             )}
             <Button
               label="View academic progress"
-              icon="→"
+              icon="arrow-right"
               onPress={() => goToTab('progress')}
               style={styles.cardAction}
             />

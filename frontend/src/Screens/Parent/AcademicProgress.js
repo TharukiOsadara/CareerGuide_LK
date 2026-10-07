@@ -19,7 +19,7 @@ function CourseCard({ course }) {
 
       {/* FR02 / UI-02 / DR-03: verification and freshness sit together, never hidden. */}
       <View style={styles.badges}>
-        {course.ugcApproved ? <Chip label="✓ UGC approved" tone="success" /> : null}
+        {course.ugcApproved ? <Chip label="UGC approved" icon="check" tone="success" /> : null}
         {course.nvqLevel ? <Chip label={course.nvqLevel} tone="info" /> : null}
         <Chip label={`Updated ${formatDate(course.lastUpdated)}`} tone="neutral" />
       </View>

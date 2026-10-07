@@ -1,12 +1,14 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, font, radius, TOUCH } from '../theme';
+import Icon from '../../../components/Icon';
 
 const VARIANTS = {
   primary: { bg: colors.blue, border: colors.blue, text: colors.white },
   secondary: { bg: colors.white, border: colors.border, text: colors.navy },
   outline: { bg: colors.white, border: colors.blue, text: colors.blue },
   danger: { bg: colors.dangerLight, border: colors.dangerBorder, text: colors.danger },
+  signOut: { bg: colors.redStrong, border: colors.redStrong, text: colors.white },
 };
 
 export default function Button({
@@ -40,10 +42,10 @@ export default function Button({
       {busy ? (
         <ActivityIndicator color={v.text} />
       ) : (
-        <Text style={[styles.label, { color: v.text }]}>
-          {label}
-          {icon ? `  ${icon}` : ''}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={[styles.label, { color: v.text }]}>{label}</Text>
+          {icon ? <Icon name={icon} size={18} color={v.text} style={{ marginLeft: 8 }} /> : null}
+        </View>
       )}
     </Pressable>
   );

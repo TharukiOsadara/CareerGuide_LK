@@ -1,4 +1,5 @@
-import { API_URL, DEV_PARENT_ID } from '../devConfig';
+import { API_URL } from '../devConfig';
+import { tokenStore } from '../../../api/client';
 
 const TIMEOUT_MS = 20000;
 
@@ -13,13 +14,14 @@ export class ApiError extends Error {
 async function request(method, path, body) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const token = await tokenStore.get();
   let response;
   try {
     response = await fetch(`${API_URL}/api/parent${path}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': String(DEV_PARENT_ID),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,

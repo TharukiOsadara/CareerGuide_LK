@@ -1,9 +1,5 @@
 import { NativeModules, Platform } from 'react-native';
 
-// TEMPORARY until login is ready: the signed-in parent (seed user 4, Nimal Perera).
-// When login exists, read the user/token from the auth session instead.
-export const DEV_PARENT_ID = 4;
-
 const API_PORT = 5000;
 
 // The backend runs on the same PC as the Expo dev server, so reuse its host.

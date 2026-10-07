@@ -1,12 +1,18 @@
 const pool = require('../db');
 
-// TEMPORARY auth for the parent module until JWT login is ready.
-// The client sends the logged-in parent's id in the `x-user-id` header.
-// When login is done, replace readUserId with JWT verification - the checks,
-// `req.user` and `req.child` shapes, routes and controllers stay unchanged.
+const { verifyToken } = require('../utils/token');
+
+// Reads the signed-in user's id from the JWT issued at login (Authorization: Bearer <token>).
+// The checks below, and the `req.user` / `req.child` shapes, are unchanged.
 function readUserId(req) {
-  const userId = Number(req.get('x-user-id'));
-  return Number.isInteger(userId) && userId > 0 ? userId : null;
+  const header = req.get('authorization') || '';
+  if (!header.startsWith('Bearer ')) return null;
+  try {
+    const userId = Number(verifyToken(header.slice(7)).id);
+    return Number.isInteger(userId) && userId > 0 ? userId : null;
+  } catch {
+    return null;
+  }
 }
 
 function rejectUser(res, row) {
@@ -49,7 +55,7 @@ async function requireParentAndChild(req, res, next) {
   const { rows } = await pool.query(
     `SELECT p.id, p.full_name, p.role,
             l.student_id, l.counsellor_id, l.relationship,
-            s.full_name AS student_name, s.al_stream, s.avatar_initials,
+            s.full_name AS student_name, s.al_stream, s.z_score, s.avatar_initials,
             c.full_name AS counsellor_name
      FROM users p
      LEFT JOIN parent_student_links l ON l.parent_id = p.id AND l.student_id = $2
@@ -71,6 +77,7 @@ async function requireParentAndChild(req, res, next) {
     relationship: row.relationship,
     student_name: row.student_name,
     al_stream: row.al_stream,
+    z_score: row.z_score === null || row.z_score === undefined ? null : Number(row.z_score),
     avatar_initials: row.avatar_initials,
     counsellor_name: row.counsellor_name,
   };

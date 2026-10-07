@@ -3,6 +3,7 @@ import { StatusBar } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AccessHistory from './AccessHistory';
 import InquiryHistory from './InquiryHistory';
+import ParentProfile from './ParentProfile';
 import ParentTabs from './ParentTabs';
 import { ToastProvider } from './components/Toast';
 import { ChildProvider } from './context/ChildContext';
@@ -11,7 +12,7 @@ import { colors } from './theme';
 
 const Stack = createNativeStackNavigator();
 
-// Entry point of the Parent View module - register this one screen in App.js.
+// Entry point of the Parent View module (registered as "ParentPortal" in App.js).
 export default function ParentPortal() {
   return (
     <ToastProvider>
@@ -22,6 +23,7 @@ export default function ParentPortal() {
             <Stack.Screen name="ParentTabs" component={ParentTabs} />
             <Stack.Screen name="InquiryHistory" component={InquiryHistory} />
             <Stack.Screen name="AccessHistory" component={AccessHistory} />
+            <Stack.Screen name="ParentProfile" component={ParentProfile} />
           </Stack.Navigator>
         </LeaveGuardProvider>
       </ChildProvider>
