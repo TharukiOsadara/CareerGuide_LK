@@ -1,0 +1,62 @@
+CareerGuide LK - How to run the frontend on your smartphone
+===========================================================
+Expo SDK 57  |  expo package pinned to 57.0.9
+
+-----------------------------------------------------------
+ONE-TIME SETUP
+-----------------------------------------------------------
+1. Install the "Expo Go" app on your phone (Play Store / App Store).
+   Expo Go must support SDK 57.
+2. Make sure your phone and this PC are on the SAME Wi-Fi network.
+
+-----------------------------------------------------------
+RUN IT (normal way - LAN)
+-----------------------------------------------------------
+Open PowerShell and run:
+
+    cd C:\Tharuki\CareerGuide_LK\frontend
+    npx expo start
+
+Then scan the QR code shown in the terminal:
+  - Android: scan it with the Expo Go app
+  - iOS: scan it with the Camera app
+
+-----------------------------------------------------------
+IF THE QR / LAN DOES NOT CONNECT
+-----------------------------------------------------------
+Phone on mobile data, office Wi-Fi, or Windows Firewall blocking?
+Use a tunnel instead (slower, but works anywhere):
+
+    cd C:\Tharuki\CareerGuide_LK\frontend
+    npx expo start --tunnel
+
+-----------------------------------------------------------
+USEFUL VARIANTS
+-----------------------------------------------------------
+Clear the Metro bundler cache (fixes most weird build errors):
+
+    npx expo start --clear
+
+Open in a web browser instead of the phone:
+
+    npx expo start --web
+
+Press these keys in the running terminal:
+    r  = reload the app
+    j  = open the debugger
+    ?  = show all commands
+    Ctrl + C = stop the server
+
+-----------------------------------------------------------
+REINSTALL DEPENDENCIES (if node_modules gets broken)
+-----------------------------------------------------------
+    cd C:\Tharuki\CareerGuide_LK\frontend
+    rmdir /s /q node_modules
+    del package-lock.json
+    npm install
+    npm install expo@57.0.9 --save-exact
+
+-----------------------------------------------------------
+CHECK EVERYTHING MATCHES SDK 57
+-----------------------------------------------------------
+    npx expo-doctor

@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
-import { colors } from '../styles/colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function PrivacyConsent({ navigation }) {
   const [isChecked, setIsChecked] = useState(true);
@@ -26,9 +27,7 @@ export default function PrivacyConsent({ navigation }) {
       <View style={styles.sheet}>
         <View style={styles.titleRow}>
           <View style={styles.titleIcon}>
-            <View style={styles.shield}>
-              <View style={styles.shieldInner} />
-            </View>
+            <Icon name="shield" size={16} color={colors.blue} />
           </View>
           <Text style={styles.title}>Data Privacy &amp; Consent</Text>
           <Pressable
@@ -37,12 +36,12 @@ export default function PrivacyConsent({ navigation }) {
             onPress={() => navigation.replace('Onboarding')}
             style={styles.closeButton}
           >
-            <Text style={styles.closeText}>×</Text>
+            <Icon name="close" size={15} color={colors.muted} />
           </Pressable>
         </View>
 
         <View style={styles.infoBox}>
-          <Text style={styles.lock}>♙</Text>
+          <Icon name="lock" size={15} color={colors.blue} style={styles.lock} />
           <Text style={styles.infoText}>
             All academic entries, including A/L results, are strictly encrypted. They are only
             utilized to simulate eligibility boundaries for course matchmaking.
@@ -56,7 +55,7 @@ export default function PrivacyConsent({ navigation }) {
           style={styles.consentRow}
         >
           <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
-            {isChecked && <Text style={styles.checkmark}>✓</Text>}
+            {isChecked && <Icon name="check" size={13} color={colors.white} strokeWidth={3} />}
           </View>
           <View style={styles.consentCopy}>
             <Text style={styles.consentText}>
@@ -92,7 +91,7 @@ export default function PrivacyConsent({ navigation }) {
           ]}
         >
           <Text style={styles.acceptText}>Accept &amp; Continue</Text>
-          <Text style={styles.acceptArrow}>→</Text>
+          <Icon name="arrow-right" size={18} color={colors.white} style={styles.acceptArrow} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -171,7 +170,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginTop: 17,
   },
-  lock: { color: colors.blue, fontSize: 18, marginRight: 9 },
+  lock: { marginRight: 9, marginTop: 1 },
   infoText: { flex: 1, color: colors.blue, fontSize: 10.5, lineHeight: 15 },
   consentRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 17 },
   checkbox: {
@@ -218,7 +217,7 @@ const styles = StyleSheet.create({
   },
   disabledButton: { backgroundColor: colors.slate },
   acceptText: { color: colors.white, fontSize: 13, fontWeight: '800' },
-  acceptArrow: { color: colors.white, fontSize: 20, marginLeft: 10 },
+  acceptArrow: { marginLeft: 10 },
   declineButton: {
     height: 43,
     borderRadius: 8,
@@ -231,3 +230,4 @@ const styles = StyleSheet.create({
   declineText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   pressed: { opacity: 0.78 },
 });
+
