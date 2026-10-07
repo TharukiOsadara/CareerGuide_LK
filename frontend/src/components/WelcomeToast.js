@@ -40,10 +40,11 @@ export default function WelcomeToast({ visible, name, loginTime, onHide, variant
 }
 
 const styles = StyleSheet.create({
-  host: { position: 'absolute', top: 14, left: 0, right: 0, alignItems: 'flex-end', paddingHorizontal: 12, zIndex: 50 },
+  // Absolute inside the page body (below the header), level with the page heading on the right.
+  host: { position: 'absolute', top: 10, left: 0, right: 0, alignItems: 'flex-end', paddingHorizontal: 12, zIndex: 50 },
   toast: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderRadius: 12,
-    paddingVertical: 12, paddingHorizontal: 14, width: '94%', overflow: 'hidden',
+    paddingVertical: 11, paddingHorizontal: 14, width: '78%', maxWidth: 320, overflow: 'hidden',
     shadowColor: colors.navy, shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
   stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },

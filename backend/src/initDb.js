@@ -23,6 +23,15 @@ async function run() {
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS z_score NUMERIC(5, 4)
   `);
+  // Admin two-factor sign-in (authenticator app codes).
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS totp_failed INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS totp_last_step BIGINT,
+    ADD COLUMN IF NOT EXISTS totp_locked_until TIMESTAMPTZ
+  `);
 
   // Seed the primary (super) admin.
   const hash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);

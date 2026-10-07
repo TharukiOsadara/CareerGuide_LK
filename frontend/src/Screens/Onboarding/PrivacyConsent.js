@@ -1,13 +1,13 @@
 ﻿import React, { useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
 import Icon, { IconText } from '../../components/Icon';
 

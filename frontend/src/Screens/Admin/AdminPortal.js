@@ -1,5 +1,7 @@
 ﻿import React, { useState } from 'react';
-import { Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Brand from '../../components/Brand';
 import RoleTabs from '../../components/RoleTabs';
@@ -9,15 +11,22 @@ import { colors } from '../../styles/colors';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
 
+// Admin sign-in is two steps: (1) email + password, (2) the 6-digit code from an
+// authenticator app (Google / Microsoft Authenticator). On an admin's first login,
+// step 2 starts with a QR code to scan.
 export default function AdminPortal({ navigation }) {
-  const { signIn } = useAuth();
+  const { adminPasswordStep, adminMfaSetup, adminMfaVerify } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [token2fa, setToken2fa] = useState('');
+  const [code, setCode] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // 'password' -> ('setup' on first login) -> 'code'
+  const [step, setStep] = useState('password');
+  const [mfaToken, setMfaToken] = useState(null);
+  const [setup, setSetup] = useState(null); // { qrDataUrl, secret, account }
 
   // Switching away from Admin returns to the standard sign-in with that role.
   const onRoleChange = (r) => {
@@ -25,20 +34,49 @@ export default function AdminPortal({ navigation }) {
     navigation.navigate('SignIn', { role: r });
   };
 
-  const submit = async () => {
-    setError('');
+  const restart = (message = '') => {
+    setStep('password'); setMfaToken(null); setSetup(null); setCode(''); setError(message);
+  };
+
+  const submitPassword = async () => {
     if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Enter a valid administrator email.');
     if (!password) return setError('Enter your admin password.');
+    const res = await adminPasswordStep({ email: email.trim(), password });
+    setMfaToken(res.mfaToken);
+    setCode('');
+    if (res.setupRequired) {
+      setSetup(await adminMfaSetup(res.mfaToken));
+      setStep('setup');
+    } else {
+      setStep('code');
+    }
+  };
+
+  const submitCode = async () => {
+    const clean = code.replace(/\s/g, '');
+    if (!/^\d{6}$/.test(clean)) return setError('Enter the 6-digit code from your authenticator app.');
+    await adminMfaVerify({ mfaToken, code: clean });
+    navigation.reset({ index: 0, routes: [{ name: 'AdminOverview', params: { welcome: true } }] });
+  };
+
+  const submit = async () => {
+    setError('');
     setBusy(true);
     try {
-      await signIn({ email: email.trim(), password, role: 'admin' });
-      navigation.reset({ index: 0, routes: [{ name: 'AdminOverview', params: { welcome: true } }] });
+      if (step === 'password') await submitPassword();
+      else await submitCode();
     } catch (e) {
-      setError(e.message || 'Authentication failed.');
+      if (e.data?.restart) restart(e.message);
+      else setError(e.message || 'Authentication failed.');
     } finally {
       setBusy(false);
     }
   };
+
+  const buttonLabel = busy
+    ? (step === 'password' ? 'Checking…' : 'Verifying…')
+    : step === 'password' ? 'Continue' : step === 'setup' ? 'Verify & Finish Setup' : 'Authenticate Admin Access';
+  const secretGroups = setup?.secret ? setup.secret.match(/.{1,4}/g).join(' ') : '';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,33 +100,73 @@ export default function AdminPortal({ navigation }) {
           </View>
 
           <Text style={styles.label}>Administrator Email or Staff ID</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, step !== 'password' && styles.inputLocked]}>
             <Icon name="user-cog" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="admin@careerguide.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+            <TextInput style={styles.input} value={email} onChangeText={setEmail} editable={step === 'password'} placeholder="admin@careerguide.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+            {step !== 'password' && <Icon name="check-circle" size={18} color={colors.greenDark} />}
           </View>
 
-          <Text style={styles.label}>Admin Password</Text>
-          <View style={styles.inputBox}>
-            <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Enter admin password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
-            <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} /></Pressable>
-          </View>
+          {step === 'password' ? (
+            <>
+              <Text style={styles.label}>Admin Password</Text>
+              <View style={styles.inputBox}>
+                <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
+                <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Enter admin password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} onSubmitEditing={submit} />
+                <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} /></Pressable>
+              </View>
 
-          <Text style={styles.label}>Security Token / 2FA Pin</Text>
-          <View style={styles.inputBox}>
-            <Icon name="key" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={token2fa} onChangeText={setToken2fa} placeholder="Enter 6-digit code" placeholderTextColor={colors.slate400} keyboardType="number-pad" maxLength={6} />
-          </View>
+              <Pressable style={styles.rememberRow} onPress={() => setRemember((r) => !r)}>
+                <View style={[styles.checkbox, remember && styles.checkboxOn]}>{remember && <Icon name="check" size={13} color={colors.white} strokeWidth={3} />}</View>
+                <Text style={styles.rememberText}>Remember this device</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              {step === 'setup' && setup ? (
+                <View style={styles.setupBox}>
+                  <Text style={styles.setupTitle}>Set up your authenticator (one time)</Text>
+                  <Text style={styles.setupStep}>1. Open Google Authenticator or Microsoft Authenticator.</Text>
+                  <Text style={styles.setupStep}>2. Tap + and choose "Scan a QR code".</Text>
+                  <Text style={styles.setupStep}>3. Scan this code, then type the 6-digit code it shows.</Text>
+                  <View style={styles.qrWrap}>
+                    {setup.qrDataUrl
+                      ? <Image source={{ uri: setup.qrDataUrl }} style={styles.qr} resizeMode="contain" accessibilityLabel="Authenticator setup QR code" />
+                      : <ActivityIndicator color={colors.blue} />}
+                  </View>
+                  <Text style={styles.manualLabel}>Can't scan? Choose "Enter a setup key" and type:</Text>
+                  <Text selectable style={styles.secret}>{secretGroups}</Text>
+                  <Text style={styles.manualHint}>Account: {setup.account} · Time based</Text>
+                </View>
+              ) : (
+                <View style={styles.codeHint}>
+                  <Icon name="shield-check" size={18} color={colors.blue} />
+                  <Text style={styles.codeHintText}>Password accepted. Open your authenticator app and enter the current code for CareerGuide LK.</Text>
+                </View>
+              )}
 
-          <Pressable style={styles.rememberRow} onPress={() => setRemember((r) => !r)}>
-            <View style={[styles.checkbox, remember && styles.checkboxOn]}>{remember && <Icon name="check" size={13} color={colors.white} strokeWidth={3} />}</View>
-            <Text style={styles.rememberText}>Remember this device</Text>
-          </Pressable>
+              <Text style={styles.label}>Security Token / 2FA Pin</Text>
+              <View style={[styles.inputBox, styles.codeBox]}>
+                <Icon name="key" size={17} color={colors.blue} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.codeInput]} value={code}
+                  onChangeText={(t) => setCode(t.replace(/[^0-9]/g, ''))}
+                  placeholder="Enter 6-digit code" placeholderTextColor={colors.slate400}
+                  keyboardType="number-pad" maxLength={6} autoFocus
+                  textContentType="oneTimeCode" autoComplete="one-time-code"
+                  onSubmitEditing={submit}
+                />
+              </View>
+
+              <Pressable onPress={() => restart()} hitSlop={8} style={styles.changeAccount}>
+                <IconText icon="arrow-left" size={14} color={colors.blue} textStyle={styles.changeAccountText}>Use a different account</IconText>
+              </Pressable>
+            </>
+          )}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Authenticating…' : 'Authenticate Admin Access'}</Text>
+            <Text style={styles.primaryText}>{buttonLabel}</Text>
             {!busy && <Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />}
           </Pressable>
         </View>
@@ -132,5 +210,28 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   bottom: { fontSize: 12, color: colors.muted },
   link: { color: colors.blue, fontWeight: '800' },
+
+  // Two-factor step
+  inputLocked: { opacity: 0.75 },
+  codeBox: { borderColor: colors.blue, borderWidth: 1.5, backgroundColor: colors.white },
+  codeInput: { fontSize: 18, fontWeight: '800', letterSpacing: 6 },
+  codeHint: {
+    flexDirection: 'row', alignItems: 'flex-start', backgroundColor: colors.blueLight, borderRadius: 10,
+    padding: 12, marginTop: 16, borderWidth: 1, borderColor: colors.bluePaleBorder,
+  },
+  codeHintText: { flex: 1, color: colors.slateDark, fontSize: 12, lineHeight: 17, marginLeft: 8 },
+  setupBox: { backgroundColor: colors.bgSofter, borderRadius: 12, padding: 14, marginTop: 16, borderWidth: 1, borderColor: colors.border },
+  setupTitle: { color: colors.navy, fontSize: 13.5, fontWeight: '800', marginBottom: 8 },
+  setupStep: { color: colors.slateDark, fontSize: 12, lineHeight: 18 },
+  qrWrap: {
+    alignSelf: 'center', width: 196, height: 196, marginTop: 12, backgroundColor: colors.white,
+    borderRadius: 12, padding: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
+  },
+  qr: { width: 178, height: 178 },
+  manualLabel: { color: colors.slate, fontSize: 11.5, marginTop: 12, textAlign: 'center' },
+  secret: { color: colors.navy, fontSize: 14, fontWeight: '800', letterSpacing: 1, textAlign: 'center', marginTop: 4 },
+  manualHint: { color: colors.slate400, fontSize: 10.5, textAlign: 'center', marginTop: 4 },
+  changeAccount: { alignSelf: 'flex-start', marginTop: 12 },
+  changeAccountText: { color: colors.blue, fontSize: 12.5, fontWeight: '700' },
 });
 

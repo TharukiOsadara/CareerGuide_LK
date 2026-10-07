@@ -53,7 +53,7 @@ export default function ParentProfile({ navigation }) {
           )}
         </SectionCard>
 
-        <Button label="Sign out" variant="outline" onPress={doSignOut} style={styles.signOut} />
+        <Button label="Sign out" variant="signOut" onPress={doSignOut} style={styles.signOut} />
 
         <DeleteAccount onDeleted={() => leavePortal('Onboarding')} />
       </ScrollView>

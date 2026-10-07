@@ -8,6 +8,8 @@ import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
 import Onboarding from './src/Screens/Onboarding/Onboarding';
 import About from './src/Screens/Onboarding/About';
 import PrivacyConsent from './src/Screens/Onboarding/PrivacyConsent';
+import CourseDatabase from './src/Screens/Onboarding/CourseDatabase';
+import JobMarket from './src/Screens/Onboarding/JobMarket';
 import SignUp from './src/Screens/Auth/SignUp';
 import SignIn from './src/Screens/Auth/SignIn';
 import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
@@ -17,9 +19,7 @@ import AdminCreateAccount from './src/Screens/Admin/AdminCreateAccount';
 
 // Student area
 import StudentHome from './src/Screens/Student/StudentHome';
-import StudentQuiz from './src/Screens/Student/StudentQuiz';
-import StudentCourses from './src/Screens/Student/StudentCourses';
-import StudentProfile from './src/Screens/Student/StudentProfile';
+import StudentCoursesDetail from './src/Screens/Student/StudentCoursesdetail';
 import StudentNotifications from './src/Screens/Student/StudentNotifications';
 
 // Admin area
@@ -47,6 +47,8 @@ export default function App() {
             <Stack.Screen name="Loading" component={LoadingScreen} />
             <Stack.Screen name="Onboarding" component={Onboarding} />
             <Stack.Screen name="About" component={About} />
+            <Stack.Screen name="CourseDatabase" component={CourseDatabase} />
+            <Stack.Screen name="JobMarket" component={JobMarket} />
             <Stack.Screen
               name="PrivacyConsent"
               component={PrivacyConsent}
@@ -61,9 +63,8 @@ export default function App() {
 
             {/* Student */}
             <Stack.Screen name="StudentHome" component={StudentHome} />
-            <Stack.Screen name="StudentQuiz" component={StudentQuiz} />
-            <Stack.Screen name="StudentCourses" component={StudentCourses} />
-            <Stack.Screen name="StudentProfile" component={StudentProfile} />
+            <Stack.Screen name="StudentCourses" component={StudentCoursesDetail} />
+            <Stack.Screen name="StudentCoursesDetail" component={StudentCoursesDetail} />
             <Stack.Screen name="StudentNotifications" component={StudentNotifications} />
 
             {/* Admin */}

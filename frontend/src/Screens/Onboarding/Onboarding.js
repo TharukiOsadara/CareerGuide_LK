@@ -7,9 +7,9 @@ import { colors } from '../../styles/colors';
 import Icon, { IconText } from '../../components/Icon';
 
 const utilities = [
-  { icon: 'database', iconStyle: 'databaseIcon', tint: colors.blue, tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
+  { icon: 'database', route: 'CourseDatabase', iconStyle: 'databaseIcon', tint: colors.blue, tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
   { icon: 'brain', iconStyle: 'quizIcon', tint: colors.teal, tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
-  { icon: 'chart', iconStyle: 'jobsIcon', tint: colors.orange, tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
+  { icon: 'chart', route: 'JobMarket', iconStyle: 'jobsIcon', tint: colors.orange, tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
 ];
 
 export default function Onboarding({ navigation }) {
@@ -39,7 +39,7 @@ export default function Onboarding({ navigation }) {
         <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Core Utilities</Text><View style={styles.sectionRule} /></View>
         <View style={styles.utilityList}>
           {utilities.map((utility) => (
-            <Pressable key={utility.title} accessibilityRole="button" onPress={openSignIn} style={({ pressed }) => [styles.utilityCard, pressed && styles.pressed]}>
+            <Pressable key={utility.title} accessibilityRole="button" onPress={() => (utility.route ? navigation.navigate(utility.route) : openSignIn())} style={({ pressed }) => [styles.utilityCard, pressed && styles.pressed]}>
               <View style={[styles.utilityIcon, styles[utility.iconStyle]]}><Icon name={utility.icon} size={20} color={utility.tint} /></View>
               <View style={styles.utilityCopy}><View style={styles.utilityMeta}><Text style={[styles.utilityTag, styles[utility.tagStyle]]}>{utility.tag}</Text><Text style={styles.utilityDescription}>{utility.description}</Text></View><Text style={styles.utilityTitle}>{utility.title}</Text></View>
               <Icon name="chevron-right" size={20} color={colors.slate} style={styles.utilityArrow} />

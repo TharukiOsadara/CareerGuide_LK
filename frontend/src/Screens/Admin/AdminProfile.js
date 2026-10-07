@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
   rejectBtn: { backgroundColor: colors.redLight, borderRadius: 7, paddingVertical: 7, paddingHorizontal: 12 },
   rejectText: { color: colors.redStrong, fontSize: 11, fontWeight: '800' },
 
-  signOut: { marginTop: 24, borderWidth: 1, borderColor: colors.red, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.white },
-  signOutText: { color: colors.redStrong, fontSize: 13, fontWeight: '800' },
+  signOut: { marginTop: 24, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.redStrong },
+  signOutText: { color: colors.white, fontSize: 13, fontWeight: '800' },
   pressed: { opacity: 0.78 },
 });
 

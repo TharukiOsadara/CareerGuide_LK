@@ -86,112 +86,115 @@ export default function AdminOverview({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <AdminHeader navigation={navigation} user={user} />
-      <WelcomeToast
-        visible={showToast}
-        name={firstName}
-        loginTime={user?.lastLoginAt}
-        variant="info"
-        onHide={() => {
-          setShowToast(false);
-          navigation.setParams({ welcome: false });
-        }}
-      />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
-        <Text style={styles.pageTitle}>Admin Dashboard</Text>
-        <Text style={styles.pageSub}>Welcome back, {firstName}. Here's what's happening today.</Text>
-        {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
+      {/* Page body: the welcome popup is anchored here, just below the header. */}
+      <View style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+          <Text style={styles.pageTitle}>Admin Dashboard</Text>
+          <Text style={styles.pageSub}>Welcome back, {firstName}. Here's what's happening today.</Text>
+          {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
-        {/* Feature card */}
-        <View style={styles.feature}>
-          <View style={styles.featureHead}>
-            <View style={styles.featureIcon}><Icon name="shield-check" size={22} color={colors.white} /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.featureTitle}>User Management & Audit</Text>
-              <Text style={styles.featureSub}>Active Sessions & Security Logs</Text>
-            </View>
-          </View>
-          <Text style={styles.featureBody}>
-            Monitor active sessions, login history, and security logs dynamically.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('AdminLogs')}
-            style={({ pressed }) => [styles.featureBtn, pressed && styles.pressed]}
-          >
-            <IconText icon="arrow-right" trailing size={15} color={colors.blue} textStyle={styles.featureBtnText}>Open User Access Logs Dashboard</IconText>
-          </Pressable>
-        </View>
-
-        {/* Quick stats */}
-        <Text style={styles.heading}>Admin Quick Stats</Text>
-        <View style={styles.grid}>
-          {statCards.map((s) => (
-            <Pressable
-              key={s.label}
-              accessibilityRole="button"
-              accessibilityLabel={`${s.label}: ${s.value}. View details`}
-              onPress={() => navigation.navigate('AdminStatDetail', { type: s.type })}
-              style={({ pressed }) => [styles.statCard, pressed && styles.pressed]}
-            >
-              <View style={styles.statTop}>
-                <View style={[styles.statIcon, { backgroundColor: s.bg }]}><Icon name={s.icon} size={20} color={s.tint} /></View>
-                <Icon name="chevron-right" size={18} color={colors.slate400} />
+          {/* Feature card */}
+          <View style={styles.feature}>
+            <View style={styles.featureHead}>
+              <View style={styles.featureIcon}><Icon name="shield-check" size={22} color={colors.white} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>User Management & Audit</Text>
+                <Text style={styles.featureSub}>Active Sessions & Security Logs</Text>
               </View>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-              <Text style={styles.statNote}>{s.note}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Management action cards */}
-        <Text style={styles.heading}>Management Action Cards</Text>
-        <ActionCard
-          title="Z-Score Criteria Manager"
-          desc="Update A/L stream cut-off marks by district and intake year."
-          onPress={() => navigation.navigate('AdminZScores')}
-        />
-        <ActionCard
-          title="Add New Degree Program"
-          desc="Create a new degree entry (title, university, duration, fee, UGC status, min Z-score)."
-          onPress={() => navigation.navigate('AdminCourses', { create: true })}
-        />
-        <ActionCard
-          title="NVQ & Accreditation Mapping"
-          desc="Link course profiles to NVQ Level 1–7 frameworks and TVEC approvals."
-          onPress={() => navigation.navigate('AdminCourses')}
-        />
-
-        {/* Recent course updates */}
-        <Text style={styles.heading}>Recent Course Updates</Text>
-        {recent.length === 0 ? (
-          <Text style={styles.empty}>No courses yet.</Text>
-        ) : recent.map((c) => (
-          <View key={c.id} style={styles.courseRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.courseName} numberOfLines={1}>{c.degreeName}</Text>
-              <Text style={styles.courseMeta} numberOfLines={1}>
-                {c.uniName}{c.createdAt ? ` · ${timeAgo(c.createdAt)}` : ''}
-              </Text>
             </View>
+            <Text style={styles.featureBody}>
+              Monitor active sessions, login history, and security logs dynamically.
+            </Text>
             <Pressable
-              hitSlop={8}
-              onPress={() => navigation.navigate('AdminCourses', { editId: c.id })}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('AdminLogs')}
+              style={({ pressed }) => [styles.featureBtn, pressed && styles.pressed]}
             >
-              <Icon name="edit" size={16} color={colors.blue} />
-            </Pressable>
-            <Pressable
-              hitSlop={8}
-              onPress={() => deleteCourse(c)}
-              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
-            >
-              <Icon name="trash" size={16} color={colors.redStrong} />
+              <IconText icon="arrow-right" trailing size={15} color={colors.blue} textStyle={styles.featureBtnText}>Open User Access Logs Dashboard</IconText>
             </Pressable>
           </View>
-        ))}
-      </ScrollView>
+
+          {/* Quick stats */}
+          <Text style={styles.heading}>Admin Quick Stats</Text>
+          <View style={styles.grid}>
+            {statCards.map((s) => (
+              <Pressable
+                key={s.label}
+                accessibilityRole="button"
+                accessibilityLabel={`${s.label}: ${s.value}. View details`}
+                onPress={() => navigation.navigate('AdminStatDetail', { type: s.type })}
+                style={({ pressed }) => [styles.statCard, pressed && styles.pressed]}
+              >
+                <View style={styles.statTop}>
+                  <View style={[styles.statIcon, { backgroundColor: s.bg }]}><Icon name={s.icon} size={20} color={s.tint} /></View>
+                  <Icon name="chevron-right" size={18} color={colors.slate400} />
+                </View>
+                <Text style={styles.statValue}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+                <Text style={styles.statNote}>{s.note}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Management action cards */}
+          <Text style={styles.heading}>Management Action Cards</Text>
+          <ActionCard
+            title="Z-Score Criteria Manager"
+            desc="Update A/L stream cut-off marks by district and intake year."
+            onPress={() => navigation.navigate('AdminZScores')}
+          />
+          <ActionCard
+            title="Add New Degree Program"
+            desc="Create a new degree entry (title, university, duration, fee, UGC status, min Z-score)."
+            onPress={() => navigation.navigate('AdminCourses', { create: true })}
+          />
+          <ActionCard
+            title="NVQ & Accreditation Mapping"
+            desc="Link course profiles to NVQ Level 1–7 frameworks and TVEC approvals."
+            onPress={() => navigation.navigate('AdminCourses')}
+          />
+
+          {/* Recent course updates */}
+          <Text style={styles.heading}>Recent Course Updates</Text>
+          {recent.length === 0 ? (
+            <Text style={styles.empty}>No courses yet.</Text>
+          ) : recent.map((c) => (
+            <View key={c.id} style={styles.courseRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.courseName} numberOfLines={1}>{c.degreeName}</Text>
+                <Text style={styles.courseMeta} numberOfLines={1}>
+                  {c.uniName}{c.createdAt ? ` · ${timeAgo(c.createdAt)}` : ''}
+                </Text>
+              </View>
+              <Pressable
+                hitSlop={8}
+                onPress={() => navigation.navigate('AdminCourses', { editId: c.id })}
+                style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              >
+                <Icon name="edit" size={16} color={colors.blue} />
+              </Pressable>
+              <Pressable
+                hitSlop={8}
+                onPress={() => deleteCourse(c)}
+                style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              >
+                <Icon name="trash" size={16} color={colors.redStrong} />
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+        <WelcomeToast
+          visible={showToast}
+          name={firstName}
+          loginTime={user?.lastLoginAt}
+          variant="info"
+          onHide={() => {
+            setShowToast(false);
+            navigation.setParams({ welcome: false });
+          }}
+        />
+      </View>
 
       <AdminNav active="AdminOverview" navigation={navigation} />
     </SafeAreaView>

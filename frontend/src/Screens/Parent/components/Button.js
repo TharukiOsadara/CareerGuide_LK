@@ -8,6 +8,7 @@ const VARIANTS = {
   secondary: { bg: colors.white, border: colors.border, text: colors.navy },
   outline: { bg: colors.white, border: colors.blue, text: colors.blue },
   danger: { bg: colors.dangerLight, border: colors.dangerBorder, text: colors.danger },
+  signOut: { bg: colors.redStrong, border: colors.redStrong, text: colors.white },
 };
 
 export default function Button({

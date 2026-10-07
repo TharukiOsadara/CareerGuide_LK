@@ -78,6 +78,20 @@ router.put('/me', authenticate, async (req, res) => {
   res.json({ user: publicUser(rows[0]) });
 });
 
+// Super admin: reset another admin's authenticator (e.g. lost phone).
+// They will be asked to scan a new QR code at their next login.
+router.post('/:id/reset-mfa', authenticate, requireAdmin, async (req, res) => {
+  if (!req.user.is_super_admin) return res.status(403).json({ message: 'Only a super admin can reset an authenticator.' });
+  const { rows } = await query(
+    `UPDATE users SET totp_secret = NULL, totp_enabled = FALSE, totp_failed = 0,
+            totp_last_step = NULL, totp_locked_until = NULL
+     WHERE id = $1 AND role = 'admin' RETURNING *`,
+    [req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ message: 'Admin not found.' });
+  res.json({ user: publicUser(rows[0]) });
+});
+
 // Delete own account (any role). Password accounts must confirm with their password;
 // Google-only accounts confirm by typing DELETE. The super admin cannot be deleted.
 // Related rows are removed or detached by the schema's ON DELETE rules.

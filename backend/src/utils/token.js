@@ -26,6 +26,7 @@ const publicUser = (u) => ({
   lastLoginAt: u.last_login_at,
   provider: u.provider,
   hasPassword: Boolean(u.password_hash),
+  mfaEnabled: Boolean(u.totp_enabled),
   createdAt: u.created_at,
 });
 

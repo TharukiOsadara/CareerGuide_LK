@@ -6,9 +6,7 @@ import Icon from './Icon';
 // Bottom navigation for the student area. Each item navigates to its own screen.
 const ITEMS = [
   { key: 'StudentHome', label: 'Home', icon: 'home' },
-  { key: 'StudentQuiz', label: 'Quiz', icon: 'brain' },
   { key: 'StudentCourses', label: 'Courses', icon: 'book' },
-  { key: 'StudentProfile', label: 'Profile', icon: 'user' },
 ];
 
 export default function StudentNav({ active, navigation }) {

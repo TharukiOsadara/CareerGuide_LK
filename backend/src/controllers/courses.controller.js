@@ -25,8 +25,8 @@ const mapCourse = (c) => ({
   updatedAt: c.updated_at,
 });
 
-// List courses (any authenticated user). Optional ?stream= & ?q= filters.
-router.get('/', authenticate, async (req, res) => {
+// List courses. Optional ?stream= & ?q= filters.
+async function listCourses(req, res) {
   const { stream, q } = req.query;
   const clauses = [];
   const params = [];
@@ -37,7 +37,13 @@ router.get('/', authenticate, async (req, res) => {
     `SELECT * FROM courses ${where} ORDER BY match_percent DESC NULLS LAST, updated_at DESC`, params
   );
   res.json({ courses: rows.map(mapCourse) });
-});
+}
+
+// Any signed-in user.
+router.get('/', authenticate, listCourses);
+
+// Read-only catalogue for visitors (onboarding "Verified Course Database" page). No login needed.
+router.get('/public', listCourses);
 
 router.get('/:id', authenticate, async (req, res) => {
   const { rows } = await query('SELECT * FROM courses WHERE id = $1', [req.params.id]);

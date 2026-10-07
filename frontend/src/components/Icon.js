@@ -30,6 +30,7 @@ import KeyRound from 'lucide-react-native/icons/key-round';
 import Landmark from 'lucide-react-native/icons/landmark';
 import LayoutGrid from 'lucide-react-native/icons/layout-grid';
 import Lock from 'lucide-react-native/icons/lock';
+import LogOut from 'lucide-react-native/icons/log-out';
 import Mail from 'lucide-react-native/icons/mail';
 import Map from 'lucide-react-native/icons/map';
 import MapPin from 'lucide-react-native/icons/map-pin';
@@ -88,6 +89,7 @@ const ICONS = {
   landmark: Landmark,
   grid: LayoutGrid,
   lock: Lock,
+  logout: LogOut,
   mail: Mail,
   map: Map,
   'map-pin': MapPin,

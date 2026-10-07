@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
@@ -29,6 +30,20 @@ export default function AdminStatDetail({ navigation, route }) {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const { user: me } = useAuth();
+  const [notice, setNotice] = useState('');
+
+  // Super admin only: clear an admin's authenticator so they scan a new QR at next login.
+  const resetMfa = async (u) => {
+    setError(''); setNotice('');
+    try {
+      const { user: updated } = await api(`/api/users/${u.id}/reset-mfa`, { method: 'POST' });
+      setUsers((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+      setNotice(`Authenticator reset for ${u.fullName}. They will scan a new QR code at their next login.`);
+    } catch (e) {
+      setError(e.message || 'Could not reset the authenticator.');
+    }
+  };
 
   const load = useCallback(async () => {
     setError('');
@@ -134,13 +149,20 @@ export default function AdminStatDetail({ navigation, route }) {
         </View>
 
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
+        {notice ? <View style={styles.okBanner}><Text style={styles.okText}>{notice}</Text></View> : null}
 
         {loading ? (
           <ActivityIndicator color={colors.blue} style={{ marginTop: 30 }} />
         ) : rows.length === 0 ? (
           <Text style={styles.empty}>{q ? 'No results match your search.' : 'Nothing to show yet.'}</Text>
         ) : type === 'users' ? (
-          rows.map((u) => <UserRow key={u.id} u={u} />)
+          rows.map((u) => (
+            <UserRow
+              key={u.id}
+              u={u}
+              onResetMfa={me?.isSuperAdmin && u.role === 'admin' && u.mfaEnabled ? () => resetMfa(u) : null}
+            />
+          ))
         ) : type === 'unis' ? (
           rows.map((u) => <UniRow key={u.name} uni={u} />)
         ) : (
@@ -196,7 +218,7 @@ function UniRow({ uni }) {
   );
 }
 
-function UserRow({ u }) {
+function UserRow({ u, onResetMfa }) {
   const statusTone = u.status === 'active' ? 'green' : u.status === 'pending' ? 'amber' : 'red';
   return (
     <View style={[styles.card, styles.userCard]}>
@@ -210,7 +232,13 @@ function UserRow({ u }) {
           <Chip text={cap(u.role)} />
           <Chip text={cap(u.status)} tone={statusTone} />
           {u.provider === 'google' ? <Chip text="Google" /> : null}
+          {u.role === 'admin' ? <Chip text={u.mfaEnabled ? '2FA on' : '2FA not set up'} tone={u.mfaEnabled ? 'green' : 'amber'} /> : null}
         </View>
+        {onResetMfa ? (
+          <Pressable onPress={onResetMfa} style={({ pressed }) => [styles.resetBtn, pressed && { opacity: 0.75 }]}>
+            <IconText icon="key" size={14} color={colors.blue} textStyle={styles.resetText}>Reset authenticator</IconText>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -259,6 +287,10 @@ const styles = StyleSheet.create({
 
   errBanner: { backgroundColor: colors.redLight, borderRadius: 8, padding: 10, marginBottom: 12 },
   errText: { color: colors.redStrong, fontSize: 11.5 },
+  okBanner: { backgroundColor: colors.greenPale, borderRadius: 8, padding: 10, marginBottom: 12 },
+  okText: { color: colors.greenDark, fontSize: 11.5, fontWeight: '700' },
+  resetBtn: { alignSelf: 'flex-start', marginTop: 10, backgroundColor: colors.blueLight, borderRadius: 8, paddingVertical: 7, paddingHorizontal: 10 },
+  resetText: { color: colors.blue, fontSize: 11.5, fontWeight: '800' },
   empty: { color: colors.slate, fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginTop: 24 },
 
   card: { backgroundColor: colors.white, borderRadius: 13, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },

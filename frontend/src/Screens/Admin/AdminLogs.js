@@ -419,8 +419,8 @@ const styles = StyleSheet.create({
   okTitle: { color: colors.greenDark, fontSize: 13.5, fontWeight: '800' },
   okBody: { color: colors.slateDark, fontSize: 12, lineHeight: 17, marginTop: 5 },
 
-  signOut: { marginTop: 18, borderWidth: 1, borderColor: colors.red, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.white },
-  signOutText: { color: colors.redStrong, fontSize: 13, fontWeight: '800' },
+  signOut: { marginTop: 18, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.redStrong },
+  signOutText: { color: colors.white, fontSize: 13, fontWeight: '800' },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
   sheet: { backgroundColor: colors.white, borderRadius: 16, padding: 16 },

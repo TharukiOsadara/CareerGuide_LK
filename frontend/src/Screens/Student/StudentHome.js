@@ -58,97 +58,101 @@ export default function StudentHome({ navigation, route }) {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <StudentHeader navigation={navigation} user={user} />
-      <WelcomeToast
-        visible={showToast}
-        name={firstName}
-        loginTime={user?.lastLoginAt}
-        onHide={() => {
-          setShowToast(false);
-          navigation.setParams({ welcome: false });
-        }}
-      />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
-        {/* Search bar */}
-        <View style={styles.searchCard}>
-          <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search courses, careers, or institutes…"
-            placeholderTextColor={colors.slate400}
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            onSubmitEditing={submitSearch}
-          />
-        </View>
-
-        {/* Welcome card */}
-        <View style={styles.card}>
-          <Text style={styles.welcomeTitle}>Welcome back, {firstName}!</Text>
-          <Text style={styles.welcomeSub}>
-            Complete your profile to unlock verified course applications.
-          </Text>
-          <View style={styles.progressRow}>
-            <Text style={styles.progressLabel}>Profile Completion</Text>
-            <Text style={styles.progressLabel}>{completion}%</Text>
+      {/* Page body: the welcome popup is anchored here, just below the header. */}
+      <View style={{ flex: 1 }}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
+          {/* Search bar */}
+          <View style={styles.searchCard}>
+            <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search courses, careers, or institutes…"
+              placeholderTextColor={colors.slate400}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+              onSubmitEditing={submitSearch}
+            />
           </View>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${Math.max(0, Math.min(100, completion))}%` }]} />
-          </View>
-        </View>
 
-        {/* Aptitude card */}
-        <View style={styles.aptitudeCard}>
-          <View style={styles.aptitudeHead}>
-            <View style={styles.aptitudeIcon}><Icon name="brain" size={22} color={colors.blue} /></View>
-            <View style={styles.aptitudeCopy}>
-              <Text style={styles.aptitudeTitle}>Aptitude Assessment</Text>
-              <Text style={styles.aptitudeText}>10-minute AI quiz to map your personality & strengths.</Text>
+          {/* Welcome card */}
+          <View style={styles.card}>
+            <Text style={styles.welcomeTitle}>Welcome back, {firstName}!</Text>
+            <Text style={styles.welcomeSub}>
+              Complete your profile to unlock verified course applications.
+            </Text>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressLabel}>Profile Completion</Text>
+              <Text style={styles.progressLabel}>{completion}%</Text>
+            </View>
+            <View style={styles.track}>
+              <View style={[styles.fill, { width: `${Math.max(0, Math.min(100, completion))}%` }]} />
             </View>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('StudentQuiz')}
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          >
-            <IconText icon="arrow-right" trailing size={16} color={colors.white} gap={8} textStyle={styles.primaryButtonText}>Start Quiz Now</IconText>
-          </Pressable>
-        </View>
 
-        {/* Recommended courses */}
-        <Text style={styles.sectionTitle}>Top Recommended Courses</Text>
-
-        {error ? <View style={styles.banner}><Text style={styles.bannerText}>{error}</Text></View> : null}
-
-        {loading ? (
-          <ActivityIndicator color={colors.blue} style={{ marginTop: 20 }} />
-        ) : courses.length === 0 && !error ? (
-          <Text style={styles.empty}>No courses available right now.</Text>
-        ) : (
-          courses.map((course) => (
-            <View key={course.id} style={styles.courseCard}>
-              <View style={styles.courseTop}>
-                {course.ugcApproved ? (
-                  <Text style={styles.ugcPill}>UGC APPROVED</Text>
-                ) : <View />}
-                {typeof course.matchPercent === 'number' ? (
-                  <Text style={styles.matchPill}>{course.matchPercent}% Match</Text>
-                ) : null}
+          {/* Aptitude card */}
+          <View style={styles.aptitudeCard}>
+            <View style={styles.aptitudeHead}>
+              <View style={styles.aptitudeIcon}><Icon name="brain" size={22} color={colors.blue} /></View>
+              <View style={styles.aptitudeCopy}>
+                <Text style={styles.aptitudeTitle}>Aptitude Assessment</Text>
+                <Text style={styles.aptitudeText}>10-minute AI quiz to map your personality & strengths.</Text>
               </View>
-              <Text style={styles.courseName}>{course.degreeName}</Text>
-              <Text style={styles.courseUni}>{course.uniName}</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => navigation.navigate('StudentCourses', { focusId: course.id })}
-                style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
-              >
-                <Text style={styles.outlineButtonText}>View Details & Entry Requirements</Text>
-              </Pressable>
             </View>
-          ))
-        )}
-      </ScrollView>
+            <Pressable
+              accessibilityRole="button"
+              // TODO: link to the new aptitude page once it exists.
+              onPress={() => {}}
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+            >
+              <IconText icon="arrow-right" trailing size={16} color={colors.white} gap={8} textStyle={styles.primaryButtonText}>Start Quiz Now</IconText>
+            </Pressable>
+          </View>
+
+          {/* Recommended courses */}
+          <Text style={styles.sectionTitle}>Top Recommended Courses</Text>
+
+          {error ? <View style={styles.banner}><Text style={styles.bannerText}>{error}</Text></View> : null}
+
+          {loading ? (
+            <ActivityIndicator color={colors.blue} style={{ marginTop: 20 }} />
+          ) : courses.length === 0 && !error ? (
+            <Text style={styles.empty}>No courses available right now.</Text>
+          ) : (
+            courses.map((course) => (
+              <View key={course.id} style={styles.courseCard}>
+                <View style={styles.courseTop}>
+                  {course.ugcApproved ? (
+                    <Text style={styles.ugcPill}>UGC APPROVED</Text>
+                  ) : <View />}
+                  {typeof course.matchPercent === 'number' ? (
+                    <Text style={styles.matchPill}>{course.matchPercent}% Match</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.courseName}>{course.degreeName}</Text>
+                <Text style={styles.courseUni}>{course.uniName}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate('StudentCourses', { focusId: course.id })}
+                  style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
+                >
+                  <Text style={styles.outlineButtonText}>View Details & Entry Requirements</Text>
+                </Pressable>
+              </View>
+            ))
+          )}
+        </ScrollView>
+        <WelcomeToast
+          visible={showToast}
+          name={firstName}
+          loginTime={user?.lastLoginAt}
+          onHide={() => {
+            setShowToast(false);
+            navigation.setParams({ welcome: false });
+          }}
+        />
+      </View>
 
       <StudentNav active="StudentHome" navigation={navigation} />
     </SafeAreaView>

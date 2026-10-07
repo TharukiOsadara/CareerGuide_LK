@@ -8,35 +8,9 @@ import { colors } from '../styles/colors';
 // Password accounts confirm with their password; Google-only accounts type DELETE.
 // `onDeleted` runs after the account is gone (use it to reset navigation).
 export default function DeleteAccount({ onDeleted, style }) {
-  const { user, deleteAccount } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [password, setPassword] = useState('');
-  const [confirmText, setConfirmText] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const usesPassword = user?.hasPassword !== false;
   const isSuperAdmin = !!user?.isSuperAdmin;
-  const ready = usesPassword ? password.length > 0 : confirmText.trim() === 'DELETE';
-
-  const close = () => {
-    if (busy) return;
-    setOpen(false); setPassword(''); setConfirmText(''); setError('');
-  };
-
-  const confirm = async () => {
-    setError('');
-    setBusy(true);
-    try {
-      await deleteAccount(usesPassword ? { password } : { confirm: confirmText.trim() });
-      setOpen(false);
-      onDeleted && onDeleted();
-    } catch (e) {
-      setError(e.message || 'Could not delete your account.');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <View style={[styles.card, style]}>
@@ -55,8 +29,45 @@ export default function DeleteAccount({ onDeleted, style }) {
           <IconText icon="trash" size={15} color={colors.white} center textStyle={styles.btnText}>Delete My Account</IconText>
         </Pressable>
       )}
+      <DeleteAccountDialog visible={open} onClose={() => setOpen(false)} onDeleted={onDeleted} />
+    </View>
+  );
+}
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+// The confirmation dialog on its own (used by the card above and the student header menu).
+export function DeleteAccountDialog({ visible, onClose, onDeleted }) {
+  const { user, deleteAccount } = useAuth();
+  const [password, setPassword] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const usesPassword = user?.hasPassword !== false;
+  const ready = usesPassword ? password.length > 0 : confirmText.trim() === 'DELETE';
+
+  const close = () => {
+    if (busy) return;
+    setPassword(''); setConfirmText(''); setError('');
+    onClose && onClose();
+  };
+
+  const confirm = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      await deleteAccount(usesPassword ? { password } : { confirm: confirmText.trim() });
+      setPassword(''); setConfirmText('');
+      onClose && onClose();
+      onDeleted && onDeleted();
+    } catch (e) {
+      setError(e.message || 'Could not delete your account.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+      <Modal visible={!!visible} transparent animationType="fade" onRequestClose={close}>
         <Pressable style={styles.backdrop} onPress={close}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.iconWrap}><Icon name="trash" size={24} color={colors.redStrong} /></View>
@@ -107,7 +118,6 @@ export default function DeleteAccount({ onDeleted, style }) {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
   );
 }
 
@@ -115,7 +125,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.redPale, borderRadius: 13, padding: 14, marginTop: 16, borderWidth: 1, borderColor: colors.redLight },
   title: { color: colors.redStrong, fontSize: 13.5, fontWeight: '800' },
   body: { color: colors.slateDark, fontSize: 12, lineHeight: 17, marginTop: 6 },
-  btn: { marginTop: 12, backgroundColor: colors.redStrong, borderRadius: 9, paddingVertical: 11 },
+  btn: { marginTop: 12, backgroundColor: colors.ink, borderRadius: 9, paddingVertical: 11 },
   btnText: { color: colors.white, fontSize: 13, fontWeight: '800' },
   pressed: { opacity: 0.8 },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', justifyContent: 'center', padding: 22 },
@@ -140,7 +150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
   cancelText: { color: colors.slateDark, fontSize: 13.5, fontWeight: '800' },
-  danger: { flex: 1, height: 46, borderRadius: 10, backgroundColor: colors.redStrong, alignItems: 'center', justifyContent: 'center' },
+  danger: { flex: 1, height: 46, borderRadius: 10, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   dangerText: { color: colors.white, fontSize: 13.5, fontWeight: '800' },
   disabled: { opacity: 0.5 },
 });

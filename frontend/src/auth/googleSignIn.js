@@ -1,3 +1,4 @@
+import { NativeModules, TurboModuleRegistry } from 'react-native';
 import { GOOGLE_WEB_CLIENT_ID } from '../config';
 
 // Native Google Sign-In. The native module only exists in a development/production build
@@ -6,8 +7,19 @@ import { GOOGLE_WEB_CLIENT_ID } from '../config';
 let lib = null;
 let configured = false;
 
+// True only in a build that actually contains the native module. Checked first because
+// requiring the library without it (Expo Go, web) throws an Invariant Violation.
+function hasNativeModule() {
+  try {
+    return Boolean(TurboModuleRegistry?.get?.('RNGoogleSignin') || NativeModules?.RNGoogleSignin);
+  } catch {
+    return false;
+  }
+}
+
 function loadLib() {
   if (lib) return lib;
+  if (!hasNativeModule()) return null;
   try {
     // eslint-disable-next-line global-require
     lib = require('@react-native-google-signin/google-signin');

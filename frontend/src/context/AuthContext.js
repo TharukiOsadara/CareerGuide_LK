@@ -38,6 +38,18 @@ export function AuthProvider({ children }) {
     signIn: async ({ email, password, role }) =>
       persist(await api('/api/auth/signin', { method: 'POST', auth: false, body: { email, password, role } })),
 
+    // Admin login, step 1: password. Returns { mfaRequired, setupRequired, mfaToken } (no session yet).
+    adminPasswordStep: async ({ email, password }) =>
+      api('/api/auth/signin', { method: 'POST', auth: false, body: { email, password, role: 'admin' } }),
+
+    // Admin login, first time only: QR code + secret for the authenticator app.
+    adminMfaSetup: async (mfaToken) =>
+      api('/api/auth/admin/mfa/setup', { method: 'POST', auth: false, body: { mfaToken } }),
+
+    // Admin login, step 2: the 6-digit code. Starts the session on success.
+    adminMfaVerify: async ({ mfaToken, code }) =>
+      persist(await api('/api/auth/admin/mfa/verify', { method: 'POST', auth: false, body: { mfaToken, code } })),
+
     signUp: async (payload) =>
       persist(await api('/api/auth/signup', { method: 'POST', auth: false, body: payload })),
 
