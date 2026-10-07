@@ -1,13 +1,14 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Bottom navigation for the student area. Each item navigates to its own screen.
 const ITEMS = [
-  { key: 'StudentHome', label: 'Home', icon: '🏠' },
-  { key: 'StudentQuiz', label: 'Quiz', icon: '🧠' },
-  { key: 'StudentCourses', label: 'Courses', icon: '📖' },
-  { key: 'StudentProfile', label: 'Profile', icon: '👤' },
+  { key: 'StudentHome', label: 'Home', icon: 'home' },
+  { key: 'StudentQuiz', label: 'Quiz', icon: 'brain' },
+  { key: 'StudentCourses', label: 'Courses', icon: 'book' },
+  { key: 'StudentProfile', label: 'Profile', icon: 'user' },
 ];
 
 export default function StudentNav({ active, navigation }) {
@@ -23,7 +24,7 @@ export default function StudentNav({ active, navigation }) {
             accessibilityState={{ selected: on }}
             onPress={() => { if (!on) navigation.navigate(item.key); }}
           >
-            <Text style={[styles.icon, on && styles.iconActive]}>{item.icon}</Text>
+            <Icon name={item.icon} size={22} color={on ? colors.blue : colors.slate400} strokeWidth={on ? 2.2 : 1.8} />
             <Text style={[styles.label, on && styles.labelActive]}>{item.label}</Text>
           </Pressable>
         );
@@ -38,8 +39,6 @@ const styles = StyleSheet.create({
     paddingTop: 8, paddingBottom: 14,
   },
   item: { flex: 1, alignItems: 'center' },
-  icon: { fontSize: 19, opacity: 0.45 },
-  iconActive: { opacity: 1 },
-  label: { fontSize: 10.5, color: colors.slate400, marginTop: 3, fontWeight: '600' },
+    label: { fontSize: 10.5, color: colors.slate400, marginTop: 3, fontWeight: '600' },
   labelActive: { color: colors.blue, fontWeight: '800' },
 });

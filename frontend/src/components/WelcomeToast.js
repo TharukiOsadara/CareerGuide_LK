@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Slide-in-from-the-right "Welcome back" popup showing the login time.
 export default function WelcomeToast({ visible, name, loginTime, onHide, variant = 'success' }) {
@@ -27,11 +28,12 @@ export default function WelcomeToast({ visible, name, loginTime, onHide, variant
     <View style={styles.host} pointerEvents="box-none">
       <Animated.View style={[styles.toast, { transform: [{ translateX: x }] }]}>
         <View style={[styles.stripe, variant === 'success' ? styles.ok : styles.info]} />
+        <Icon name="hand" size={20} color={variant === 'success' ? colors.green : colors.blue} style={styles.lead} />
         <View style={styles.body}>
-          <Text style={styles.title}>👋 Welcome back{ name ? `, ${name}!` : '!'}</Text>
+          <Text style={styles.title}>Welcome back{ name ? `, ${name}!` : '!'}</Text>
           <Text style={styles.sub}>Signed in today at {time}</Text>
         </View>
-        <Pressable hitSlop={8} onPress={hide}><Text style={styles.close}>×</Text></Pressable>
+        <Pressable hitSlop={8} onPress={hide}><Icon name="close" size={18} color={colors.slate400} style={styles.close} /></Pressable>
       </Animated.View>
     </View>
   );
@@ -47,8 +49,9 @@ const styles = StyleSheet.create({
   stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   ok: { backgroundColor: colors.green },
   info: { backgroundColor: colors.blue },
-  body: { flex: 1, marginLeft: 6 },
+  lead: { marginLeft: 6 },
+  body: { flex: 1, marginLeft: 10 },
   title: { fontSize: 13.5, fontWeight: '800', color: colors.navy },
   sub: { fontSize: 11.5, color: colors.slate, marginTop: 2 },
-  close: { fontSize: 22, color: colors.slate400, marginLeft: 8, lineHeight: 22 },
+  close: { marginLeft: 8 },
 });

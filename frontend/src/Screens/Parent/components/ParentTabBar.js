@@ -2,12 +2,13 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, space } from '../theme';
+import Icon from '../../../components/Icon';
 
 export const PARENT_TABS = [
-  { key: 'home', label: 'Home', icon: '⌂' },
-  { key: 'progress', label: 'Progress', icon: '▥' },
-  { key: 'counsellor', label: 'Counsellor', icon: '✉' },
-  { key: 'privacy', label: 'Privacy', icon: '◈' },
+  { key: 'home', label: 'Home', icon: 'home' },
+  { key: 'progress', label: 'Progress', icon: 'chart' },
+  { key: 'counsellor', label: 'Counsellor', icon: 'mail' },
+  { key: 'privacy', label: 'Privacy', icon: 'shield' },
 ];
 
 export default function ParentTabBar({ active, onChange }) {
@@ -26,7 +27,7 @@ export default function ParentTabBar({ active, onChange }) {
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
             <View style={[styles.iconWrap, selected && styles.iconWrapActive]}>
-              <Text style={[styles.icon, selected && styles.active]}>{tab.icon}</Text>
+              <Icon name={tab.icon} size={20} color={selected ? colors.blue : colors.slate} strokeWidth={selected ? 2.2 : 1.8} />
             </View>
             <Text style={[styles.label, selected && styles.active]}>{tab.label}</Text>
           </Pressable>
@@ -48,7 +49,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   iconWrap: { width: 48, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   iconWrapActive: { backgroundColor: colors.blueLight },
-  icon: { fontSize: 18, color: colors.slate },
   label: { fontSize: font.tiny, color: colors.muted, fontWeight: '600', marginTop: 2 },
   active: { color: colors.blue, fontWeight: '800' },
 });

@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { query } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { publicUser } = require('../utils/token');
@@ -75,6 +76,26 @@ router.put('/me', authenticate, async (req, res) => {
     [fullName ?? null, alStream ?? null, req.user.id]
   );
   res.json({ user: publicUser(rows[0]) });
+});
+
+// Delete own account (any role). Password accounts must confirm with their password;
+// Google-only accounts confirm by typing DELETE. The super admin cannot be deleted.
+// Related rows are removed or detached by the schema's ON DELETE rules.
+router.delete('/me', authenticate, async (req, res) => {
+  const { password, confirm } = req.body || {};
+  const me = req.user;
+  if (me.is_super_admin) {
+    return res.status(403).json({ message: 'The super admin account cannot be deleted.' });
+  }
+  if (me.password_hash) {
+    if (!password || !(await bcrypt.compare(password, me.password_hash))) {
+      return res.status(401).json({ message: 'Incorrect password. Your account was not deleted.' });
+    }
+  } else if (confirm !== 'DELETE') {
+    return res.status(400).json({ message: 'Type DELETE to confirm.' });
+  }
+  await query('DELETE FROM users WHERE id = $1', [me.id]);
+  res.json({ message: 'Your account has been deleted.' });
 });
 
 module.exports = router;

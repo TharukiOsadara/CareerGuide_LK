@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useChild } from '../context/ChildContext';
 import { useLeaveGuard } from '../context/LeaveGuardContext';
 import { colors, font, radius, space, TOUCH } from '../theme';
+import Icon from '../../../components/Icon';
 
 function Avatar({ initials, size = 36 }) {
   return (
@@ -31,7 +32,12 @@ export default function ChildSelector() {
           {selectedChild.fullName}
         </Text>
       </View>
-      {canSwitch ? <Text style={styles.switchText}>Switch ▾</Text> : null}
+      {canSwitch ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={styles.switchText}>Switch</Text>
+          <Icon name="chevron-down" size={16} color={colors.blue} style={{ marginLeft: 3 }} />
+        </View>
+      ) : null}
     </>
   );
 

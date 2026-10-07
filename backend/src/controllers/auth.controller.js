@@ -8,7 +8,9 @@ const { authenticate } = require('../middleware/auth');
 const { GOOGLE_CLIENT_ID } = require('../config/env');
 
 const router = express.Router();
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client();
+// GOOGLE_CLIENT_ID may list several OAuth client IDs (comma-separated); the Web client ID is required.
+const googleAudiences = GOOGLE_CLIENT_ID.split(',').map((s) => s.trim()).filter(Boolean);
 
 const initials = (name = '') =>
   name.trim().split(/\s+/).map((p) => p[0] || '').join('').slice(0, 2).toUpperCase() || 'U';
@@ -210,8 +212,11 @@ router.post('/google', async (req, res) => {
     if (!GOOGLE_CLIENT_ID) {
       return res.status(500).json({ message: 'Google sign-in is not configured on the server.' });
     }
-    const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: googleAudiences });
     const payload = ticket.getPayload();
+    if (!payload.email || !payload.email_verified) {
+      return res.status(401).json({ message: 'Your Google email address is not verified.' });
+    }
     const normEmail = payload.email.toLowerCase();
 
     let { rows } = await query('SELECT * FROM users WHERE email = $1', [normEmail]);
@@ -227,6 +232,11 @@ router.post('/google', async (req, res) => {
     if (user.status === 'blocked' || user.status === 'locked') {
       return res.status(403).json({ message: `This account is ${user.status}.` });
     }
+    // Admins must use the Admin Portal (keeps admin approval and staff checks in one place).
+    if (user.role === 'admin') {
+      return res.status(403).json({ message: 'Admin accounts must sign in through the Admin Portal.' });
+    }
+    if (!user.google_id) await query('UPDATE users SET google_id = $1 WHERE id = $2', [payload.sub, user.id]);
     await query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
     await logAccess(user, 'login', req);
     await openSession(user, req);

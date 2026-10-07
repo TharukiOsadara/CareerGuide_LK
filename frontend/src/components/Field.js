@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Labeled input with a leading icon, optional password visibility toggle,
 // and an optional right-corner adornment (used for the sign-in role badge).
@@ -14,7 +15,7 @@ export default function Field({
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <View style={[styles.box, highlight && styles.boxHighlight]}>
-        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+        {icon ? <Icon name={icon} size={17} color={colors.blue} style={styles.icon} /> : null}
         <TextInput
           style={styles.input}
           value={value}
@@ -29,7 +30,7 @@ export default function Field({
         {rightAdornment}
         {secure ? (
           <Pressable hitSlop={10} onPress={() => setHidden((h) => !h)}>
-            <Text style={styles.eye}>{hidden ? '👁️' : '🙈'}</Text>
+            <Icon name={hidden ? 'eye' : 'eye-off'} size={18} color={colors.slate} style={styles.eye} />
           </Pressable>
         ) : null}
       </View>
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, backgroundColor: colors.white,
   },
   boxHighlight: { borderColor: colors.blue, borderWidth: 1.5, backgroundColor: colors.blueLight },
-  icon: { fontSize: 15, marginRight: 9 },
+  icon: { marginRight: 9 },
   input: { flex: 1, fontSize: 13.5, color: colors.navy, paddingVertical: 0 },
-  eye: { fontSize: 16, marginLeft: 6 },
+  eye: { marginLeft: 6 },
 });

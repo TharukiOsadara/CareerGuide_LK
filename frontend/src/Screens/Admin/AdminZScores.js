@@ -9,6 +9,7 @@ import { CourseModal } from './AdminCourses';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 const NUMERIC = ['zScore', 'minZScore', 'islandRank', 'districtRank', 'intakeYear', 'tuitionFee', 'nvqLevel', 'matchPercent'];
 
@@ -104,45 +105,45 @@ export default function AdminZScores({ navigation }) {
         <View style={styles.topRow}>
           <Text style={styles.h1}>Z-Score Manager</Text>
           <Pressable onPress={openCreate} style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}>
-            <Text style={styles.addBtnText}>ï¼‹ Add New</Text>
+            <IconText icon="plus" size={15} color={colors.white} gap={5} textStyle={styles.addBtnText}>Add New</IconText>
           </Pressable>
         </View>
-        <Text style={styles.note}>ðŸ”’ Only admins can edit. Update cut-off marks by district & intake year.</Text>
+        <IconText icon="lock" size={12} color={colors.slate} gap={5} style={{ marginTop: 6, marginBottom: 4 }} textStyle={styles.note}>Only admins can edit. Update cut-off marks by district & intake year.</IconText>
 
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         {loading ? (
-          <Text style={styles.empty}>Loadingâ€¦</Text>
+          <Text style={styles.empty}>Loading…</Text>
         ) : courses.length === 0 ? (
-          <Text style={styles.empty}>No Z-Score entries yet. Tap â€œAdd Newâ€.</Text>
+          <Text style={styles.empty}>No Z-Score entries yet. Tap “Add New”.</Text>
         ) : courses.map((c) => (
           <View key={c.id} style={styles.card}>
             <View style={styles.zTop}>
               <View style={styles.zBadge}>
                 <Text style={styles.zBadgeLabel}>Z-SCORE</Text>
-                <Text style={styles.zBadgeValue}>{c.zScore != null ? c.zScore : 'â€”'}</Text>
+                <Text style={styles.zBadgeValue}>{c.zScore != null ? c.zScore : '—'}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle} numberOfLines={2}>{c.degreeName}</Text>
-                <Text style={styles.cardUni} numberOfLines={1}>ðŸ›ï¸ {c.uniName}</Text>
+                <IconText icon="landmark" size={13} color={colors.slate} gap={5} style={{ marginTop: 3 }} textStyle={styles.cardUni} numberOfLines={1}>{c.uniName}</IconText>
               </View>
             </View>
 
             <View style={styles.statsGrid}>
-              <Stat label="Island Rank" value={c.islandRank != null ? `#${c.islandRank}` : 'â€”'} />
-              <Stat label="District Rank" value={c.districtRank != null ? `#${c.districtRank}` : 'â€”'} />
-              <Stat label="District" value={c.district || 'â€”'} />
-              <Stat label="Intake Year" value={c.intakeYear != null ? `${c.intakeYear}` : 'â€”'} />
-              <Stat label="A/L Stream" value={c.alStream || 'â€”'} />
-              <Stat label="Min Z-Score" value={c.minZScore != null ? `${c.minZScore}` : 'â€”'} />
+              <Stat label="Island Rank" value={c.islandRank != null ? `#${c.islandRank}` : '—'} />
+              <Stat label="District Rank" value={c.districtRank != null ? `#${c.districtRank}` : '—'} />
+              <Stat label="District" value={c.district || '—'} />
+              <Stat label="Intake Year" value={c.intakeYear != null ? `${c.intakeYear}` : '—'} />
+              <Stat label="A/L Stream" value={c.alStream || '—'} />
+              <Stat label="Min Z-Score" value={c.minZScore != null ? `${c.minZScore}` : '—'} />
             </View>
 
             <View style={styles.cardBtns}>
               <Pressable onPress={() => openEdit(c)} style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}>
-                <Text style={styles.editBtnText}>âœï¸ Edit</Text>
+                <IconText icon="edit" size={14} color={colors.blue} center textStyle={styles.editBtnText}>Edit</IconText>
               </Pressable>
               <Pressable onPress={() => remove(c)} style={({ pressed }) => [styles.delBtn, pressed && styles.pressed]}>
-                <Text style={styles.delBtnText}>ðŸ—‘ï¸ Delete</Text>
+                <IconText icon="trash" size={14} color={colors.redStrong} center textStyle={styles.delBtnText}>Delete</IconText>
               </Pressable>
             </View>
           </View>

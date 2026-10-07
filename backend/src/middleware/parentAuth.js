@@ -1,12 +1,18 @@
 const pool = require('../db');
 
-// TEMPORARY auth for the parent module until JWT login is ready.
-// The client sends the logged-in parent's id in the `x-user-id` header.
-// When login is done, replace readUserId with JWT verification - the checks,
-// `req.user` and `req.child` shapes, routes and controllers stay unchanged.
+const { verifyToken } = require('../utils/token');
+
+// Reads the signed-in user's id from the JWT issued at login (Authorization: Bearer <token>).
+// The checks below, and the `req.user` / `req.child` shapes, are unchanged.
 function readUserId(req) {
-  const userId = Number(req.get('x-user-id'));
-  return Number.isInteger(userId) && userId > 0 ? userId : null;
+  const header = req.get('authorization') || '';
+  if (!header.startsWith('Bearer ')) return null;
+  try {
+    const userId = Number(verifyToken(header.slice(7)).id);
+    return Number.isInteger(userId) && userId > 0 ? userId : null;
+  } catch {
+    return null;
+  }
 }
 
 function rejectUser(res, row) {

@@ -30,6 +30,10 @@ import AdminLogs from './src/Screens/Admin/AdminLogs';
 import AdminSettings from './src/Screens/Admin/AdminSettings';
 import AdminProfile from './src/Screens/Admin/AdminProfile';
 import AdminNotifications from './src/Screens/Admin/AdminNotifications';
+import AdminStatDetail from './src/Screens/Admin/AdminStatDetail';
+
+// Parent area (has its own nested stack + tabs)
+import ParentPortal from './src/Screens/Parent/ParentPortal';
 
 const Stack = createNativeStackNavigator();
 
@@ -70,6 +74,10 @@ export default function App() {
             <Stack.Screen name="AdminSettings" component={AdminSettings} />
             <Stack.Screen name="AdminProfile" component={AdminProfile} />
             <Stack.Screen name="AdminNotifications" component={AdminNotifications} />
+            <Stack.Screen name="AdminStatDetail" component={AdminStatDetail} />
+
+            {/* Parent */}
+            <Stack.Screen name="ParentPortal" component={ParentPortal} />
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>

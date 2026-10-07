@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 function formatDate(iso) {
   if (!iso) return 'Never';
@@ -47,25 +49,23 @@ export default function AdminProfile({ navigation }) {
     navigation.reset({ index: 0, routes: [{ name: 'AdminPortal' }] });
   };
 
-  const initials = (user && user.avatarInitials) || 'ðŸŽ“';
+  const initials = user && user.avatarInitials;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
-          <Text style={styles.hIcon}>â†</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.hTitle}>Admin Profile</Text>
-        <View style={styles.hBtn} />
+        <View style={{ width: BACK_WIDTH }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         <View style={styles.hero}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
+          <View style={styles.avatar}>{initials ? <Text style={styles.avatarText}>{initials}</Text> : <Icon name="graduation-cap" size={34} color={colors.white} />}</View>
           <Text style={styles.name}>{user?.fullName || 'Admin'}</Text>
           <Text style={styles.email}>{user?.email || ''}</Text>
           <View style={styles.pills}>

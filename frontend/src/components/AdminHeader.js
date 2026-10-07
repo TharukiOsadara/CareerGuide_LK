@@ -1,10 +1,11 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Shared admin header: avatar tile + brand/title on the left, bell on the right.
 export default function AdminHeader({ navigation, user, title }) {
-  const initials = (user && user.avatarInitials) || '🎓';
+  const initials = user && user.avatarInitials;
   const firstName = user && user.fullName ? user.fullName.split(' ')[0] : 'Admin';
 
   return (
@@ -16,7 +17,7 @@ export default function AdminHeader({ navigation, user, title }) {
         style={({ pressed }) => [styles.left, pressed && styles.pressed]}
       >
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+          {initials ? <Text style={styles.avatarText}>{initials}</Text> : <Icon name="graduation-cap" size={20} color={colors.white} />}
         </View>
         <View style={styles.titleWrap}>
           <Text style={styles.title} numberOfLines={1}>
@@ -33,7 +34,7 @@ export default function AdminHeader({ navigation, user, title }) {
         onPress={() => navigation.navigate('AdminNotifications')}
         style={({ pressed }) => [styles.bell, pressed && styles.pressed]}
       >
-        <Text style={styles.bellIcon}>🔔</Text>
+        <Icon name="bell" size={19} color={colors.blue} />
       </Pressable>
     </View>
   );
@@ -58,6 +59,5 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 9, backgroundColor: colors.blueLight,
     alignItems: 'center', justifyContent: 'center', marginLeft: 10,
   },
-  bellIcon: { fontSize: 18 },
   pressed: { opacity: 0.7 },
 });

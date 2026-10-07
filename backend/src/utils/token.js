@@ -24,6 +24,9 @@ const publicUser = (u) => ({
   profileCompletion: u.profile_completion,
   avatarInitials: u.avatar_initials,
   lastLoginAt: u.last_login_at,
+  provider: u.provider,
+  hasPassword: Boolean(u.password_hash),
+  createdAt: u.created_at,
 });
 
 module.exports = { signToken, verifyToken, publicUser };

@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 const NUMERIC = ['zScore', 'minZScore', 'islandRank', 'districtRank', 'intakeYear', 'tuitionFee', 'nvqLevel', 'matchPercent'];
 
@@ -126,21 +127,21 @@ export default function AdminCourses({ navigation, route }) {
         <View style={styles.topRow}>
           <Text style={styles.h1}>Course Manager</Text>
           <Pressable onPress={openCreate} style={({ pressed }) => [styles.addBtn, pressed && styles.pressed]}>
-            <Text style={styles.addBtnText}>ï¼‹ Add New</Text>
+            <IconText icon="plus" size={15} color={colors.white} gap={5} textStyle={styles.addBtnText}>Add New</IconText>
           </Pressable>
         </View>
-        <Text style={styles.note}>ðŸ”’ Only admins can edit.</Text>
+        <IconText icon="lock" size={12} color={colors.slate} gap={5} style={{ marginTop: 6, marginBottom: 4 }} textStyle={styles.note}>Only admins can edit.</IconText>
 
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         {loading ? (
-          <Text style={styles.empty}>Loadingâ€¦</Text>
+          <Text style={styles.empty}>Loading…</Text>
         ) : courses.length === 0 ? (
-          <Text style={styles.empty}>No courses yet. Tap â€œAdd Newâ€ to create one.</Text>
+          <Text style={styles.empty}>No courses yet. Tap “Add New” to create one.</Text>
         ) : courses.map((c) => (
           <View key={c.id} style={styles.card}>
             <Text style={styles.cardTitle} numberOfLines={2}>{c.degreeName}</Text>
-            <Text style={styles.cardUni} numberOfLines={1}>ðŸ›ï¸ {c.uniName}</Text>
+            <IconText icon="landmark" size={13} color={colors.slate} gap={5} style={{ marginTop: 4 }} textStyle={styles.cardUni} numberOfLines={1}>{c.uniName}</IconText>
             <View style={styles.chipRow}>
               {!!c.alStream && <Chip text={c.alStream} />}
               {c.zScore != null && <Chip text={`Z ${c.zScore}`} />}
@@ -149,10 +150,10 @@ export default function AdminCourses({ navigation, route }) {
             </View>
             <View style={styles.cardBtns}>
               <Pressable onPress={() => openEdit(c)} style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}>
-                <Text style={styles.editBtnText}>âœï¸ Edit</Text>
+                <IconText icon="edit" size={14} color={colors.blue} center textStyle={styles.editBtnText}>Edit</IconText>
               </Pressable>
               <Pressable onPress={() => remove(c)} style={({ pressed }) => [styles.delBtn, pressed && styles.pressed]}>
-                <Text style={styles.delBtnText}>ðŸ—‘ï¸ Delete</Text>
+                <IconText icon="trash" size={14} color={colors.redStrong} center textStyle={styles.delBtnText}>Delete</IconText>
               </Pressable>
             </View>
           </View>
@@ -185,40 +186,40 @@ export function CourseModal({ visible, editing, form, setField, onClose, onSave,
         <View style={styles.mSheet}>
           <View style={styles.mHead}>
             <Text style={styles.mTitle}>{editing ? 'Edit Course' : 'Add New Course'}</Text>
-            <Pressable hitSlop={10} onPress={onClose}><Text style={styles.mClose}>Ã—</Text></Pressable>
+            <Pressable hitSlop={10} onPress={onClose}><Icon name="close" size={22} color={colors.slate} /></Pressable>
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator>
             {emphasis === 'zscore' && (
               <Text style={styles.mSection}>Z-Score & Ranking</Text>
             )}
-            <Field label="Degree Name" icon="ðŸŽ“" value={form.degreeName} onChangeText={setField('degreeName')} placeholder="e.g. BSc in Computer Science" autoCapitalize="words" />
-            <Field label="University" icon="ðŸ›ï¸" value={form.uniName} onChangeText={setField('uniName')} placeholder="e.g. University of Colombo" autoCapitalize="words" />
+            <Field label="Degree Name" icon="graduation-cap" value={form.degreeName} onChangeText={setField('degreeName')} placeholder="e.g. BSc in Computer Science" autoCapitalize="words" />
+            <Field label="University" icon="landmark" value={form.uniName} onChangeText={setField('uniName')} placeholder="e.g. University of Colombo" autoCapitalize="words" />
 
             <Text style={styles.fLabel}>A/L Stream</Text>
-            <Dropdown value={form.alStream} options={AL_STREAMS} onSelect={setField('alStream')} placeholder="Select A/L stream" icon="ðŸ“˜" />
+            <Dropdown value={form.alStream} options={AL_STREAMS} onSelect={setField('alStream')} placeholder="Select A/L stream" icon="book" />
 
             <View style={styles.two}>
-              <View style={styles.col}><Field label="Z-Score" icon="ðŸ“Š" value={form.zScore} onChangeText={setField('zScore')} placeholder="1.8542" keyboardType="numeric" /></View>
-              <View style={styles.col}><Field label="Min Z-Score" icon="ðŸ“‰" value={form.minZScore} onChangeText={setField('minZScore')} placeholder="1.6000" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Z-Score" icon="chart" value={form.zScore} onChangeText={setField('zScore')} placeholder="1.8542" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Min Z-Score" icon="trending-down" value={form.minZScore} onChangeText={setField('minZScore')} placeholder="1.6000" keyboardType="numeric" /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="Island Rank" icon="ðŸ…" value={form.islandRank} onChangeText={setField('islandRank')} placeholder="120" keyboardType="numeric" /></View>
-              <View style={styles.col}><Field label="District Rank" icon="ðŸ“" value={form.districtRank} onChangeText={setField('districtRank')} placeholder="12" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Island Rank" icon="medal" value={form.islandRank} onChangeText={setField('islandRank')} placeholder="120" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="District Rank" icon="map-pin" value={form.districtRank} onChangeText={setField('districtRank')} placeholder="12" keyboardType="numeric" /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="District" icon="ðŸ—ºï¸" value={form.district} onChangeText={setField('district')} placeholder="Colombo" autoCapitalize="words" /></View>
-              <View style={styles.col}><Field label="Intake Year" icon="ðŸ“…" value={form.intakeYear} onChangeText={setField('intakeYear')} placeholder="2026" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="District" icon="map" value={form.district} onChangeText={setField('district')} placeholder="Colombo" autoCapitalize="words" /></View>
+              <View style={styles.col}><Field label="Intake Year" icon="calendar" value={form.intakeYear} onChangeText={setField('intakeYear')} placeholder="2026" keyboardType="numeric" /></View>
             </View>
 
             {emphasis === 'zscore' && <Text style={styles.mSection}>Program Details</Text>}
             <View style={styles.two}>
-              <View style={styles.col}><Field label="Duration" icon="â³" value={form.duration} onChangeText={setField('duration')} placeholder="4 years" autoCapitalize="none" /></View>
-              <View style={styles.col}><Field label="Tuition Fee" icon="ðŸ’°" value={form.tuitionFee} onChangeText={setField('tuitionFee')} placeholder="0" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Duration" icon="hourglass" value={form.duration} onChangeText={setField('duration')} placeholder="4 years" autoCapitalize="none" /></View>
+              <View style={styles.col}><Field label="Tuition Fee" icon="wallet" value={form.tuitionFee} onChangeText={setField('tuitionFee')} placeholder="0" keyboardType="numeric" /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="NVQ Level" icon="ðŸ·ï¸" value={form.nvqLevel} onChangeText={setField('nvqLevel')} placeholder="1â€“7" keyboardType="numeric" /></View>
-              <View style={styles.col}><Field label="Match %" icon="ðŸŽ¯" value={form.matchPercent} onChangeText={setField('matchPercent')} placeholder="85" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="NVQ Level" icon="tag" value={form.nvqLevel} onChangeText={setField('nvqLevel')} placeholder="1–7" keyboardType="numeric" /></View>
+              <View style={styles.col}><Field label="Match %" icon="target" value={form.matchPercent} onChangeText={setField('matchPercent')} placeholder="85" keyboardType="numeric" /></View>
             </View>
 
             <View style={styles.switchRow}>
@@ -237,13 +238,13 @@ export function CourseModal({ visible, editing, form, setField, onClose, onSave,
             <Text style={styles.fLabel}>Description</Text>
             <TextInput
               style={styles.multiline} multiline value={form.description}
-              onChangeText={setField('description')} placeholder="Short description of the programâ€¦"
+              onChangeText={setField('description')} placeholder="Short description of the program…"
               placeholderTextColor={colors.slate400}
             />
             <Text style={styles.fLabel}>Career Path</Text>
             <TextInput
               style={styles.multiline} multiline value={form.careerPath}
-              onChangeText={setField('careerPath')} placeholder="Typical roles & career outcomesâ€¦"
+              onChangeText={setField('careerPath')} placeholder="Typical roles & career outcomes…"
               placeholderTextColor={colors.slate400}
             />
           </ScrollView>
@@ -253,7 +254,7 @@ export function CourseModal({ visible, editing, form, setField, onClose, onSave,
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </Pressable>
             <Pressable disabled={saving} onPress={onSave} style={({ pressed }) => [styles.saveBtn, (pressed || saving) && styles.pressed]}>
-              <Text style={styles.saveBtnText}>{saving ? 'Savingâ€¦' : editing ? 'Save Changes' : 'Create Course'}</Text>
+              <Text style={styles.saveBtnText}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Course'}</Text>
             </Pressable>
           </View>
         </View>

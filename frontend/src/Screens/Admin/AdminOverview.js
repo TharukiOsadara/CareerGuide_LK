@@ -8,6 +8,7 @@ import AdminNav from '../../components/AdminNav';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -68,10 +69,10 @@ export default function AdminOverview({ navigation }) {
   const recent = courses.slice(0, 3);
 
   const statCards = [
-    { icon: 'ðŸŽ“', value: courses.length ? `${courses.length}` : 'â€”', label: 'Total Courses', note: `${courses.length || 0} Programs` },
-    { icon: 'ðŸ“Š', value: '2026', label: 'Z-Score Updates', note: 'Ingested' },
-    { icon: 'ðŸ›ï¸', value: '28', label: 'Active Unis', note: 'Institutes' },
-    { icon: 'ðŸ‘¥', value: userCount != null ? `${userCount}` : 'â€”', label: 'Registered Users', note: `${userCount || 0} Active` },
+    { icon: 'graduation-cap', tint: colors.blue, bg: colors.blueLight, value: courses.length ? `${courses.length}` : '—', label: 'Total Courses', note: `${courses.length || 0} Programs` },
+    { icon: 'chart', tint: colors.orange, bg: colors.yellow, value: '2026', label: 'Z-Score Updates', note: 'Ingested' },
+    { icon: 'landmark', tint: colors.teal, bg: colors.mint, value: '28', label: 'Active Unis', note: 'Institutes' },
+    { icon: 'users', tint: colors.blue, bg: colors.blueChip, value: userCount != null ? `${userCount}` : '—', label: 'Registered Users', note: `${userCount || 0} Active` },
   ];
 
   return (
@@ -85,7 +86,7 @@ export default function AdminOverview({ navigation }) {
         {/* Feature card */}
         <View style={styles.feature}>
           <View style={styles.featureHead}>
-            <Text style={styles.featureIcon}>ðŸ›¡ï¸</Text>
+            <View style={styles.featureIcon}><Icon name="shield-check" size={22} color={colors.white} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.featureTitle}>User Management & Audit</Text>
               <Text style={styles.featureSub}>Active Sessions & Security Logs</Text>
@@ -99,7 +100,7 @@ export default function AdminOverview({ navigation }) {
             onPress={() => navigation.navigate('AdminLogs')}
             style={({ pressed }) => [styles.featureBtn, pressed && styles.pressed]}
           >
-            <Text style={styles.featureBtnText}>Open User Access Logs Dashboard â†’</Text>
+            <IconText icon="arrow-right" trailing size={15} color={colors.blue} textStyle={styles.featureBtnText}>Open User Access Logs Dashboard</IconText>
           </Pressable>
         </View>
 
@@ -108,7 +109,7 @@ export default function AdminOverview({ navigation }) {
         <View style={styles.grid}>
           {statCards.map((s) => (
             <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statIcon}>{s.icon}</Text>
+              <View style={[styles.statIcon, { backgroundColor: s.bg }]}><Icon name={s.icon} size={20} color={s.tint} /></View>
               <Text style={styles.statValue}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
               <Text style={styles.statNote}>{s.note}</Text>
@@ -130,7 +131,7 @@ export default function AdminOverview({ navigation }) {
         />
         <ActionCard
           title="NVQ & Accreditation Mapping"
-          desc="Link course profiles to NVQ Level 1â€“7 frameworks and TVEC approvals."
+          desc="Link course profiles to NVQ Level 1–7 frameworks and TVEC approvals."
           onPress={() => navigation.navigate('AdminCourses')}
         />
 
@@ -143,7 +144,7 @@ export default function AdminOverview({ navigation }) {
             <View style={{ flex: 1 }}>
               <Text style={styles.courseName} numberOfLines={1}>{c.degreeName}</Text>
               <Text style={styles.courseMeta} numberOfLines={1}>
-                {c.uniName}{c.createdAt ? ` Â· ${timeAgo(c.createdAt)}` : ''}
+                {c.uniName}{c.createdAt ? ` · ${timeAgo(c.createdAt)}` : ''}
               </Text>
             </View>
             <Pressable
@@ -151,14 +152,14 @@ export default function AdminOverview({ navigation }) {
               onPress={() => navigation.navigate('AdminCourses', { editId: c.id })}
               style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
             >
-              <Text style={styles.iconBtnText}>âœï¸</Text>
+              <Icon name="edit" size={16} color={colors.blue} />
             </Pressable>
             <Pressable
               hitSlop={8}
               onPress={() => deleteCourse(c)}
               style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
             >
-              <Text style={styles.iconBtnText}>ðŸ—‘ï¸</Text>
+              <Icon name="trash" size={16} color={colors.redStrong} />
             </Pressable>
           </View>
         ))}
@@ -179,7 +180,7 @@ function ActionCard({ title, desc, onPress }) {
         onPress={onPress}
         style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
       >
-        <Text style={styles.actionBtnText}>Manage Criteria â†’</Text>
+        <IconText icon="arrow-right" trailing size={14} color={colors.white} textStyle={styles.actionBtnText}>Manage Criteria</IconText>
       </Pressable>
     </View>
   );
@@ -193,7 +194,10 @@ const styles = StyleSheet.create({
 
   feature: { backgroundColor: colors.adminDark, borderRadius: 16, padding: 16 },
   featureHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  featureIcon: { fontSize: 24, marginRight: 10 },
+  featureIcon: {
+    width: 40, height: 40, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center', marginRight: 10,
+  },
   featureTitle: { color: colors.white, fontSize: 15, fontWeight: '800' },
   featureSub: { color: colors.slate400, fontSize: 11, marginTop: 2 },
   featureBody: { color: colors.border, fontSize: 12, lineHeight: 18 },
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
     width: '48%', backgroundColor: colors.white, borderRadius: 13, padding: 14,
     marginBottom: 12, borderWidth: 1, borderColor: colors.border,
   },
-  statIcon: { fontSize: 20 },
+  statIcon: { width: 40, height: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   statValue: { color: colors.navy, fontSize: 20, fontWeight: '800', marginTop: 6 },
   statLabel: { color: colors.slateDark, fontSize: 11.5, fontWeight: '700', marginTop: 2 },
   statNote: { color: colors.slate, fontSize: 10, marginTop: 2 },

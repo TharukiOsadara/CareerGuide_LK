@@ -3,12 +3,14 @@ import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Brand from '../../components/Brand';
 import { colors } from '../../styles/colors';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 const FEATURES = [
-  { icon: 'ðŸŽ“', title: 'Verified UGC Degrees', text: 'Only accredited programs from recognised Sri Lankan universities and institutes.' },
-  { icon: 'ðŸ§ ', title: 'AI Aptitude Matching', text: 'A 10-minute quiz maps your strengths to the right degree and career path.' },
-  { icon: 'ðŸ“Š', title: 'Z-Score Intelligence', text: 'Live cut-off marks by district and intake year so you apply with confidence.' },
-  { icon: 'ðŸ§­', title: 'Clear Career Paths', text: 'See where each degree leads â€” roles, industries and earning potential.' },
+  { icon: 'graduation-cap', title: 'Verified UGC Degrees', text: 'Only accredited programs from recognised Sri Lankan universities and institutes.' },
+  { icon: 'brain', title: 'AI Aptitude Matching', text: 'A 10-minute quiz maps your strengths to the right degree and career path.' },
+  { icon: 'chart', title: 'Z-Score Intelligence', text: 'Live cut-off marks by district and intake year so you apply with confidence.' },
+  { icon: 'compass', title: 'Clear Career Paths', text: 'See where each degree leads — roles, industries and earning potential.' },
 ];
 
 export default function About({ navigation }) {
@@ -16,20 +18,18 @@ export default function About({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>â†</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
         <Brand size="sm" />
-        <View style={{ width: 20 }} />
+        <View style={{ width: BACK_WIDTH }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.logoTile}><Text style={styles.logoEmoji}>ðŸŽ“</Text></View>
+          <View style={styles.logoTile}><Icon name="graduation-cap" size={34} color={colors.white} /></View>
           <Text style={styles.title}>About CareerGuide LK</Text>
           <Text style={styles.subtitle}>
             CareerGuide LK helps Sri Lankan A/L students turn their results into a confident
-            next step â€” matching them with UGC-approved and accredited university programs.
+            next step — matching them with UGC-approved and accredited university programs.
           </Text>
         </View>
 
@@ -42,7 +42,7 @@ export default function About({ navigation }) {
         <Text style={styles.sectionTitle}>Why students choose us</Text>
         {FEATURES.map((f) => (
           <View key={f.title} style={styles.card}>
-            <View style={styles.cardIcon}><Text style={{ fontSize: 20 }}>{f.icon}</Text></View>
+            <View style={styles.cardIcon}><Icon name={f.icon} size={20} color={colors.blue} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>{f.title}</Text>
               <Text style={styles.cardText}>{f.text}</Text>
@@ -54,7 +54,7 @@ export default function About({ navigation }) {
           <Text style={styles.missionTitle}>Our mission</Text>
           <Text style={styles.missionText}>
             To make higher-education decisions transparent and data-driven for every student in
-            Sri Lanka â€” regardless of district, school or background.
+            Sri Lanka — regardless of district, school or background.
           </Text>
         </View>
 
@@ -63,10 +63,10 @@ export default function About({ navigation }) {
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
         >
           <Text style={styles.primaryText}>Get Started</Text>
-          <Text style={styles.arrow}>â†’</Text>
+          <Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />
         </Pressable>
 
-        <Text style={styles.footer}>ðŸ›¡ï¸  Protected under Sri Lankan educational privacy standards</Text>
+        <IconText icon="shield-check" size={13} color={colors.slate400} gap={5} center style={{ marginTop: 20 }} textStyle={styles.footer}>Protected under Sri Lankan educational privacy standards</IconText>
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   missionText: { fontSize: 12.5, lineHeight: 19, color: colors.slateDark, marginTop: 6 },
   primaryBtn: { height: 50, borderRadius: 11, backgroundColor: colors.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 24 },
   primaryText: { color: colors.white, fontSize: 14, fontWeight: '800' },
-  arrow: { color: colors.white, fontSize: 20, marginLeft: 10 },
+  arrow: { marginLeft: 10 },
   pressed: { opacity: 0.8 },
   footer: { fontSize: 10.5, color: colors.slate400, textAlign: 'center', marginTop: 20 },
 });

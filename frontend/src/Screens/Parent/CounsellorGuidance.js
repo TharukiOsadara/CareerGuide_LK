@@ -126,7 +126,7 @@ export default function CounsellorGuidance({ active, navigation }) {
               </Text>
               <Button
                 label={`Send to ${counsellorName}`}
-                icon="→"
+                icon="arrow-right"
                 onPress={send}
                 busy={sending}
                 disabled={!trimmed}

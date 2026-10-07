@@ -13,6 +13,7 @@ import { useParentData } from './hooks/useParentData';
 import { parentApi } from './services/parentApi';
 import { firstName, formatRelative } from './utils/format';
 import { colors, font, radius, space } from './theme';
+import { IconText } from '../../components/Icon';
 
 const FIELDS = ['counsellorAccess', 'parentMonitoring', 'researchShare'];
 const pick = (p) => ({
@@ -162,7 +163,7 @@ export default function ParentPrivacy({ active, navigation }) {
           onPress={() => navigation.navigate('AccessHistory')}
           style={({ pressed }) => [styles.link, pressed && styles.pressed]}
         >
-          <Text style={styles.linkText}>View data access history  ›</Text>
+          <IconText icon="chevron-right" trailing size={18} color={colors.blue} gap={4} textStyle={styles.linkText}>View data access history</IconText>
         </Pressable>
 
         {exists ? (

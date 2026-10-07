@@ -16,6 +16,7 @@ import WelcomeToast from '../../components/WelcomeToast';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentHome({ navigation, route }) {
   const { user } = useAuth();
@@ -70,10 +71,10 @@ export default function StudentHome({ navigation, route }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
         {/* Search bar */}
         <View style={styles.searchCard}>
-          <Text style={styles.searchIcon}>ðŸ”</Text>
+          <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search courses, careers, or institutesâ€¦"
+            placeholder="Search courses, careers, or institutes…"
             placeholderTextColor={colors.slate400}
             value={query}
             onChangeText={setQuery}
@@ -100,7 +101,7 @@ export default function StudentHome({ navigation, route }) {
         {/* Aptitude card */}
         <View style={styles.aptitudeCard}>
           <View style={styles.aptitudeHead}>
-            <View style={styles.aptitudeIcon}><Text style={styles.aptitudeIconText}>ðŸ§ </Text></View>
+            <View style={styles.aptitudeIcon}><Icon name="brain" size={22} color={colors.blue} /></View>
             <View style={styles.aptitudeCopy}>
               <Text style={styles.aptitudeTitle}>Aptitude Assessment</Text>
               <Text style={styles.aptitudeText}>10-minute AI quiz to map your personality & strengths.</Text>
@@ -111,7 +112,7 @@ export default function StudentHome({ navigation, route }) {
             onPress={() => navigation.navigate('StudentQuiz')}
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
           >
-            <Text style={styles.primaryButtonText}>Start Quiz Now  â†’</Text>
+            <IconText icon="arrow-right" trailing size={16} color={colors.white} gap={8} textStyle={styles.primaryButtonText}>Start Quiz Now</IconText>
           </Pressable>
         </View>
 
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     height: 46,
     marginBottom: 14,
   },
-  searchIcon: { fontSize: 15, marginRight: 8 },
+  searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 13, color: colors.navy, paddingVertical: 0 },
 
   card: {

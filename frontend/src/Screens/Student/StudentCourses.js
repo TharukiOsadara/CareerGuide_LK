@@ -16,6 +16,7 @@ import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentCourses({ navigation, route }) {
   const { user } = useAuth();
@@ -65,10 +66,10 @@ export default function StudentCourses({ navigation, route }) {
         <Text style={styles.title}>Courses</Text>
 
         <View style={styles.searchCard}>
-          <Text style={styles.searchIcon}>ðŸ”</Text>
+          <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search coursesâ€¦"
+            placeholder="Search courses…"
             placeholderTextColor={colors.slate400}
             value={query}
             onChangeText={setQuery}
@@ -123,7 +124,7 @@ export default function StudentCourses({ navigation, route }) {
                 </View>
                 <View style={styles.metaRow}>
                   <Meta label="Tuition" value={course.tuitionFee} />
-                  <Meta label="NVQ Level" value={course.nvqLevel != null ? `${course.nvqLevel}` : 'â€”'} />
+                  <Meta label="NVQ Level" value={course.nvqLevel != null ? `${course.nvqLevel}` : '—'} />
                 </View>
 
                 {open && (
@@ -143,7 +144,7 @@ export default function StudentCourses({ navigation, route }) {
                   </View>
                 )}
 
-                <Text style={styles.toggleHint}>{open ? 'Tap to collapse â–²' : 'Tap to view details â–¼'}</Text>
+                <IconText icon={open ? 'chevron-up' : 'chevron-down'} trailing size={14} color={colors.blue} gap={4} style={{ marginTop: 10 }} textStyle={styles.toggleHint}>{open ? 'Tap to collapse' : 'Tap to view details'}</IconText>
               </Pressable>
             );
           })
@@ -172,13 +173,13 @@ function Meta({ label, value }) {
   return (
     <View style={styles.meta}>
       <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value || 'â€”'}</Text>
+      <Text style={styles.metaValue}>{value || '—'}</Text>
     </View>
   );
 }
 
 function fmtZ(z) {
-  if (z == null) return 'â€”';
+  if (z == null) return '—';
   const n = Number(z);
   return Number.isNaN(n) ? `${z}` : n.toFixed(4);
 }
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderRadius: 12,
     borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, height: 44, marginBottom: 10,
   },
-  searchIcon: { fontSize: 15, marginRight: 8 },
+  searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 13, color: colors.navy, paddingVertical: 0 },
 
   chipRow: { gap: 8, paddingRight: 6 },

@@ -7,6 +7,8 @@ import Field from '../../components/Field';
 import Dropdown from '../../components/Dropdown';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 const AUDIENCE = [
   { label: 'All Users', role: 'all' },
@@ -91,31 +93,29 @@ export default function AdminNotifications({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
-          <Text style={styles.hIcon}>â†</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.hTitle}>Send Notifications</Text>
-        <View style={styles.hBtn} />
+        <View style={{ width: BACK_WIDTH }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
-        {success ? <View style={styles.okBanner}><Text style={styles.okText}>âœ“ {success}</Text></View> : null}
+        {success ? <View style={styles.okBanner}><IconText icon="check-circle" size={15} color={colors.greenDark} textStyle={styles.okText}>{success}</IconText></View> : null}
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         {/* Compose */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{editingId ? 'Edit Notification' : 'Compose Notification'}</Text>
-          <Field label="Title" icon="ðŸ“¢" value={title} onChangeText={setTitle} placeholder="Notification title" autoCapitalize="sentences" />
+          <Field label="Title" icon="megaphone" value={title} onChangeText={setTitle} placeholder="Notification title" autoCapitalize="sentences" />
 
           <Text style={styles.fLabel}>Message</Text>
           <TextInput
             style={styles.multiline} multiline value={bodyText}
-            onChangeText={setBodyText} placeholder="Write your messageâ€¦"
+            onChangeText={setBodyText} placeholder="Write your message…"
             placeholderTextColor={colors.slate400}
           />
 
           <Text style={styles.fLabel}>Target Audience</Text>
-          <Dropdown value={audience} options={LABELS} onSelect={setAudience} placeholder="Select audience" icon="ðŸ‘¥" />
+          <Dropdown value={audience} options={LABELS} onSelect={setAudience} placeholder="Select audience" icon="users" />
 
           <View style={styles.formBtns}>
             {editingId ? (
@@ -124,7 +124,7 @@ export default function AdminNotifications({ navigation }) {
               </Pressable>
             ) : null}
             <Pressable disabled={sending} onPress={submit} style={({ pressed }) => [styles.sendBtn, (pressed || sending) && styles.pressed]}>
-              <Text style={styles.sendText}>{sending ? 'Sendingâ€¦' : editingId ? 'Update Notification' : 'Send Notification'}</Text>
+              <Text style={styles.sendText}>{sending ? 'Sending…' : editingId ? 'Update Notification' : 'Send Notification'}</Text>
             </Pressable>
           </View>
         </View>
@@ -144,10 +144,10 @@ export default function AdminNotifications({ navigation }) {
               <Text style={styles.sentTime}>{timeAgo(n.createdAt)}</Text>
               <View style={{ flex: 1 }} />
               <Pressable hitSlop={6} onPress={() => edit(n)} style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}>
-                <Text style={styles.iconBtnText}>âœï¸</Text>
+                <Icon name="edit" size={15} color={colors.blue} />
               </Pressable>
               <Pressable hitSlop={6} onPress={() => remove(n)} style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}>
-                <Text style={styles.iconBtnText}>ðŸ—‘ï¸</Text>
+                <Icon name="trash" size={15} color={colors.redStrong} />
               </Pressable>
             </View>
           </View>

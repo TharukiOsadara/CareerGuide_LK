@@ -4,11 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 const utilities = [
-  { icon: 'â–¤', iconStyle: 'databaseIcon', iconTextStyle: 'databaseIconText', tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
-  { icon: 'â™§', iconStyle: 'quizIcon', iconTextStyle: 'quizIconText', tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
-  { icon: 'â–¥', iconStyle: 'jobsIcon', iconTextStyle: 'jobsIconText', tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
+  { icon: 'database', iconStyle: 'databaseIcon', tint: colors.blue, tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },
+  { icon: 'brain', iconStyle: 'quizIcon', tint: colors.teal, tag: 'INTERACTIVE', tagStyle: 'interactiveTag', description: '10 MINUTE QUIZ', title: 'Aptitude Matcher Quiz' },
+  { icon: 'chart', iconStyle: 'jobsIcon', tint: colors.orange, tag: 'TRENDING', tagStyle: 'trendingTag', description: 'LATEST STATS', title: 'Job Market Indicators' },
 ];
 
 export default function Onboarding({ navigation }) {
@@ -26,7 +27,7 @@ export default function Onboarding({ navigation }) {
           <Text style={styles.heading}>Discover Your Ideal{'\n'}Degree &amp; Career Path</Text>
           <Text style={styles.subtitle}>Empowering students in Sri Lanka with trusted{'\n'}insights, course matching, and real-time job market{'\n'}indicators.</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Get Started Now" onPress={openPrivacyConsent} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
-            <Text style={styles.primaryButtonText}>Get Started Now</Text><Text style={styles.arrow}>â†’</Text>
+            <Text style={styles.primaryButtonText}>Get Started Now</Text><Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Learn More" onPress={openAbout} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
             <Text style={styles.secondaryButtonText}>Learn More</Text>
@@ -39,9 +40,9 @@ export default function Onboarding({ navigation }) {
         <View style={styles.utilityList}>
           {utilities.map((utility) => (
             <Pressable key={utility.title} accessibilityRole="button" onPress={openSignIn} style={({ pressed }) => [styles.utilityCard, pressed && styles.pressed]}>
-              <View style={[styles.utilityIcon, styles[utility.iconStyle]]}><Text style={[styles.utilityIconText, styles[utility.iconTextStyle]]}>{utility.icon}</Text></View>
+              <View style={[styles.utilityIcon, styles[utility.iconStyle]]}><Icon name={utility.icon} size={20} color={utility.tint} /></View>
               <View style={styles.utilityCopy}><View style={styles.utilityMeta}><Text style={[styles.utilityTag, styles[utility.tagStyle]]}>{utility.tag}</Text><Text style={styles.utilityDescription}>{utility.description}</Text></View><Text style={styles.utilityTitle}>{utility.title}</Text></View>
-              <Text style={styles.utilityArrow}>â€º</Text>
+              <Icon name="chevron-right" size={20} color={colors.slate} style={styles.utilityArrow} />
             </Pressable>
           ))}
         </View>
@@ -73,7 +74,7 @@ export default function Onboarding({ navigation }) {
 }
 
 function Benefit({ text }) {
-  return <View style={styles.benefit}><View style={styles.check}><Text style={styles.checkText}>âœ“</Text></View><Text style={styles.benefitText}>{text}</Text></View>;
+  return <View style={styles.benefit}><View style={styles.check}><Icon name="check" size={9} color={colors.green} strokeWidth={3.5} /></View><Text style={styles.benefitText}>{text}</Text></View>;
 }
 
 const styles = StyleSheet.create({
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.muted, fontSize: 12.5, lineHeight: 18, textAlign: 'center', marginTop: 9 },
   primaryButton: { width: '100%', height: 43, marginTop: 17, borderRadius: 9, backgroundColor: colors.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { color: colors.white, fontSize: 13, fontWeight: '700' },
-  arrow: { color: colors.white, fontSize: 20, marginLeft: 10, marginTop: -2 },
+  arrow: { marginLeft: 10 },
   secondaryButton: { width: '100%', height: 43, marginTop: 10, borderRadius: 9, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   secondaryButtonText: { color: colors.navy, fontSize: 13, fontWeight: '700' },
   pressed: { opacity: 0.78 },
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
   trendingTag: { color: colors.orange },
   utilityDescription: { color: colors.slate, fontSize: 8 },
   utilityTitle: { color: colors.navy, fontSize: 12.5, fontWeight: '800' },
-  utilityArrow: { color: colors.slate, fontSize: 23, marginLeft: 8 },
+  utilityArrow: { marginLeft: 8 },
   exploreSection: { marginTop: 8 },
   exploreIntro: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 16, marginTop: 12 },
   exploreCard: { marginHorizontal: 16, marginTop: 12, padding: 16, borderRadius: 13, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },

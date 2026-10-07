@@ -7,6 +7,8 @@ import AdminNav from '../../components/AdminNav';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 const ROLE_CYCLE = ['all', 'student', 'parent', 'counsellor', 'admin'];
 const ACTION_CYCLE = ['all', 'login', 'failed_login', 'logout'];
@@ -114,13 +116,13 @@ export default function AdminLogs({ navigation }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
-          <Text style={styles.hIcon}>â†</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.hTitle} numberOfLines={1}>User Access & Audit Logs</Text>
-        <Pressable hitSlop={10} onPress={openLockModal} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
-          <Text style={styles.hIcon}>ðŸ”’</Text>
-        </Pressable>
+        <View style={{ width: BACK_WIDTH, alignItems: 'flex-end' }}>
+          <Pressable hitSlop={10} onPress={openLockModal} style={({ pressed }) => [styles.hBtn, pressed && styles.pressed]}>
+            <Icon name="lock" size={19} color={colors.navy} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
@@ -131,7 +133,7 @@ export default function AdminLogs({ navigation }) {
           style={styles.search}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search user or IPâ€¦"
+          placeholder="Search user or IP…"
           placeholderTextColor={colors.slate400}
           autoCapitalize="none"
         />
@@ -156,10 +158,10 @@ export default function AdminLogs({ navigation }) {
 
         {/* Stats row */}
         <View style={styles.statsRow}>
-          <StatBox value={stats?.activeSessions ?? 'â€”'} label="Active Sessions" note="Live" />
-          <StatBox value={stats?.todayLogins ?? 'â€”'} label="Today's Logins" />
-          <StatBox value={stats?.failedAttempts ?? 'â€”'} label="Failed Attempts" note="Flagged" danger />
-          <StatBox value={stats?.lockedAccounts ?? 'â€”'} label="Locked" />
+          <StatBox value={stats?.activeSessions ?? '—'} label="Active Sessions" note="Live" />
+          <StatBox value={stats?.todayLogins ?? '—'} label="Today's Logins" />
+          <StatBox value={stats?.failedAttempts ?? '—'} label="Failed Attempts" note="Flagged" danger />
+          <StatBox value={stats?.lockedAccounts ?? '—'} label="Locked" />
         </View>
 
         {/* Live sessions */}
@@ -171,7 +173,7 @@ export default function AdminLogs({ navigation }) {
             <View key={s.id} style={styles.sessionRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowName}>{s.userName}</Text>
-                <Text style={styles.rowMeta}>{s.role} Â· {clockTime(s.startedAt)} Â· {s.ip || s.device || ''}</Text>
+                <Text style={styles.rowMeta}>{s.role} · {clockTime(s.startedAt)} · {s.ip || s.device || ''}</Text>
               </View>
               <Pressable onPress={() => killSession(s.id)} style={({ pressed }) => [styles.killBtn, pressed && styles.pressed]}>
                 <Text style={styles.killBtnText}>Kill</Text>
@@ -192,8 +194,8 @@ export default function AdminLogs({ navigation }) {
                 <View style={[styles.dot, { backgroundColor: dot }]} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowName}>{l.userName}</Text>
-                  <Text style={styles.rowMeta}>Action: {ACTION_LABEL[l.action] || l.action} Â· {timeAgo(l.createdAt)}</Text>
-                  <Text style={styles.rowSub}>{[l.device, l.ip].filter(Boolean).join(' Â· ')}</Text>
+                  <Text style={styles.rowMeta}>Action: {ACTION_LABEL[l.action] || l.action} · {timeAgo(l.createdAt)}</Text>
+                  <Text style={styles.rowSub}>{[l.device, l.ip].filter(Boolean).join(' · ')}</Text>
                 </View>
               </View>
             );
@@ -203,12 +205,12 @@ export default function AdminLogs({ navigation }) {
         {/* Security alerts */}
         {stats && stats.failedAttempts > 0 && (
           <View style={styles.alertCard}>
-            <Text style={styles.alertTitle}>âš ï¸ Multiple Failed Attempts</Text>
+            <IconText icon="warning" size={16} color={colors.redStrong} textStyle={styles.alertTitle}>Multiple Failed Attempts</IconText>
             <Text style={styles.alertBody}>
               {stats.failedAttempts} failed login attempt(s) detected. Review the timeline and lock accounts if suspicious.
             </Text>
             <Pressable onPress={openLockModal} style={({ pressed }) => [styles.alertBtn, pressed && styles.pressed]}>
-              <Text style={styles.alertBtnText}>Manage Locked Accounts â†’</Text>
+              <IconText icon="arrow-right" trailing size={14} color={colors.white} textStyle={styles.alertBtnText}>Manage Locked Accounts</IconText>
             </Pressable>
           </View>
         )}
@@ -225,7 +227,7 @@ export default function AdminLogs({ navigation }) {
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>Locked & Blocked Accounts</Text>
-              <Pressable hitSlop={10} onPress={() => setLockModal(false)}><Text style={styles.mClose}>Ã—</Text></Pressable>
+              <Pressable hitSlop={10} onPress={() => setLockModal(false)}><Icon name="close" size={22} color={colors.slate} /></Pressable>
             </View>
             {lockErr ? <Text style={styles.errText}>{lockErr}</Text> : null}
             <ScrollView style={{ maxHeight: 360 }}>
@@ -235,7 +237,7 @@ export default function AdminLogs({ navigation }) {
                 <View key={u.id} style={styles.lockRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowName}>{u.fullName}</Text>
-                    <Text style={styles.rowMeta}>{u.email} Â· {u.status}</Text>
+                    <Text style={styles.rowMeta}>{u.email} · {u.status}</Text>
                   </View>
                   <Pressable onPress={() => unlock(u)} style={({ pressed }) => [styles.unlockBtn, pressed && styles.pressed]}>
                     <Text style={styles.unlockBtnText}>{u.status === 'blocked' ? 'Unblock' : 'Unlock'}</Text>

@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentNotifications({ navigation }) {
   const { user } = useAuth(); // eslint-disable-line no-unused-vars
@@ -56,15 +58,7 @@ export default function StudentNotifications({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={8}
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.back}>â†</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>Notifications</Text>
         {hasUnread ? (
           <Pressable
@@ -84,7 +78,7 @@ export default function StudentNotifications({ navigation }) {
           <ActivityIndicator color={colors.blue} style={{ marginTop: 24 }} />
         ) : items.length === 0 && !error ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>ðŸ””</Text>
+            <Icon name="bell" size={34} color={colors.slate400} style={styles.emptyIcon} />
             <Text style={styles.empty}>No notifications yet</Text>
           </View>
         ) : (
@@ -163,7 +157,7 @@ const styles = StyleSheet.create({
   bannerText: { color: colors.redStrong, fontSize: 11.5 },
 
   emptyWrap: { alignItems: 'center', marginTop: 50 },
-  emptyIcon: { fontSize: 34, marginBottom: 10, opacity: 0.5 },
+  emptyIcon: { marginBottom: 10 },
   empty: { color: colors.slate, fontSize: 13 },
 
   card: {

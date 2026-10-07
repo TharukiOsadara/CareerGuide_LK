@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Tappable field that opens a modal list of options (A/L streams, roles, etc.).
-export default function Dropdown({ value, placeholder = 'Select…', options, onSelect, icon = '📘' }) {
+export default function Dropdown({ value, placeholder = 'Select…', options, onSelect, icon = 'book' }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Pressable style={styles.field} onPress={() => setOpen(true)}>
-        <Text style={styles.icon}>{icon}</Text>
+        <Icon name={icon} size={17} color={colors.blue} style={styles.icon} />
         <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>
           {value || placeholder}
         </Text>
-        <Text style={styles.chevron}>▾</Text>
+        <Icon name="chevron-down" size={16} color={colors.slate} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -31,7 +32,7 @@ export default function Dropdown({ value, placeholder = 'Select…', options, on
                     onPress={() => { onSelect(item); setOpen(false); }}
                   >
                     <Text style={[styles.optionText, active && styles.optionTextActive]}>{item}</Text>
-                    {active && <Text style={styles.tick}>✓</Text>}
+                    {active && <Icon name="check" size={16} color={colors.blue} strokeWidth={2.5} />}
                   </Pressable>
                 );
               }}
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', height: 50, borderWidth: 1,
     borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, backgroundColor: colors.white,
   },
-  icon: { fontSize: 15, marginRight: 9 },
+  icon: { marginRight: 9 },
   value: { flex: 1, fontSize: 13.5, color: colors.navy },
   placeholder: { color: colors.slate400 },
   chevron: { fontSize: 13, color: colors.slate },

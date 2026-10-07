@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Brand from './Brand';
 import { api } from '../api/client';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Reusable white top bar for the student area: brand on the left, a notification
 // bell (with an unread red dot) and the user's avatar on the right.
@@ -38,7 +39,7 @@ export default function StudentHeader({ navigation, user }) {
           onPress={() => navigation.navigate('StudentNotifications')}
           style={({ pressed }) => [styles.bellWrap, pressed && styles.pressed]}
         >
-          <Text style={styles.bell}>🔔</Text>
+          <Icon name="bell" size={20} color={colors.slateDark} />
           {hasUnread && <View style={styles.dot} />}
         </Pressable>
         <Pressable
@@ -47,7 +48,7 @@ export default function StudentHeader({ navigation, user }) {
           onPress={() => navigation.navigate('StudentProfile')}
           style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
         >
-          <Text style={styles.avatarText}>{user?.avatarInitials || '👤'}</Text>
+          {user?.avatarInitials ? <Text style={styles.avatarText}>{user.avatarInitials}</Text> : <Icon name="user" size={15} color={colors.blue} />}
         </Pressable>
       </View>
     </View>
@@ -67,7 +68,6 @@ const styles = StyleSheet.create({
   },
   right: { flexDirection: 'row', alignItems: 'center' },
   bellWrap: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
-  bell: { fontSize: 19 },
   dot: {
     position: 'absolute',
     top: 4,

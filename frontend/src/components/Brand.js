@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../styles/colors';
+import Icon from './Icon';
 
 // Graduation-cap logo tile (#0052CC) + "CareerGuide LK" wordmark.
 export default function Brand({ size = 'md', showText = true, textColor = colors.navy }) {
@@ -9,7 +10,7 @@ export default function Brand({ size = 'md', showText = true, textColor = colors
   return (
     <View style={styles.row}>
       <View style={[styles.logo, { width: dims, height: dims, borderRadius: dims * 0.28 }]}>
-        <Text style={{ fontSize: dims * 0.6 }}>🎓</Text>
+        <Icon name="graduation-cap" size={dims * 0.6} color={colors.white} />
       </View>
       {showText && (
         <Text style={[styles.text, { fontSize: font, color: textColor }]}>
@@ -20,10 +21,10 @@ export default function Brand({ size = 'md', showText = true, textColor = colors
   );
 }
 
-export function LogoTile({ dims = 56, emoji = '🎓' }) {
+export function LogoTile({ dims = 56, icon = 'graduation-cap' }) {
   return (
     <View style={[styles.logo, { width: dims, height: dims, borderRadius: dims * 0.28 }]}>
-      <Text style={{ fontSize: dims * 0.5 }}>{emoji}</Text>
+      <Icon name={icon} size={dims * 0.5} color={colors.white} />
     </View>
   );
 }

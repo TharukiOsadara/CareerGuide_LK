@@ -43,6 +43,50 @@ router.post('/sessions/:id/kill', authenticate, requireAdmin, async (req, res) =
   res.json({ message: 'Session terminated.' });
 });
 
+// Security alerts for the audit screen:
+//  - failedAttempts: accounts with 3+ failed logins in the last 24h (possible brute force)
+//  - unusualLogins: successful logins in the last 24h from an IP that account never used before
+router.get('/alerts', authenticate, requireAdmin, async (req, res) => {
+  const failed = await query(
+    `SELECT l.user_id, COALESCE(u.email, l.user_name) AS account, u.full_name, u.status,
+            u.is_super_admin, COUNT(*)::int AS attempts, MAX(l.created_at) AS last_at
+       FROM access_logs l
+       LEFT JOIN users u ON u.id = l.user_id
+      WHERE l.action = 'failed_login' AND l.created_at > NOW() - INTERVAL '24 hours'
+      GROUP BY l.user_id, COALESCE(u.email, l.user_name), u.full_name, u.status, u.is_super_admin
+     HAVING COUNT(*) >= 3
+      ORDER BY attempts DESC
+      LIMIT 10`
+  );
+  const unusual = await query(
+    `SELECT l.id, l.user_id, l.user_name, l.ip_address, l.created_at,
+            (SELECT p.ip_address FROM access_logs p
+              WHERE p.user_id = l.user_id AND p.action = 'login' AND p.created_at < l.created_at
+              GROUP BY p.ip_address ORDER BY COUNT(*) DESC LIMIT 1) AS usual_ip
+       FROM access_logs l
+      WHERE l.action = 'login' AND l.user_id IS NOT NULL
+        AND l.created_at > NOW() - INTERVAL '24 hours'
+        AND EXISTS (SELECT 1 FROM access_logs p
+                     WHERE p.user_id = l.user_id AND p.action = 'login' AND p.created_at < l.created_at)
+        AND NOT EXISTS (SELECT 1 FROM access_logs p
+                         WHERE p.user_id = l.user_id AND p.action = 'login'
+                           AND p.created_at < l.created_at AND p.ip_address = l.ip_address)
+      ORDER BY l.created_at DESC
+      LIMIT 5`
+  );
+  res.json({
+    failedAttempts: failed.rows.map((r) => ({
+      userId: r.user_id, account: r.account, fullName: r.full_name, status: r.status,
+      canLock: Boolean(r.user_id) && !r.is_super_admin && r.status === 'active',
+      attempts: r.attempts, lastAt: r.last_at,
+    })),
+    unusualLogins: unusual.rows.map((r) => ({
+      id: r.id, userId: r.user_id, userName: r.user_name, ip: r.ip_address,
+      usualIp: r.usual_ip, createdAt: r.created_at,
+    })),
+  });
+});
+
 // Login history timeline. Optional ?action=&role=&q=
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   const { action, role, q } = req.query;

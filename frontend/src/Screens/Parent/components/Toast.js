@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, radius, space } from '../theme';
+import Icon from '../../../components/Icon';
 
 // A real toast (fixes the prototype's blocking "Inquiry Sent" modal):
 // slides in, never blocks the screen, disappears by itself, can be tapped away,
@@ -10,9 +11,9 @@ const ToastContext = createContext(() => {});
 const useNativeDriver = Platform.OS !== 'web';
 
 const TONES = {
-  success: { bg: colors.successText, icon: '✓' },
-  error: { bg: colors.danger, icon: '!' },
-  info: { bg: colors.navy, icon: 'i' },
+  success: { bg: colors.successText, icon: 'check' },
+  error: { bg: colors.danger, icon: 'warning' },
+  info: { bg: colors.navy, icon: 'info' },
 };
 
 export function ToastProvider({ children }) {
@@ -62,7 +63,7 @@ export function ToastProvider({ children }) {
               accessibilityHint="Tap to dismiss"
               style={[styles.toast, { backgroundColor: tone.bg }]}
             >
-              <Text style={styles.icon}>{tone.icon}</Text>
+              <View style={styles.icon}><Icon name={tone.icon} size={14} color={colors.white} strokeWidth={2.5} /></View>
               <View style={styles.copy}>
                 {toast.title ? <Text style={styles.title}>{toast.title}</Text> : null}
                 {toast.message ? <Text style={styles.message}>{toast.message}</Text> : null}
@@ -100,13 +101,9 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.25)',
-    color: colors.white,
-    textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '800',
-    fontSize: font.small,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: space.md,
-    overflow: 'hidden',
   },
   copy: { flex: 1 },
   title: { color: colors.white, fontSize: font.body, fontWeight: '800' },

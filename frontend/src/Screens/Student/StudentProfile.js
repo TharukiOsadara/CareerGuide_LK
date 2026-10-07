@@ -16,6 +16,7 @@ import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentProfile({ navigation }) {
   const { user, refresh, signOut } = useAuth();
@@ -56,14 +57,14 @@ export default function StudentProfile({ navigation }) {
         {/* Profile summary */}
         <View style={styles.card}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.avatarInitials || 'ðŸ‘¤'}</Text>
+            {user?.avatarInitials ? <Text style={styles.avatarText}>{user.avatarInitials}</Text> : <Icon name="user" size={30} color={colors.blue} />}
           </View>
           <Text style={styles.name}>{user?.fullName || 'Student'}</Text>
           <Text style={styles.email}>{user?.email || ''}</Text>
           <View style={styles.pillRow}>
             <Text style={styles.rolePill}>STUDENT</Text>
           </View>
-          {user?.alStream ? <Text style={styles.stream}>ðŸŽ“ {user.alStream}</Text> : null}
+          {user?.alStream ? <IconText icon="graduation-cap" size={15} color={colors.blue} center style={{ marginTop: 8 }} textStyle={styles.stream}>{user.alStream}</IconText> : null}
 
           <View style={styles.progressRow}>
             <Text style={styles.progressLabel}>Profile Completion</Text>
@@ -97,7 +98,7 @@ export default function StudentProfile({ navigation }) {
               options={AL_STREAMS}
               onSelect={setAlStream}
               placeholder="Select your A/L stream"
-              icon="ðŸ“˜"
+              icon="book"
             />
           </View>
 
@@ -107,7 +108,7 @@ export default function StudentProfile({ navigation }) {
             onPress={save}
             style={({ pressed }) => [styles.saveButton, saving && styles.saveDisabled, pressed && styles.pressed]}
           >
-            <Text style={styles.saveText}>{saving ? 'Savingâ€¦' : 'Save Changes'}</Text>
+            <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
           </Pressable>
         </View>
 

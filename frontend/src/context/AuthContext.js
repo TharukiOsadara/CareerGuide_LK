@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api, tokenStore } from '../api/client';
+import { googleSignOut } from '../auth/googleSignIn';
 
 const AuthContext = createContext(null);
 
@@ -45,6 +46,15 @@ export function AuthProvider({ children }) {
 
     signOut: async () => {
       try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
+      await googleSignOut();
+      await tokenStore.clear();
+      setUser(null);
+    },
+
+    // Permanently deletes the signed-in account (password, or confirm: 'DELETE' for Google-only accounts).
+    deleteAccount: async ({ password, confirm }) => {
+      await api('/api/users/me', { method: 'DELETE', body: { password, confirm } });
+      await googleSignOut();
       await tokenStore.clear();
       setUser(null);
     },
