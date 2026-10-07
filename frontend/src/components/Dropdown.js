@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../styles/colors';
 import Icon from './Icon';
+import FieldError, { errorBorder } from './FieldError';
 
 // Tappable field that opens a modal list of options (A/L streams, roles, etc.).
-export default function Dropdown({ value, placeholder = 'Select…', options, onSelect, icon = 'book' }) {
+export default function Dropdown({ value, placeholder = 'Select…', options, onSelect, icon = 'book', error }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Pressable style={styles.field} onPress={() => setOpen(true)}>
+      <Pressable style={[styles.field, !!error && errorBorder]} onPress={() => setOpen(true)}>
         <Icon name={icon} size={17} color={colors.blue} style={styles.icon} />
         <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>
           {value || placeholder}
         </Text>
         <Icon name="chevron-down" size={16} color={colors.slate} />
       </Pressable>
+      <FieldError message={error} />
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>

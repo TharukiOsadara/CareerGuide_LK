@@ -10,6 +10,7 @@ import About from './src/Screens/Onboarding/About';
 import PrivacyConsent from './src/Screens/Onboarding/PrivacyConsent';
 import CourseDatabase from './src/Screens/Onboarding/CourseDatabase';
 import JobMarket from './src/Screens/Onboarding/JobMarket';
+import AptitudeInfo from './src/Screens/Onboarding/AptitudeInfo';
 import SignUp from './src/Screens/Auth/SignUp';
 import SignIn from './src/Screens/Auth/SignIn';
 import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
@@ -49,6 +50,7 @@ export default function App() {
             <Stack.Screen name="About" component={About} />
             <Stack.Screen name="CourseDatabase" component={CourseDatabase} />
             <Stack.Screen name="JobMarket" component={JobMarket} />
+            <Stack.Screen name="AptitudeInfo" component={AptitudeInfo} />
             <Stack.Screen
               name="PrivacyConsent"
               component={PrivacyConsent}

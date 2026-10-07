@@ -8,8 +8,10 @@ import RoleTabs from '../../components/RoleTabs';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES_WITH_ADMIN } from '../../config';
 import { colors } from '../../styles/colors';
+import { collectErrors, hasErrors, validateCode6, validateEmail, validateLoginPassword } from '../../utils/validation';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 // Admin sign-in is two steps: (1) email + password, (2) the 6-digit code from an
 // authenticator app (Google / Microsoft Authenticator). On an admin's first login,
@@ -27,6 +29,11 @@ export default function AdminPortal({ navigation }) {
   const [step, setStep] = useState('password');
   const [mfaToken, setMfaToken] = useState(null);
   const [setup, setSetup] = useState(null); // { qrDataUrl, secret, account }
+  const [errors, setErrors] = useState({});
+  const change = (setter, key) => (v) => {
+    setter(v);
+    setErrors((e) => (e[key] ? { ...e, [key]: '' } : e));
+  };
 
   // Switching away from Admin returns to the standard sign-in with that role.
   const onRoleChange = (r) => {
@@ -35,12 +42,13 @@ export default function AdminPortal({ navigation }) {
   };
 
   const restart = (message = '') => {
-    setStep('password'); setMfaToken(null); setSetup(null); setCode(''); setError(message);
+    setStep('password'); setMfaToken(null); setSetup(null); setCode(''); setErrors({}); setError(message);
   };
 
   const submitPassword = async () => {
-    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Enter a valid administrator email.');
-    if (!password) return setError('Enter your admin password.');
+    const errs = collectErrors({ email: validateEmail(email, 'Administrator email'), password: validateLoginPassword(password) });
+    setErrors(errs);
+    if (hasErrors(errs)) return;
     const res = await adminPasswordStep({ email: email.trim(), password });
     setMfaToken(res.mfaToken);
     setCode('');
@@ -54,7 +62,9 @@ export default function AdminPortal({ navigation }) {
 
   const submitCode = async () => {
     const clean = code.replace(/\s/g, '');
-    if (!/^\d{6}$/.test(clean)) return setError('Enter the 6-digit code from your authenticator app.');
+    const codeMsg = validateCode6(clean);
+    setErrors({ code: codeMsg });
+    if (codeMsg) return;
     await adminMfaVerify({ mfaToken, code: clean });
     navigation.reset({ index: 0, routes: [{ name: 'AdminOverview', params: { welcome: true } }] });
   };
@@ -100,20 +110,22 @@ export default function AdminPortal({ navigation }) {
           </View>
 
           <Text style={styles.label}>Administrator Email or Staff ID</Text>
-          <View style={[styles.inputBox, step !== 'password' && styles.inputLocked]}>
+          <View style={[styles.inputBox, step !== 'password' && styles.inputLocked, !!errors.email && errorBorder]}>
             <Icon name="user-cog" size={17} color={colors.blue} style={styles.inputIcon} />
-            <TextInput style={styles.input} value={email} onChangeText={setEmail} editable={step === 'password'} placeholder="admin@careerguide.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
+            <TextInput style={styles.input} value={email} onChangeText={change(setEmail, 'email')} maxLength={254} editable={step === 'password'} placeholder="admin@careerguide.lk" placeholderTextColor={colors.slate400} keyboardType="email-address" autoCapitalize="none" />
             {step !== 'password' && <Icon name="check-circle" size={18} color={colors.greenDark} />}
           </View>
+          <FieldError message={errors.email} />
 
           {step === 'password' ? (
             <>
               <Text style={styles.label}>Admin Password</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, !!errors.password && errorBorder]}>
                 <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
-                <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Enter admin password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} onSubmitEditing={submit} />
+                <TextInput style={styles.input} value={password} onChangeText={change(setPassword, 'password')} maxLength={128} placeholder="Enter admin password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} onSubmitEditing={submit} />
                 <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} /></Pressable>
               </View>
+              <FieldError message={errors.password} />
 
               <Pressable style={styles.rememberRow} onPress={() => setRemember((r) => !r)}>
                 <View style={[styles.checkbox, remember && styles.checkboxOn]}>{remember && <Icon name="check" size={13} color={colors.white} strokeWidth={3} />}</View>
@@ -145,17 +157,18 @@ export default function AdminPortal({ navigation }) {
               )}
 
               <Text style={styles.label}>Security Token / 2FA Pin</Text>
-              <View style={[styles.inputBox, styles.codeBox]}>
+              <View style={[styles.inputBox, styles.codeBox, !!errors.code && errorBorder]}>
                 <Icon name="key" size={17} color={colors.blue} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, styles.codeInput]} value={code}
-                  onChangeText={(t) => setCode(t.replace(/[^0-9]/g, ''))}
+                  onChangeText={(t) => { setCode(t.replace(/[^0-9]/g, '')); setErrors((e) => ({ ...e, code: '' })); }}
                   placeholder="Enter 6-digit code" placeholderTextColor={colors.slate400}
                   keyboardType="number-pad" maxLength={6} autoFocus
                   textContentType="oneTimeCode" autoComplete="one-time-code"
                   onSubmitEditing={submit}
                 />
               </View>
+              <FieldError message={errors.code} />
 
               <Pressable onPress={() => restart()} hitSlop={8} style={styles.changeAccount}>
                 <IconText icon="arrow-left" size={14} color={colors.blue} textStyle={styles.changeAccountText}>Use a different account</IconText>

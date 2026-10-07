@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '../styles/colors';
 import Icon from './Icon';
+import FieldError, { errorBorder } from './FieldError';
 
 // Labeled input with a leading icon, optional password visibility toggle,
-// and an optional right-corner adornment (used for the sign-in role badge).
+// an optional right-corner adornment (used for the sign-in role badge) and an
+// optional `error` message shown under the box with a red border.
 export default function Field({
   label, icon, value, onChangeText, placeholder, secure = false,
   keyboardType, autoCapitalize = 'none', rightAdornment, highlight = false,
-  editable = true,
+  editable = true, error, maxLength,
 }) {
   const [hidden, setHidden] = useState(secure);
   return (
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.box, highlight && styles.boxHighlight]}>
+      <View style={[styles.box, highlight && styles.boxHighlight, !!error && errorBorder]}>
         {icon ? <Icon name={icon} size={17} color={colors.blue} style={styles.icon} /> : null}
         <TextInput
           style={styles.input}
@@ -26,6 +28,7 @@ export default function Field({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           editable={editable}
+          maxLength={maxLength}
         />
         {rightAdornment}
         {secure ? (
@@ -34,6 +37,7 @@ export default function Field({
           </Pressable>
         ) : null}
       </View>
+      <FieldError message={error} />
     </View>
   );
 }

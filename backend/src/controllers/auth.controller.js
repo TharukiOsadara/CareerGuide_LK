@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
 const { GOOGLE_CLIENT_ID, JWT_SECRET } = require('../config/env');
 const { generateSecret, verifyCode, otpauthUrl } = require('../utils/totp');
+const v = require('../utils/validate');
 
 const router = express.Router();
 const googleClient = new OAuth2Client();
@@ -175,16 +176,19 @@ router.post('/signup', async (req, res) => {
       fullName, email, password, role = 'student', alStream, zScore,
       childEmail1, childEmail2,
     } = req.body;
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: 'Full name, email and password are required.' });
-    }
     if (!['student', 'parent', 'counsellor'].includes(role)) {
       return res.status(400).json({ message: 'Public signup is only for student, parent or counsellor.' });
     }
-    if (role === 'student' && zScore !== undefined && zScore !== null
-      && (!Number.isFinite(Number(zScore)) || Number(zScore) < 0 || Number(zScore) > 4)) {
-      return res.status(400).json({ message: 'Z-score must be a number between 0 and 4.' });
-    }
+    const invalid = v.first(
+      v.name(fullName),
+      v.email(email),
+      v.newPassword(password),
+      role === 'student' ? (v.required(alStream, 'A/L stream') || (v.AL_STREAMS.includes(alStream) ? '' : 'Choose a valid A/L stream.')) : '',
+      role === 'student' ? v.number(zScore, 'Z-score', { min: 0, max: 4, decimals: 4 }) : '',
+      role === 'parent' ? v.email(childEmail1, 'Child 1 email') : '',
+      role === 'parent' && childEmail2 ? v.email(childEmail2, 'Child 2 email') : '',
+    );
+    if (invalid) return res.status(400).json({ message: invalid });
     const childEmails = role === 'parent'
       ? [...new Set([childEmail1, childEmail2].map((value) => (value || '').toLowerCase().trim()).filter(Boolean))]
       : [];
@@ -238,9 +242,8 @@ router.post('/signup', async (req, res) => {
 router.post('/admin/register', async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required.' });
-    }
+    const invalid = v.first(v.name(fullName), v.email(email), v.newPassword(password));
+    if (invalid) return res.status(400).json({ message: invalid });
     const normEmail = email.toLowerCase().trim();
     const exists = await query('SELECT id FROM users WHERE email = $1', [normEmail]);
     if (exists.rows.length) return res.status(409).json({ message: 'An account with this email already exists.' });
@@ -266,6 +269,8 @@ router.post('/signin', async (req, res) => {
   try {
     const { email, password, role } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
+    const badEmail = v.email(email);
+    if (badEmail) return res.status(400).json({ message: badEmail });
     const normEmail = email.toLowerCase().trim();
     const { rows } = await query('SELECT * FROM users WHERE email = $1', [normEmail]);
 
@@ -389,7 +394,8 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, email, newPassword } = req.body;
-    if (!newPassword) return res.status(400).json({ message: 'A new password is required.' });
+    const invalid = v.newPassword(newPassword, 'New password');
+    if (invalid) return res.status(400).json({ message: invalid });
 
     let userRow;
     if (token) {

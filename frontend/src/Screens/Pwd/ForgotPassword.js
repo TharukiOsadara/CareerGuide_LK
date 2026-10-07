@@ -4,17 +4,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Brand from '../../components/Brand';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import { validateEmail } from '../../utils/validation';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 export default function ForgotPassword({ navigation }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setError('');
-    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Please enter a valid email address.');
+    const emailMsg = validateEmail(email);
+    setEmailError(emailMsg);
+    if (emailMsg) return;
     setBusy(true);
     try {
       const res = await api('/api/auth/forgot-password', { method: 'POST', auth: false, body: { email: email.trim() } });
@@ -44,14 +49,15 @@ export default function ForgotPassword({ navigation }) {
           </Text>
 
           <Text style={styles.label}>Email Address</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, !!emailError && errorBorder]}>
             <Icon name="mail" size={17} color={colors.blue} style={styles.inputIcon} />
             <TextInput
-              style={styles.input} value={email} onChangeText={setEmail}
+              style={styles.input} value={email} onChangeText={(v) => { setEmail(v); setEmailError(''); }} maxLength={254}
               placeholder="student@example.lk" placeholderTextColor={colors.slate400}
               keyboardType="email-address" autoCapitalize="none" autoFocus
             />
           </View>
+          <FieldError message={emailError} style={{ alignSelf: 'flex-start' }} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
