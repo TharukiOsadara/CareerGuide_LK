@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AdminHeader from '../../components/AdminHeader';
 import AdminNav from '../../components/AdminNav';
+import WelcomeToast from '../../components/WelcomeToast';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
@@ -21,11 +22,13 @@ function timeAgo(iso) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function AdminOverview({ navigation }) {
+export default function AdminOverview({ navigation, route }) {
   const { user } = useAuth();
+  const [showToast, setShowToast] = useState(!!route?.params?.welcome);
+  const firstName = user?.fullName ? user.fullName.split(' ')[0] : 'Admin';
   const [stats, setStats] = useState(null);
   const [courses, setCourses] = useState([]);
-  const [userCount, setUserCount] = useState(null);
+  const [users, setUsers] = useState(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -38,7 +41,7 @@ export default function AdminOverview({ navigation }) {
       ]);
       if (s.status === 'fulfilled') setStats(s.value);
       if (c.status === 'fulfilled') setCourses(c.value.courses || []);
-      if (u.status === 'fulfilled') setUserCount((u.value.users || []).length);
+      if (u.status === 'fulfilled') setUsers(u.value.users || []);
       const failed = [s, c, u].find((r) => r.status === 'rejected');
       if (failed) setError(failed.reason?.message || 'Some data could not be loaded.');
     } catch (e) {
@@ -68,19 +71,35 @@ export default function AdminOverview({ navigation }) {
 
   const recent = courses.slice(0, 3);
 
+  // Card values are computed from live data so they match the detail page each card opens.
+  const zScoreCount = courses.filter((c) => c.zScore != null).length;
+  const uniCount = new Set(courses.map((c) => (c.uniName || '').trim()).filter(Boolean)).size;
+  const activeUsers = (users || []).filter((u) => u.status === 'active').length;
   const statCards = [
-    { icon: 'graduation-cap', tint: colors.blue, bg: colors.blueLight, value: courses.length ? `${courses.length}` : '—', label: 'Total Courses', note: `${courses.length || 0} Programs` },
-    { icon: 'chart', tint: colors.orange, bg: colors.yellow, value: '2026', label: 'Z-Score Updates', note: 'Ingested' },
-    { icon: 'landmark', tint: colors.teal, bg: colors.mint, value: '28', label: 'Active Unis', note: 'Institutes' },
-    { icon: 'users', tint: colors.blue, bg: colors.blueChip, value: userCount != null ? `${userCount}` : '—', label: 'Registered Users', note: `${userCount || 0} Active` },
+    { type: 'courses', icon: 'graduation-cap', tint: colors.blue, bg: colors.blueLight, value: `${courses.length}`, label: 'Total Courses', note: `${courses.length} Programs` },
+    { type: 'zscores', icon: 'chart', tint: colors.orange, bg: colors.yellow, value: `${zScoreCount}`, label: 'Z-Score Updates', note: 'Cut-offs recorded' },
+    { type: 'unis', icon: 'landmark', tint: colors.teal, bg: colors.mint, value: `${uniCount}`, label: 'Active Unis', note: 'Institutes' },
+    { type: 'users', icon: 'users', tint: colors.blue, bg: colors.blueChip, value: users ? `${users.length}` : '—', label: 'Registered Users', note: `${activeUsers} Active` },
   ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-      <AdminHeader navigation={navigation} user={user} title="CareerGuide Admin" />
+      <AdminHeader navigation={navigation} user={user} />
+      <WelcomeToast
+        visible={showToast}
+        name={firstName}
+        loginTime={user?.lastLoginAt}
+        variant="info"
+        onHide={() => {
+          setShowToast(false);
+          navigation.setParams({ welcome: false });
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+        <Text style={styles.pageTitle}>Admin Dashboard</Text>
+        <Text style={styles.pageSub}>Welcome back, {firstName}. Here's what's happening today.</Text>
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         {/* Feature card */}
@@ -108,12 +127,21 @@ export default function AdminOverview({ navigation }) {
         <Text style={styles.heading}>Admin Quick Stats</Text>
         <View style={styles.grid}>
           {statCards.map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: s.bg }]}><Icon name={s.icon} size={20} color={s.tint} /></View>
+            <Pressable
+              key={s.label}
+              accessibilityRole="button"
+              accessibilityLabel={`${s.label}: ${s.value}. View details`}
+              onPress={() => navigation.navigate('AdminStatDetail', { type: s.type })}
+              style={({ pressed }) => [styles.statCard, pressed && styles.pressed]}
+            >
+              <View style={styles.statTop}>
+                <View style={[styles.statIcon, { backgroundColor: s.bg }]}><Icon name={s.icon} size={20} color={s.tint} /></View>
+                <Icon name="chevron-right" size={18} color={colors.slate400} />
+              </View>
               <Text style={styles.statValue}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
               <Text style={styles.statNote}>{s.note}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
 
@@ -214,6 +242,9 @@ const styles = StyleSheet.create({
     width: '48%', backgroundColor: colors.white, borderRadius: 13, padding: 14,
     marginBottom: 12, borderWidth: 1, borderColor: colors.border,
   },
+  pageTitle: { color: colors.navy, fontSize: 20, fontWeight: '800' },
+  pageSub: { color: colors.slate, fontSize: 12, marginTop: 4, marginBottom: 14 },
+  statTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statIcon: { width: 40, height: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   statValue: { color: colors.navy, fontSize: 20, fontWeight: '800', marginTop: 6 },
   statLabel: { color: colors.slateDark, fontSize: 11.5, fontWeight: '700', marginTop: 2 },

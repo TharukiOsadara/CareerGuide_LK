@@ -99,7 +99,7 @@ export default function AdminZScores({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-      <AdminHeader navigation={navigation} user={user} title="Z-Score Criteria" />
+      <AdminHeader navigation={navigation} user={user} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
         <View style={styles.topRow}>

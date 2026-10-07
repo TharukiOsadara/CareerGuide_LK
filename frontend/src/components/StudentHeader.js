@@ -5,12 +5,18 @@ import { api } from '../api/client';
 import { colors } from '../styles/colors';
 import Icon from './Icon';
 
-// Reusable white top bar for the student area: brand on the left, a notification
+// Reusable white top bar (student and admin areas): brand on the left, a notification
 // bell (with an unread red dot) and the user's avatar on the right.
-export default function StudentHeader({ navigation, user }) {
+export default function StudentHeader({
+  navigation, user,
+  notificationsRoute = 'StudentNotifications',
+  profileRoute = 'StudentProfile',
+  showUnread = true,
+}) {
   const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
+    if (!showUnread) return undefined;
     let mounted = true;
     const loadUnread = async () => {
       try {
@@ -26,7 +32,7 @@ export default function StudentHeader({ navigation, user }) {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [navigation]);
+  }, [navigation, showUnread]);
 
   return (
     <View style={styles.bar}>
@@ -36,7 +42,7 @@ export default function StudentHeader({ navigation, user }) {
           accessibilityRole="button"
           accessibilityLabel="Notifications"
           hitSlop={8}
-          onPress={() => navigation.navigate('StudentNotifications')}
+          onPress={() => navigation.navigate(notificationsRoute)}
           style={({ pressed }) => [styles.bellWrap, pressed && styles.pressed]}
         >
           <Icon name="bell" size={20} color={colors.slateDark} />
@@ -45,7 +51,7 @@ export default function StudentHeader({ navigation, user }) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Profile"
-          onPress={() => navigation.navigate('StudentProfile')}
+          onPress={() => navigation.navigate(profileRoute)}
           style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
         >
           {user?.avatarInitials ? <Text style={styles.avatarText}>{user.avatarInitials}</Text> : <Icon name="user" size={15} color={colors.blue} />}

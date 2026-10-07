@@ -49,9 +49,10 @@ export default function AdminSettings({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-      <AdminHeader navigation={navigation} user={user} title="Settings" />
+      <AdminHeader navigation={navigation} user={user} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
+        <Text style={styles.pageTitle}>Settings</Text>
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         <Text style={styles.heading}>Notifications</Text>
@@ -111,6 +112,7 @@ function Row({ title, sub, value, onChange, disabled }) {
 }
 
 const styles = StyleSheet.create({
+  pageTitle: { color: colors.navy, fontSize: 20, fontWeight: '800', marginBottom: 4 },
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, paddingBottom: 24 },
   errBanner: { backgroundColor: colors.redLight, borderRadius: 8, padding: 10, marginBottom: 12 },

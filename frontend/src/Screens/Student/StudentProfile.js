@@ -16,6 +16,7 @@ import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
+import DeleteAccount from '../../components/DeleteAccount';
 import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentProfile({ navigation }) {
@@ -120,6 +121,8 @@ export default function StudentProfile({ navigation }) {
         >
           <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>
+
+        <DeleteAccount onDeleted={() => navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })} />
       </ScrollView>
 
       <StudentNav active="StudentProfile" navigation={navigation} />

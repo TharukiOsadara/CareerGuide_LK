@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
+import DeleteAccount from '../../components/DeleteAccount';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
 
@@ -102,6 +103,8 @@ export default function AdminProfile({ navigation }) {
         <Pressable onPress={doSignOut} style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>
+
+        <DeleteAccount onDeleted={() => navigation.reset({ index: 0, routes: [{ name: 'AdminPortal' }] })} />
       </ScrollView>
     </SafeAreaView>
   );

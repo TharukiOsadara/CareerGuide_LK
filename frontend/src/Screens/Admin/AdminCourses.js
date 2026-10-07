@@ -121,7 +121,7 @@ export default function AdminCourses({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-      <AdminHeader navigation={navigation} user={user} title="Degree Programs" />
+      <AdminHeader navigation={navigation} user={user} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
         <View style={styles.topRow}>
