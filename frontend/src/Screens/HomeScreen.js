@@ -20,18 +20,20 @@ const BACKGROUND = '#F4F7FC';
 
 const courses = [
   {
+    id: 'software-engineering',
     title: 'B.Sc. (Hons) in Software Engineering',
     institute: 'IIT / University of Westminster',
     match: '94% Match',
   },
   {
+    id: 'biomedical-science',
     title: 'B.Sc. (Hons) in Biomedical Science',
     institute: 'AIC Campus',
     match: '87% Match',
   },
 ];
 
-function CourseCard({ course }) {
+function CourseCard({ course, navigation }) {
   return (
     <View style={styles.courseCard}>
       <View style={styles.courseTags}>
@@ -46,6 +48,7 @@ function CourseCard({ course }) {
       <Text style={styles.institute}>{course.institute}</Text>
       <Pressable
         accessibilityRole="button"
+        onPress={() => navigation.navigate('CourseDetails', { courseId: course.id })}
         style={styles.detailsButton}
       >
         <Text style={styles.detailsButtonText}>
@@ -162,7 +165,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {courses.map((course) => (
-          <CourseCard course={course} key={course.title} />
+          <CourseCard course={course} key={course.title} navigation={navigation} />
         ))}
       </ScrollView>
 

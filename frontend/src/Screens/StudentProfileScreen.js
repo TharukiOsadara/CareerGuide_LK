@@ -155,7 +155,10 @@ export default function StudentProfileScreen({ navigation }) {
           </View>
         </View>
 
-        <Pressable style={styles.primaryButton}>
+        <Pressable
+          onPress={() => navigation.navigate('CounsellorInquiry')}
+          style={styles.primaryButton}
+        >
           <Text style={styles.primaryButtonText}>Tap to send inquiry to counsellor</Text>
           <Text style={styles.primaryButtonArrow}>→</Text>
         </Pressable>

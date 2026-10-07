@@ -49,7 +49,7 @@ const coursesData = [
 
 const filters = ['All Courses', 'UGC Approved', 'Computing & IT', 'Engineering', 'Business'];
 
-function CourseCard({ course }) {
+function CourseCard({ course, navigation }) {
   return (
     <View style={styles.courseCard}>
       <View style={styles.cardHeader}>
@@ -64,7 +64,11 @@ function CourseCard({ course }) {
       </View>
       <Text style={styles.courseTitle}>{course.title}</Text>
       <Text style={styles.institute}>{course.institute}</Text>
-      <Pressable accessibilityRole="button" style={styles.detailsButton}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => navigation.navigate('CourseDetails', { courseId: course.id })}
+        style={styles.detailsButton}
+      >
         <Text style={styles.detailsButtonText}>
           View Details &amp; Entry Requirements
         </Text>
@@ -204,7 +208,9 @@ export default function StudentCourses({ navigation }) {
           {isLoading && <ActivityIndicator color={BLUE} size="small" />}
         </View>
         {filteredCourses.length > 0 ? (
-          filteredCourses.map((course) => <CourseCard course={course} key={course.id || course.title} />)
+          filteredCourses.map((course) => (
+            <CourseCard course={course} key={course.id || course.title} navigation={navigation} />
+          ))
         ) : (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons color={MUTED} name="book-search-outline" size={34} />
