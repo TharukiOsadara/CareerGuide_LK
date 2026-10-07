@@ -12,13 +12,14 @@ const utilities = [
 ];
 
 export default function Onboarding({ navigation }) {
-  const openMain = () => navigation.replace('Main');
+  const openSignIn = () => navigation.navigate('SignIn');
+  const openAbout = () => navigation.navigate('About');
   const openPrivacyConsent = () => navigation.navigate('PrivacyConsent');
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-      <Header onSignIn={openMain} />
+      <Header onSignIn={openSignIn} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
         <View style={styles.hero}>
           <View style={styles.badge}><Text style={styles.badgeText}>UPDATED FOR 2026/2027 INTAKE</Text></View>
@@ -27,7 +28,7 @@ export default function Onboarding({ navigation }) {
           <Pressable accessibilityRole="button" accessibilityLabel="Get Started Now" onPress={openPrivacyConsent} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
             <Text style={styles.primaryButtonText}>Get Started Now</Text><Text style={styles.arrow}>→</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Learn More" onPress={openMain} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Learn More" onPress={openAbout} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
             <Text style={styles.secondaryButtonText}>Learn More</Text>
           </Pressable>
         </View>
@@ -37,7 +38,7 @@ export default function Onboarding({ navigation }) {
         <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Core Utilities</Text><View style={styles.sectionRule} /></View>
         <View style={styles.utilityList}>
           {utilities.map((utility) => (
-            <Pressable key={utility.title} accessibilityRole="button" onPress={openMain} style={({ pressed }) => [styles.utilityCard, pressed && styles.pressed]}>
+            <Pressable key={utility.title} accessibilityRole="button" onPress={openSignIn} style={({ pressed }) => [styles.utilityCard, pressed && styles.pressed]}>
               <View style={[styles.utilityIcon, styles[utility.iconStyle]]}><Text style={[styles.utilityIconText, styles[utility.iconTextStyle]]}>{utility.icon}</Text></View>
               <View style={styles.utilityCopy}><View style={styles.utilityMeta}><Text style={[styles.utilityTag, styles[utility.tagStyle]]}>{utility.tag}</Text><Text style={styles.utilityDescription}>{utility.description}</Text></View><Text style={styles.utilityTitle}>{utility.title}</Text></View>
               <Text style={styles.utilityArrow}>›</Text>
