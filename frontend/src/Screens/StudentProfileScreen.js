@@ -7,6 +7,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomNavigation from '../Components/BottomNavigation';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -38,39 +40,17 @@ const careers = [
   },
 ];
 
-function BottomNavigation({ navigation }) {
-  const tabs = [
-    { label: 'Home', icon: '⌂', route: 'Main' },
-    { label: 'Explore', icon: '◉' },
-    { label: 'Saved', icon: '♡' },
-    { label: 'Profile', icon: '●', active: true },
-  ];
-
-  return (
-    <View style={styles.bottomNavigation}>
-      {tabs.map((tab) => (
-        <Pressable
-          key={tab.label}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: Boolean(tab.active) }}
-          onPress={() => tab.route && navigation.navigate(tab.route)}
-          style={styles.tab}
-        >
-          <Text style={[styles.tabIcon, tab.active && styles.activeTabText]}>
-            {tab.icon}
-          </Text>
-          <Text style={[styles.tabLabel, tab.active && styles.activeTabText]}>
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function StudentProfileScreen({ navigation }) {
+  const goBackToPreviousScreen = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Main');
+  };
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F7FC' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#F7F9FC" />
 
       <View style={styles.header}>
@@ -78,7 +58,7 @@ export default function StudentProfileScreen({ navigation }) {
           accessibilityLabel="Go back"
           accessibilityRole="button"
           hitSlop={10}
-          onPress={() => navigation.goBack()}
+          onPress={goBackToPreviousScreen}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>‹</Text>
@@ -184,8 +164,8 @@ export default function StudentProfileScreen({ navigation }) {
         </Pressable>
       </ScrollView>
 
-      <BottomNavigation navigation={navigation} />
-    </View>
+      <BottomNavigation activeRoute="StudentProfile" navigation={navigation} />
+    </SafeAreaView>
   );
 }
 
@@ -451,38 +431,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#DE350B',
     fontSize: 14,
-    fontWeight: '700',
-  },
-  bottomNavigation: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderTopColor: BORDER,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    bottom: 0,
-    flexDirection: 'row',
-    height: 72,
-    justifyContent: 'space-around',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-  },
-  tab: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  tabIcon: {
-    color: MUTED,
-    fontSize: 21,
-    height: 25,
-  },
-  tabLabel: {
-    color: MUTED,
-    fontSize: 11,
-    marginTop: 3,
-  },
-  activeTabText: {
-    color: BLUE,
     fontWeight: '700',
   },
 });

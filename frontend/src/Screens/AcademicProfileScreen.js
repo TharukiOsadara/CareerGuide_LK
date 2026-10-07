@@ -8,6 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomNavigation from '../Components/BottomNavigation';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -76,9 +78,16 @@ export default function AcademicProfileScreen({ navigation }) {
   const [stream, setStream] = useState(STREAM_OPTIONS[0]);
   const [district, setDistrict] = useState(DISTRICT_OPTIONS[0]);
   const [zScore, setZScore] = useState('1.4250');
+  const goBackToPreviousScreen = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Main');
+  };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
@@ -86,7 +95,7 @@ export default function AcademicProfileScreen({ navigation }) {
           accessibilityLabel="Go back"
           accessibilityRole="button"
           hitSlop={10}
-          onPress={() => navigation.goBack()}
+          onPress={goBackToPreviousScreen}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>‹</Text>
@@ -178,7 +187,8 @@ export default function AcademicProfileScreen({ navigation }) {
           <Text style={styles.primaryButtonArrow}>→</Text>
         </Pressable>
       </View>
-    </View>
+      <BottomNavigation activeRoute="AcademicProfile" navigation={navigation} />
+    </SafeAreaView>
   );
 }
 
@@ -224,7 +234,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 116,
+    paddingBottom: 188,
   },
   infoCard: {
     backgroundColor: '#FFFFFF',
@@ -374,7 +384,7 @@ const styles = StyleSheet.create({
   },
   bottomAction: {
     backgroundColor: BACKGROUND,
-    bottom: 0,
+    bottom: 72,
     left: 0,
     padding: 16,
     position: 'absolute',

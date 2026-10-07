@@ -6,6 +6,7 @@ import HomeScreen from './src/Screens/HomeScreen';
 import StudentProfileScreen from './src/Screens/StudentProfileScreen';
 import AcademicProfileScreen from './src/Screens/AcademicProfileScreen';
 import StudentCourses from './src/Screens/StudentCourses';
+import CourseFilterScreen from './src/Screens/CourseFilterScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +24,7 @@ export default function App() {
         <Stack.Screen name="StudentProfile" component={StudentProfileScreen} />
         <Stack.Screen name="AcademicProfile" component={AcademicProfileScreen} />
         <Stack.Screen name="StudentCourses" component={StudentCourses} />
+        <Stack.Screen name="CourseFilter" component={CourseFilterScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

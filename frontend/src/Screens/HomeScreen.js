@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomNavigation from '../Components/BottomNavigation';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -55,43 +57,11 @@ function CourseCard({ course }) {
   );
 }
 
-function BottomNavigation({ navigation }) {
-  const tabs = [
-    { label: 'Home', icon: 'home', route: 'Main', active: true },
-    { label: 'Quiz', icon: 'brain', route: 'AcademicProfile' },
-    { label: 'Courses', icon: 'book-open-variant', route: 'StudentCourses' },
-    { label: 'Profile', icon: 'account-outline', route: 'StudentProfile' },
-  ];
-
-  return (
-    <View style={styles.bottomNavigation}>
-      {tabs.map((tab) => (
-        <Pressable
-          accessibilityRole="tab"
-          accessibilityState={{ selected: Boolean(tab.active) }}
-          key={tab.label}
-          onPress={() => tab.route && navigation.navigate(tab.route)}
-          style={styles.tab}
-        >
-          <MaterialCommunityIcons
-            color={tab.active ? BLUE : MUTED}
-            name={tab.icon}
-            size={22}
-          />
-          <Text style={[styles.tabLabel, tab.active && styles.activeTabLabel]}>
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function HomeScreen({ navigation }) {
   const openAcademicProfile = () => navigation.navigate('AcademicProfile');
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
@@ -117,7 +87,10 @@ export default function HomeScreen({ navigation }) {
             accessibilityRole="button"
             hitSlop={10}
             onPress={openAcademicProfile}
-            style={styles.avatar}
+            style={({ pressed }) => [
+              styles.avatar,
+              pressed && styles.avatarPressed,
+            ]}
           >
             <Text style={styles.avatarText}>TO</Text>
           </Pressable>
@@ -128,15 +101,22 @@ export default function HomeScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.searchBar}>
+        <Pressable
+          accessibilityLabel="Open course search and filters"
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('CourseFilter')}
+          style={styles.searchBar}
+        >
           <Ionicons color={MUTED} name="search-outline" size={20} />
           <TextInput
             accessibilityLabel="Search courses, careers, or institutes"
+            editable={false}
             placeholder="Search courses, careers, or institutes..."
             placeholderTextColor={MUTED}
+            pointerEvents="none"
             style={styles.searchInput}
           />
-        </View>
+        </Pressable>
 
         <View style={styles.progressCard}>
           <Text style={styles.welcomeTitle}>Welcome back, Tharuki!</Text>
@@ -165,9 +145,8 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
           <Pressable
-            accessibilityLabel="Open academic profile"
+            accessibilityLabel="Start aptitude quiz"
             accessibilityRole="button"
-            onPress={openAcademicProfile}
             style={styles.quizButton}
           >
             <Text style={styles.quizButtonText}>Start Quiz Now</Text>
@@ -187,8 +166,8 @@ export default function HomeScreen({ navigation }) {
         ))}
       </ScrollView>
 
-      <BottomNavigation navigation={navigation} />
-    </View>
+      <BottomNavigation activeRoute="Main" navigation={navigation} />
+    </SafeAreaView>
   );
 }
 
@@ -257,6 +236,9 @@ const styles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     width: 42,
+  },
+  avatarPressed: {
+    opacity: 0.7,
   },
   avatarText: {
     color: BLUE,
@@ -465,37 +447,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     marginRight: 7,
-  },
-  bottomNavigation: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderTopColor: BORDER,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    bottom: 0,
-    elevation: 8,
-    flexDirection: 'row',
-    height: 72,
-    justifyContent: 'space-around',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    shadowColor: '#172B4D',
-    shadowOffset: { height: -2, width: 0 },
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-  },
-  tab: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  tabLabel: {
-    color: MUTED,
-    fontSize: 11,
-    marginTop: 4,
-  },
-  activeTabLabel: {
-    color: BLUE,
-    fontWeight: '700',
   },
 });

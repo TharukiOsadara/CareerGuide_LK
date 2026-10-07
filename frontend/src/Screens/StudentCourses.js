@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import BottomNavigation from '../Components/BottomNavigation';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -72,43 +74,18 @@ function CourseCard({ course }) {
   );
 }
 
-function BottomNavigation({ navigation }) {
-  const tabs = [
-    { label: 'Home', icon: 'home-outline', route: 'Main' },
-    { label: 'Quiz', icon: 'brain', route: 'AcademicProfile' },
-    { label: 'Courses', icon: 'book-open', active: true },
-    { label: 'Profile', icon: 'account-outline', route: 'StudentProfile' },
-  ];
-
-  return (
-    <View style={styles.bottomNavigation}>
-      {tabs.map((tab) => (
-        <Pressable
-          accessibilityRole="tab"
-          accessibilityState={{ selected: Boolean(tab.active) }}
-          key={tab.label}
-          onPress={() => tab.route && navigation.navigate(tab.route)}
-          style={styles.tab}
-        >
-          <MaterialCommunityIcons
-            color={tab.active ? BLUE : MUTED}
-            name={tab.icon}
-            size={22}
-          />
-          <Text style={[styles.tabLabel, tab.active && styles.activeTabLabel]}>
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function StudentCourses({ navigation }) {
   const [courses, setCourses] = useState(coursesData);
   const [activeFilter, setActiveFilter] = useState('All Courses');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const goBackToPreviousScreen = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('Main');
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -160,19 +137,26 @@ export default function StudentCourses({ navigation }) {
   }, [activeFilter, courses, searchQuery]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="Go back"
           accessibilityRole="button"
-          onPress={() => navigation.goBack()}
+          onPress={goBackToPreviousScreen}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>‹</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Courses</Text>
-        <View style={styles.headerSpacer} />
+        <Pressable
+          accessibilityLabel="Open course filters"
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('CourseFilter')}
+          style={styles.headerFilterButton}
+        >
+          <Ionicons color={BLUE} name="options-outline" size={22} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -230,8 +214,8 @@ export default function StudentCourses({ navigation }) {
         )}
       </ScrollView>
 
-      <BottomNavigation navigation={navigation} />
-    </View>
+      <BottomNavigation activeRoute="StudentCourses" navigation={navigation} />
+    </SafeAreaView>
   );
 }
 
@@ -250,7 +234,15 @@ const styles = StyleSheet.create({
   backButton: { justifyContent: 'center', width: 82 },
   backIcon: { color: TEXT, fontSize: 36, fontWeight: '300', lineHeight: 38 },
   headerTitle: { color: TEXT, fontSize: 18, fontWeight: '700' },
-  headerSpacer: { width: 82 },
+  headerFilterButton: {
+    alignItems: 'center',
+    borderColor: BORDER,
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
   scrollContent: { padding: 16, paddingBottom: 100 },
   searchBar: {
     alignItems: 'center',
@@ -306,21 +298,4 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 50 },
   emptyTitle: { color: TEXT, fontSize: 16, fontWeight: '700', marginTop: 12 },
   emptyText: { color: MUTED, fontSize: 13, marginTop: 5 },
-  bottomNavigation: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderTopColor: BORDER,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    bottom: 0,
-    elevation: 8,
-    flexDirection: 'row',
-    height: 72,
-    justifyContent: 'space-around',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-  },
-  tab: { alignItems: 'center', flex: 1, justifyContent: 'center' },
-  tabLabel: { color: MUTED, fontSize: 11, marginTop: 4 },
-  activeTabLabel: { color: BLUE, fontWeight: '700' },
 });
