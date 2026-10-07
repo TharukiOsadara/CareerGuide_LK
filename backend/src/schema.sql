@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   status          VARCHAR(20) NOT NULL DEFAULT 'active'
                     CHECK (status IN ('active', 'locked', 'blocked', 'pending')),
   admin_approved  BOOLEAN NOT NULL DEFAULT TRUE,
+  admin_rejected  BOOLEAN NOT NULL DEFAULT FALSE,
   is_super_admin  BOOLEAN NOT NULL DEFAULT FALSE,
   profile_completion INTEGER NOT NULL DEFAULT 40,
   avatar_initials VARCHAR(4),

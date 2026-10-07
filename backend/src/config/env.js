@@ -1,6 +1,7 @@
-// Loads environment variables from the project-root .env regardless of CWD.
+// Load the backend environment regardless of the process working directory.
 const path = require('path');
 
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 
 module.exports = {

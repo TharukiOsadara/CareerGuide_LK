@@ -24,14 +24,22 @@ export async function api(path, { method = 'GET', body, auth = true } = {}) {
   }
 
   let res;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
   } catch (networkErr) {
-    throw new ApiError('Network error — is the backend running and reachable?', 0);
+    const message = networkErr.name === 'AbortError'
+      ? 'The server took too long to respond. Check that the backend is running and reachable.'
+      : 'Network error — is the backend running and reachable?';
+    throw new ApiError(message, 0);
+  } finally {
+    clearTimeout(timeout);
   }
 
   let data = null;

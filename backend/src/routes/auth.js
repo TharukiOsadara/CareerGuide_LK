@@ -148,6 +148,11 @@ router.post('/signin', async (req, res) => {
     }
 
     if (user.role === 'admin' && !user.admin_approved) {
+      if (user.admin_rejected) {
+        return res.status(403).json({
+          message: 'Your admin request was not approved by the super admin. Please contact the administrator.',
+        });
+      }
       return res.status(403).json({ message: 'Your admin account is awaiting approval from a super admin.' });
     }
 

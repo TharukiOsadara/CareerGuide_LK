@@ -21,7 +21,9 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 // Pending admin requests (super admin approves these).
 router.get('/admin-requests', authenticate, requireAdmin, async (req, res) => {
   const { rows } = await query(
-    `SELECT * FROM users WHERE role = 'admin' AND admin_approved = FALSE ORDER BY created_at DESC`
+    `SELECT * FROM users
+     WHERE role = 'admin' AND admin_approved = FALSE AND admin_rejected = FALSE
+     ORDER BY created_at DESC`
   );
   res.json({ requests: rows.map(publicUser) });
 });
@@ -29,7 +31,8 @@ router.get('/admin-requests', authenticate, requireAdmin, async (req, res) => {
 router.post('/:id/approve-admin', authenticate, requireAdmin, async (req, res) => {
   if (!req.user.is_super_admin) return res.status(403).json({ message: 'Only a super admin can approve admins.' });
   const { rows } = await query(
-    `UPDATE users SET admin_approved = TRUE, status = 'active' WHERE id = $1 AND role = 'admin' RETURNING *`,
+    `UPDATE users SET admin_approved = TRUE, admin_rejected = FALSE, status = 'active'
+     WHERE id = $1 AND role = 'admin' AND admin_approved = FALSE RETURNING *`,
     [req.params.id]
   );
   if (!rows.length) return res.status(404).json({ message: 'Admin request not found.' });
@@ -38,7 +41,12 @@ router.post('/:id/approve-admin', authenticate, requireAdmin, async (req, res) =
 
 router.post('/:id/reject-admin', authenticate, requireAdmin, async (req, res) => {
   if (!req.user.is_super_admin) return res.status(403).json({ message: 'Only a super admin can reject admins.' });
-  await query(`DELETE FROM users WHERE id = $1 AND role = 'admin' AND admin_approved = FALSE`, [req.params.id]);
+  const { rowCount } = await query(
+    `UPDATE users SET admin_rejected = TRUE, status = 'pending'
+     WHERE id = $1 AND role = 'admin' AND admin_approved = FALSE`,
+    [req.params.id]
+  );
+  if (!rowCount) return res.status(404).json({ message: 'Admin request not found.' });
   res.json({ message: 'Admin request rejected.' });
 });
 

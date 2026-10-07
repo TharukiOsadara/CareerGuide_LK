@@ -13,6 +13,10 @@ async function run() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   console.log('Applying schema...');
   await pool.query(schema);
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS admin_rejected BOOLEAN NOT NULL DEFAULT FALSE
+  `);
 
   // Seed the primary (super) admin.
   const hash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);
