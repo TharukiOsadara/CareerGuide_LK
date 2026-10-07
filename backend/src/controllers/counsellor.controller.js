@@ -30,7 +30,7 @@ function toStudent(row) {
     stream: row.al_stream,
     status,
     assessmentAccess: row.counsellor_access ? 'shared' : 'not_shared',
-    topMatch: row.top_match_name
+    topMatch: row.counsellor_access && row.top_match_name
       ? { title: row.top_match_name, matchPercent: row.top_match_percent }
       : null,
     guidanceId: row.guidance_id,
@@ -215,11 +215,28 @@ async function getGuidance(req, res) {
 async function saveGuidance(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
-  if (!(await findAssignedStudent(req.user.id, studentId))) {
+  const assignedStudent = await findAssignedStudent(req.user.id, studentId);
+  if (!assignedStudent) {
     return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
   }
   const { value, error } = validateGuidance(req.body);
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
+  if (value.sharedWithParent === true && !assignedStudent.counsellor_access) {
+    return res.status(409).json({ error: 'Parent sharing requires counsellor access consent', code: 'CONSENT_REQUIRED' });
+  }
+
+  const existing = await pool.query(
+    `SELECT guidance_status, reviewed_at
+     FROM counsellor_guidance_records
+     WHERE counsellor_id = $1 AND student_id = $2`,
+    [req.user.id, studentId]
+  );
+  if (existing.rows[0]?.guidance_status === 'final' && value.guidanceStatus === 'draft') {
+    return res.status(409).json({ error: 'Final guidance cannot return to draft', code: 'INVALID_STATUS_TRANSITION' });
+  }
+  if (existing.rows[0]?.reviewed_at && value.sharedWithParent === false) {
+    return res.status(409).json({ error: 'Reviewed guidance must remain shared with the parent', code: 'INVALID_STATUS_TRANSITION' });
+  }
 
   const { rows } = await pool.query(
     `INSERT INTO counsellor_guidance_records
@@ -235,7 +252,9 @@ async function saveGuidance(req, res) {
        shared_with_parent = EXCLUDED.shared_with_parent,
        updated_at = NOW()
      RETURNING *`,
-    [req.user.id, studentId, value.assessmentSummary, JSON.stringify(value.recommendedPathways), value.guidanceStatus || 'draft', value.sharedWithParent || false]
+    [req.user.id, studentId, value.assessmentSummary, JSON.stringify(value.recommendedPathways),
+      value.guidanceStatus || existing.rows[0]?.guidance_status || 'draft',
+      value.sharedWithParent ?? (existing.rows[0]?.reviewed_at ? true : false)]
   );
   res.status(201).json({ guidance: toGuidance(rows[0]) });
 }
@@ -247,6 +266,23 @@ async function updateGuidance(req, res) {
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
   const student = await findAssignedStudent(req.user.id, studentId);
   if (!student) return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
+  if (value.sharedWithParent === true && !student.counsellor_access) {
+    return res.status(409).json({ error: 'Parent sharing requires counsellor access consent', code: 'CONSENT_REQUIRED' });
+  }
+
+  const existing = await pool.query(
+    `SELECT guidance_status, reviewed_at
+     FROM counsellor_guidance_records
+     WHERE counsellor_id = $1 AND student_id = $2`,
+    [req.user.id, studentId]
+  );
+  if (!existing.rows[0]) return res.status(404).json({ error: 'Guidance record not found', code: 'NOT_FOUND' });
+  if (existing.rows[0].guidance_status === 'final' && value.guidanceStatus === 'draft') {
+    return res.status(409).json({ error: 'Final guidance cannot return to draft', code: 'INVALID_STATUS_TRANSITION' });
+  }
+  if (existing.rows[0].reviewed_at && value.sharedWithParent === false) {
+    return res.status(409).json({ error: 'Reviewed guidance must remain shared with the parent', code: 'INVALID_STATUS_TRANSITION' });
+  }
 
   const { rows } = await pool.query(
     `UPDATE counsellor_guidance_records
@@ -268,6 +304,9 @@ async function updateGuidance(req, res) {
 async function deleteGuidance(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
+  if (!(await findAssignedStudent(req.user.id, studentId))) {
+    return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
+  }
   const { rows } = await pool.query(
     `DELETE FROM counsellor_guidance_records
      WHERE counsellor_id = $1 AND student_id = $2 AND guidance_status = 'draft'
@@ -286,12 +325,26 @@ async function deleteGuidance(req, res) {
 async function markReviewed(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
+  const assignedStudent = await findAssignedStudent(req.user.id, studentId);
+  if (!assignedStudent) {
+    return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const guidance = await client.query(
       `UPDATE counsellor_guidance_records
-       SET guidance_status = 'final', shared_with_parent = TRUE, reviewed_at = NOW(), updated_at = NOW()
+       SET guidance_status = 'final',
+           shared_with_parent = EXISTS (
+             SELECT 1
+             FROM privacy_preferences pp
+             JOIN parent_student_links l
+               ON l.parent_id = pp.parent_id AND l.student_id = pp.student_id
+             WHERE l.counsellor_id = $1
+               AND l.student_id = $2
+               AND pp.counsellor_access = TRUE
+           ),
+           reviewed_at = NOW(), updated_at = NOW()
        WHERE counsellor_id = $1 AND student_id = $2
        RETURNING *`,
       [req.user.id, studentId]
@@ -303,11 +356,14 @@ async function markReviewed(req, res) {
 
     const notifications = await client.query(
       `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
-       SELECT 'Guidance reviewed',
-              'Your counsellor has reviewed the student guidance profile.',
-              $1, 'parent', l.parent_id
-       FROM parent_student_links l
-       WHERE l.counsellor_id = $1 AND l.student_id = $2
+        SELECT 'Guidance reviewed',
+               'Your counsellor has reviewed the student guidance profile.',
+               $1, 'parent', l.parent_id
+        FROM parent_student_links l
+        JOIN privacy_preferences pp
+          ON pp.parent_id = l.parent_id AND pp.student_id = l.student_id
+         AND pp.counsellor_access = TRUE
+        WHERE l.counsellor_id = $1 AND l.student_id = $2
        RETURNING id, target_user_id`,
       [req.user.id, studentId]
     );

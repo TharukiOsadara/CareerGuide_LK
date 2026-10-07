@@ -34,8 +34,7 @@ export const ROLES = ['student', 'parent', 'counsellor'];
 export const ROLES_WITH_ADMIN = ['student', 'parent', 'counsellor', 'admin'];
 
 // Dashboard each role lands on after signing in.
-// Counsellors have no dashboard of their own yet, so they share the student one.
-const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'StudentHome', counsellor: 'StudentHome' };
+const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'StudentHome', counsellor: 'CounsellorPortal' };
 export const homeRouteFor = (role) => HOME_ROUTE[role] || 'StudentHome';
 
 // Google Sign-In: the OAuth "Web application" client ID from Google Cloud Console.

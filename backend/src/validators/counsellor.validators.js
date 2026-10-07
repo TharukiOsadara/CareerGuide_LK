@@ -7,8 +7,28 @@ const ALLOWED_PATHWAYS = [
 const MAX_SUMMARY = 4000;
 
 function parseId(raw) {
+  if (typeof raw !== 'number' && !/^\d+$/.test(String(raw).trim())) return null;
   const id = Number(raw);
-  return Number.isInteger(id) && id > 0 ? id : null;
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function validateListFilters(query = {}) {
+  const fields = {};
+  for (const [field, maxLength] of [['search', 100], ['stream', 60]]) {
+    if (query[field] === undefined) continue;
+    if (typeof query[field] !== 'string') return { error: `${field} must be text` };
+    const value = query[field].trim();
+    if (value.length > maxLength) return { error: `${field} must be ${maxLength} characters or fewer` };
+    fields[field] = value;
+  }
+
+  if (query.status !== undefined) {
+    if (!['pending', 'reviewed'].includes(String(query.status).toLowerCase())) {
+      return { error: 'status must be pending or reviewed' };
+    }
+    fields.status = String(query.status).toLowerCase();
+  }
+  return { value: fields };
 }
 
 function validateGuidance(body, { partial = false } = {}) {
@@ -64,15 +84,19 @@ function validateGuidance(body, { partial = false } = {}) {
 function validateSettings(body, { partial = false } = {}) {
   const value = {};
   const input = body || {};
-  const textFields = ['schoolAffiliation', 'zone', 'ugcHandbookVersion'];
+  const textFields = [
+    ['schoolAffiliation', 160],
+    ['zone', 160],
+    ['ugcHandbookVersion', 40],
+  ];
   const booleanFields = ['notificationsEnabled', 'emailAlertsEnabled'];
 
-  for (const field of textFields) {
+  for (const [field, maxLength] of textFields) {
     if (input[field] === undefined) continue;
     if (input[field] !== null && typeof input[field] !== 'string') {
       return { error: `${field} must be text or null` };
     }
-    if (typeof input[field] === 'string' && input[field].trim().length > 160) {
+    if (typeof input[field] === 'string' && input[field].trim().length > maxLength) {
       return { error: `${field} is too long` };
     }
     value[field] = typeof input[field] === 'string' ? input[field].trim() : null;
@@ -91,6 +115,7 @@ function validateSettings(body, { partial = false } = {}) {
 module.exports = {
   ALLOWED_PATHWAYS,
   parseId,
+  validateListFilters,
   validateGuidance,
   validateSettings,
 };

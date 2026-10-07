@@ -1,7 +1,9 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const parentRoutes = require('./routes/parent.routes');
+const counsellorRoutes = require('./routes/counsellor.routes');
+const { PORT } = require('./config/env');
+const { pool } = require('./config/db');
 
 const app = express();
 
@@ -9,11 +11,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/api/parent', parentRoutes);
-
-// PostgreSQL connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+app.use('/api/counsellor', counsellorRoutes);
 
 // Test route
 app.get('/', (req, res) => {
@@ -33,6 +31,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

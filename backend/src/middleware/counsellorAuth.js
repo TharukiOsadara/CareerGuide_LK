@@ -1,13 +1,25 @@
 const pool = require('../db');
+const { parseId } = require('../validators/counsellor.validators');
 
 // Temporary auth shared with the rest of the project. Replace only readUserId
 // with JWT verification when the team's sign-in work is ready.
 function readUserId(req) {
-  const userId = Number(req.get('x-user-id'));
-  return Number.isInteger(userId) && userId > 0 ? userId : null;
+  return parseId(req.get('x-user-id'));
 }
 
 async function requireCounsellor(req, res, next) {
+  if (req.user) {
+    if (req.user.role !== 'counsellor' || req.user.status !== 'active') {
+      return res.status(403).json({ error: 'Counsellor access only', code: 'FORBIDDEN' });
+    }
+    req.user = {
+      id: req.user.id,
+      role: req.user.role,
+      fullName: req.user.full_name || req.user.fullName,
+    };
+    return next();
+  }
+
   const userId = readUserId(req);
   if (!userId) {
     return res.status(401).json({ error: 'Not signed in', code: 'UNAUTHENTICATED' });
