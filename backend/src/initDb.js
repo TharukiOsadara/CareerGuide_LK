@@ -34,6 +34,11 @@ async function run() {
     ADD COLUMN IF NOT EXISTS totp_last_step BIGINT,
     ADD COLUMN IF NOT EXISTS totp_locked_until TIMESTAMPTZ
   `);
+  // Password reset: wrong-code counter for the emailed 6-digit code.
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS reset_attempts INTEGER NOT NULL DEFAULT 0
+  `);
 
   // Seed the primary (super) admin.
   const hash = await bcrypt.hash(SUPER_ADMIN_PASSWORD, 10);
