@@ -1,16 +1,16 @@
-ï»¿import React from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../components/Brand';
+import Brand from '../../Components/Brand';
 import { colors } from '../../styles/colors';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
 
 const FEATURES = [
   { icon: 'graduation-cap', title: 'Verified UGC Degrees', text: 'Only accredited programs from recognised Sri Lankan universities and institutes.' },
   { icon: 'brain', title: 'AI Aptitude Matching', text: 'A 10-minute quiz maps your strengths to the right degree and career path.' },
   { icon: 'chart', title: 'Z-Score Intelligence', text: 'Live cut-off marks by district and intake year so you apply with confidence.' },
-  { icon: 'compass', title: 'Clear Career Paths', text: 'See where each degree leads â€” roles, industries and earning potential.' },
+  { icon: 'compass', title: 'Clear Career Paths', text: 'See where each degree leads — roles, industries and earning potential.' },
 ];
 
 export default function About({ navigation }) {
@@ -29,7 +29,7 @@ export default function About({ navigation }) {
           <Text style={styles.title}>About CareerGuide LK</Text>
           <Text style={styles.subtitle}>
             CareerGuide LK helps Sri Lankan A/L students turn their results into a confident
-            next step â€” matching them with UGC-approved and accredited university programs.
+            next step — matching them with UGC-approved and accredited university programs.
           </Text>
         </View>
 
@@ -54,7 +54,7 @@ export default function About({ navigation }) {
           <Text style={styles.missionTitle}>Our mission</Text>
           <Text style={styles.missionText}>
             To make higher-education decisions transparent and data-driven for every student in
-            Sri Lanka â€” regardless of district, school or background.
+            Sri Lanka — regardless of district, school or background.
           </Text>
         </View>
 

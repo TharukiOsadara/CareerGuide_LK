@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, radius, space } from '../theme';
-import Icon from '../../../components/Icon';
+import Icon from '../../../Components/Icon';
 
 // A real toast (fixes the prototype's blocking "Inquiry Sent" modal):
 // slides in, never blocks the screen, disappears by itself, can be tapped away,

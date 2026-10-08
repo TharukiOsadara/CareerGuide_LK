@@ -1,20 +1,20 @@
-ï»¿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../components/Brand';
-import RoleTabs from '../../components/RoleTabs';
+import Brand from '../../Components/Brand';
+import RoleTabs from '../../Components/RoleTabs';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { ROLES_WITH_ADMIN, homeRouteFor } from '../../config';
 import { getGoogleIdToken } from '../../auth/googleSignIn';
 import { collectErrors, hasErrors, validateEmail, validateLoginPassword } from '../../utils/validation';
 import { colors } from '../../styles/colors';
-import GoogleLogo from '../../components/GoogleLogo';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
-import FieldError, { errorBorder } from '../../components/FieldError';
+import GoogleLogo from '../../Components/GoogleLogo';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
+import FieldError, { errorBorder } from '../../Components/FieldError';
 
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', counsellor: 'Counsellor', admin: 'Admin' };
 
@@ -154,13 +154,13 @@ export default function SignIn({ navigation, route }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Signing inâ€¦' : 'Sign In'}</Text>
+            <Text style={styles.primaryText}>{busy ? 'Signing in…' : 'Sign In'}</Text>
           </Pressable>
 
           <View style={styles.divider}><View style={styles.line} /><Text style={styles.or}>OR CONTINUE WITH</Text><View style={styles.line} /></View>
 
           <Pressable disabled={googleBusy || busy} onPress={continueWithGoogle} style={({ pressed }) => [styles.googleBtn, (pressed || googleBusy) && styles.pressed]}>
-            <GoogleLogo size={18} style={styles.googleG} /><Text style={styles.googleText}>{googleBusy ? 'Connecting to Googleâ€¦' : 'Continue with Google'}</Text>
+            <GoogleLogo size={18} style={styles.googleG} /><Text style={styles.googleText}>{googleBusy ? 'Connecting to Google…' : 'Continue with Google'}</Text>
           </Pressable>
         </View>
 

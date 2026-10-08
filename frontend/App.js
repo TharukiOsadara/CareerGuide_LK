@@ -4,7 +4,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 
 // Feature Student Screens
-import SplashScreen from './src/Screens/SplashScreen';
 import HomeScreen from './src/Screens/HomeScreen';
 import StudentProfileScreen from './src/Screens/StudentProfileScreen';
 import AcademicProfileScreen from './src/Screens/AcademicProfileScreen';
@@ -57,7 +56,7 @@ export default function App() {
           <Stack.Navigator initialRouteName="Loading" screenOptions={{ headerShown: false }}>
             {/* Onboarding + Auth */}
             <Stack.Screen name="Loading" component={LoadingScreen} />
-            <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Splash" component={LoadingScreen} />
             <Stack.Screen name="Onboarding" component={Onboarding} />
             <Stack.Screen name="About" component={About} />
             <Stack.Screen name="CourseDatabase" component={CourseDatabase} />

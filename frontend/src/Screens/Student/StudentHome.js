@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../../components/StudentHeader';
-import StudentNav from '../../components/StudentNav';
-import WelcomeToast from '../../components/WelcomeToast';
+import StudentHeader from '../../Components/StudentHeader';
+import StudentNav from '../../Components/StudentNav';
+import WelcomeToast from '../../Components/WelcomeToast';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../components/Icon';
+import Icon, { IconText } from '../../Components/Icon';
 
 export default function StudentHome({ navigation, route }) {
   const { user } = useAuth();
@@ -67,7 +67,7 @@ export default function StudentHome({ navigation, route }) {
             <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search courses, careers, or institutes…"
+              placeholder="Search courses, careers, or institutes�"
               placeholderTextColor={colors.slate400}
               value={query}
               onChangeText={setQuery}
