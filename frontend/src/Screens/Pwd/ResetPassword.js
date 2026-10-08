@@ -5,13 +5,16 @@ import Brand from '../../components/Brand';
 import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import { collectErrors, hasErrors, validateNewPassword } from '../../utils/validation';
+import { collectErrors, hasErrors, validateCode6, validateNewPassword } from '../../utils/validation';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
 import FieldError, { errorBorder } from '../../components/FieldError';
 
 export default function ResetPassword({ navigation, route }) {
-  const { email, resetToken } = route.params || {};
+  const { email } = route.params || {};
+  const [code, setCode] = useState('');
+  const [notice, setNotice] = useState(email ? `We sent a 6-digit code to ${email}. It expires in 15 minutes.` : '');
+  const [resending, setResending] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -22,9 +25,26 @@ export default function ResetPassword({ navigation, route }) {
 
   const match = password.length > 0 && password === confirm;
 
+  // Sends a fresh code (the old one stops working).
+  const resend = async () => {
+    if (!email || resending) return;
+    setResending(true); setError('');
+    try {
+      await api('/api/auth/forgot-password', { method: 'POST', auth: false, body: { email } });
+      setCode('');
+      setNotice(`A new code was sent to ${email}.`);
+    } catch (e) {
+      setError(e.message || 'Could not resend the code.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const submit = async () => {
     setError('');
+    if (!email) return setError('Start again from "Forgot Password" to get a reset code.');
     const errs = collectErrors({
+      code: validateCode6(code),
       password: validateNewPassword(password, 'New password'),
       confirm: !confirm ? 'Please confirm your new password.' : !match ? 'Passwords do not match.' : '',
     });
@@ -33,14 +53,21 @@ export default function ResetPassword({ navigation, route }) {
 
     setBusy(true);
     try {
-      await api('/api/auth/reset-password', {
+      const res = await api('/api/auth/reset-password', {
         method: 'POST', auth: false,
-        body: { token: resetToken, email, newPassword: password },
+        body: { email, code: code.trim(), newPassword: password },
       });
       setSuccess(true);
-      setTimeout(() => navigation.reset({ index: 0, routes: [{ name: 'SignIn', params: { email } }] }), 1800);
+      // Go to the sign-in for this account's role (admins use the Admin Portal).
+      const role = res?.role || 'student';
+      const next = role === 'admin'
+        ? { name: 'AdminPortal' }
+        : { name: 'SignIn', params: { email, role, passwordReset: true } };
+      setTimeout(() => navigation.reset({ index: 0, routes: [next] }), 1800);
     } catch (e) {
+      setNotice('');
       setError(e.message || 'Could not reset your password.');
+      if (e.data?.restart) setCode('');
     } finally {
       setBusy(false);
     }
@@ -58,7 +85,24 @@ export default function ResetPassword({ navigation, route }) {
         <View style={styles.card}>
           <View style={styles.iconTile}><Icon name="shield-alert" size={26} color={colors.blue} /></View>
           <Text style={styles.title}>Reset New Password</Text>
-          <Text style={styles.subtitle}>Create a strong, new password for your CareerGuide LK account</Text>
+          <Text style={styles.subtitle}>Enter the code from your email, then create a strong new password.</Text>
+          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+
+          <Text style={styles.label}>6-Digit Reset Code</Text>
+          <View style={[styles.inputBox, !!errors.code && errorBorder]}>
+            <Icon name="key" size={17} color={colors.blue} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, styles.codeInput]} value={code}
+              onChangeText={(t) => { setCode(t.replace(/[^0-9]/g, '')); setErrors((e) => ({ ...e, code: '' })); }}
+              placeholder="000000" placeholderTextColor={colors.slate400}
+              keyboardType="number-pad" maxLength={6} autoFocus
+              textContentType="oneTimeCode" autoComplete="one-time-code"
+            />
+          </View>
+          <FieldError message={errors.code} style={{ alignSelf: 'flex-start' }} />
+          <Pressable onPress={resend} disabled={resending || !email} hitSlop={8} style={styles.resend}>
+            <Text style={styles.resendText}>{resending ? 'Sending…' : "Didn't get it? Resend code"}</Text>
+          </Pressable>
 
           <Text style={styles.label}>New Password</Text>
           <View style={[styles.inputBox, !!errors.password && errorBorder]}>
@@ -66,7 +110,7 @@ export default function ResetPassword({ navigation, route }) {
             <TextInput style={styles.input} value={password} onChangeText={(v) => { setPassword(v); setErrors((e) => ({ ...e, password: '' })); }} placeholder="New password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} maxLength={128} />
             <Pressable hitSlop={10} onPress={() => setShowPw((s) => !s)}><Icon name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.slate} style={styles.eye} /></Pressable>
           </View>
-          <FieldError message={errors.password} />
+          <FieldError message={errors.password} style={{ alignSelf: 'flex-start' }} />
           <PasswordStrength value={password} />
 
           <Text style={styles.label}>Confirm New Password</Text>
@@ -75,7 +119,7 @@ export default function ResetPassword({ navigation, route }) {
             <TextInput style={styles.input} value={confirm} onChangeText={(v) => { setConfirm(v); setErrors((e) => ({ ...e, confirm: '' })); }} maxLength={128} placeholder="Re-enter new password" placeholderTextColor={colors.slate400} secureTextEntry={!showPw} />
             {confirm.length > 0 && <Icon name={match ? 'check-circle' : 'x-circle'} size={18} color={match ? colors.greenDark : colors.redStrong} style={styles.matchMark} />}
           </View>
-          <FieldError message={errors.confirm} />
+          <FieldError message={errors.confirm} style={{ alignSelf: 'flex-start' }} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -98,6 +142,10 @@ export default function ResetPassword({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  notice: { color: colors.greenDark, backgroundColor: colors.greenPale, fontSize: 12, lineHeight: 17, padding: 10, borderRadius: 8, marginTop: 12, alignSelf: 'stretch' },
+  codeInput: { fontSize: 18, fontWeight: '800', letterSpacing: 6 },
+  resend: { alignSelf: 'flex-end', marginTop: 8 },
+  resendText: { color: colors.blue, fontSize: 12.5, fontWeight: '700' },
   safe: { flex: 1, backgroundColor: colors.bgSoft },
   topbar: { height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
   backRow: { flexDirection: 'row', alignItems: 'center' },

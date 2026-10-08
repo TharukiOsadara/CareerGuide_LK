@@ -10,6 +10,7 @@ const QRCode = require('qrcode');
 const { GOOGLE_CLIENT_ID, JWT_SECRET } = require('../config/env');
 const { generateSecret, verifyCode, otpauthUrl } = require('../utils/totp');
 const v = require('../utils/validate');
+const { sendMail } = require('../utils/mailer');
 
 const router = express.Router();
 const googleClient = new OAuth2Client();
@@ -369,57 +370,90 @@ router.post('/google', async (req, res) => {
 });
 
 // --- Forgot password: issue a reset token ---
+// --- Password reset (6-digit code sent to the account's email) ---
+// Only a hash of the code is stored. It expires after 15 minutes and is cleared after
+// 5 wrong tries. The code is never returned in an API response.
+const RESET_CODE_MINUTES = 15;
+const RESET_MAX_ATTEMPTS = 5;
+const hashResetCode = (code) => crypto.createHash('sha256').update(String(code)).digest('hex');
+
 router.post('/forgot-password', async (req, res) => {
   try {
-    const email = (req.body.email || '').toLowerCase().trim();
-    const { rows } = await query('SELECT id FROM users WHERE email = $1', [email]);
-    // Always respond success to avoid leaking which emails exist.
-    if (rows.length) {
-      const token = crypto.randomBytes(24).toString('hex');
-      await query(
-        `UPDATE users SET reset_token = $1, reset_expires = NOW() + INTERVAL '1 hour' WHERE id = $2`,
-        [token, rows[0].id]
-      );
-      // In production this token is emailed. For the demo we return it so the flow works end-to-end.
-      return res.json({ message: 'Reset instructions sent.', resetToken: token });
-    }
-    res.json({ message: 'If that email exists, reset instructions have been sent.' });
+    const invalid = v.email(req.body.email);
+    if (invalid) return res.status(400).json({ message: invalid });
+    const email = req.body.email.toLowerCase().trim();
+    const generic = { message: 'If an account exists for that email, a 6-digit reset code has been sent.' };
+
+    const { rows } = await query('SELECT id, full_name, status FROM users WHERE email = $1', [email]);
+    const user = rows[0];
+    // Same response whether or not the account exists, so emails can't be discovered.
+    if (!user || user.status === 'blocked') return res.json(generic);
+
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    await query(
+      `UPDATE users SET reset_token = $1, reset_expires = NOW() + ($2 || ' minutes')::interval, reset_attempts = 0
+       WHERE id = $3`,
+      [hashResetCode(code), String(RESET_CODE_MINUTES), user.id]
+    );
+    await sendMail({
+      to: email,
+      subject: 'Your CareerGuide LK password reset code',
+      text: `Hi ${user.full_name || ''},\n\nYour password reset code is: ${code}\n\n`
+        + `It expires in ${RESET_CODE_MINUTES} minutes. If you did not ask to reset your password, ignore this email.\n\nCareerGuide LK`,
+    });
+    res.json(generic);
   } catch (err) {
     console.error('forgot password error', err);
     res.status(500).json({ message: 'Could not process request.' });
   }
 });
 
-// --- Reset password ---
 router.post('/reset-password', async (req, res) => {
   try {
-    const { token, email, newPassword } = req.body;
-    const invalid = v.newPassword(newPassword, 'New password');
+    const { email, code, newPassword } = req.body;
+    const invalid = v.first(
+      v.email(email),
+      /^\d{6}$/.test(String(code || '')) ? '' : 'Enter the 6-digit code from your email.',
+      v.newPassword(newPassword, 'New password'),
+    );
     if (invalid) return res.status(400).json({ message: invalid });
 
-    let userRow;
-    if (token) {
-      const { rows } = await query(
-        'SELECT * FROM users WHERE reset_token = $1 AND reset_expires > NOW()', [token]
-      );
-      userRow = rows[0];
-    } else if (email) {
-      const { rows } = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
-      userRow = rows[0];
+    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    const user = rows[0];
+    const expired = !user || !user.reset_token || !user.reset_expires || new Date(user.reset_expires) < new Date();
+    if (expired) {
+      return res.status(400).json({ message: 'This reset code has expired. Please request a new one.', restart: true });
     }
-    if (!userRow) return res.status(400).json({ message: 'Invalid or expired reset link.' });
+
+    const ok = crypto.timingSafeEqual(Buffer.from(hashResetCode(code)), Buffer.from(user.reset_token));
+    if (!ok) {
+      const attempts = (user.reset_attempts || 0) + 1;
+      if (attempts >= RESET_MAX_ATTEMPTS) {
+        await query('UPDATE users SET reset_token = NULL, reset_expires = NULL, reset_attempts = 0 WHERE id = $1', [user.id]);
+        return res.status(400).json({ message: 'Too many wrong codes. Please request a new code.', restart: true });
+      }
+      await query('UPDATE users SET reset_attempts = $1 WHERE id = $2', [attempts, user.id]);
+      const left = RESET_MAX_ATTEMPTS - attempts;
+      return res.status(400).json({ message: `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.` });
+    }
 
     const hash = await bcrypt.hash(newPassword, 10);
     await query(
-      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_expires = NULL WHERE id = $2',
-      [hash, userRow.id]
+      `UPDATE users SET password_hash = $1, reset_token = NULL, reset_expires = NULL, reset_attempts = 0,
+              failed_attempts = 0
+       WHERE id = $2`,
+      [hash, user.id]
     );
-    res.json({ message: 'Password updated successfully.' });
+    // Sign out everywhere after a password change.
+    await query('UPDATE sessions SET active = FALSE WHERE user_id = $1', [user.id]);
+    // The role tells the app which sign-in screen to open next.
+    res.json({ message: 'Password updated successfully.', role: user.role });
   } catch (err) {
     console.error('reset password error', err);
     res.status(500).json({ message: 'Could not reset password.' });
   }
 });
+
 
 // --- Current user ---
 router.get('/me', authenticate, async (req, res) => {
