@@ -1,0 +1,11 @@
+{
+  "name": "careerguide-lk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CareerGuide LK - role-based career guidance app (Expo frontend + Express/Neon backend)",
+  "scripts": {
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend start",
+    "db:init": "node backend/src/initDb.js"
+  }
+}
