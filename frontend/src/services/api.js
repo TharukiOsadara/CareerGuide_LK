@@ -49,6 +49,23 @@ export async function saveAcademicProfile(data) {
   });
 }
 
+export async function deleteAcademicProfile(userId = 42) {
+  return request(`/academic-profile/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getAcademicProfile(userId = 42) {
+  return request(`/academic-profile/${encodeURIComponent(userId)}`);
+}
+
+export async function updateUserProfile(data) {
+  return request('/user/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getCourses(filters = {}) {
   const payload = await request(`/courses${withQueryParams(filters)}`);
   return Array.isArray(payload) ? payload : payload?.courses || [];
@@ -72,11 +89,11 @@ export async function sendInquiry(data) {
   });
 }
 
-export async function getNotifications(userId = 1) {
+export async function getNotifications(userId = 42) {
   return request(`/notifications${withQueryParams({ userId })}`);
 }
 
-export async function markNotificationsRead(notificationIds, userId = 1) {
+export async function markNotificationsRead(notificationIds, userId = 42) {
   return request('/notifications/mark-read', {
     method: 'PUT',
     body: JSON.stringify({ userId, notificationIds }),

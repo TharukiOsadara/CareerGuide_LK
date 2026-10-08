@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -71,7 +72,7 @@ export default function HomeScreen({ navigation }) {
   const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
-  const openAcademicProfile = () => navigation.navigate('AcademicProfile');
+  const openStudentProfile = () => navigation.navigate('StudentProfile');
 
   useEffect(() => {
     let mounted = true;
@@ -120,7 +121,7 @@ export default function HomeScreen({ navigation }) {
     setSelectedNotification(null);
   };
 
-  const studentName = profile?.user?.full_name || 'Tharuki';
+  const studentName = profile?.user?.full_name || 'Savindi Piyarathna';
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -145,16 +146,20 @@ export default function HomeScreen({ navigation }) {
             {notifications.length > 0 && <View style={styles.notificationDot} />}
           </Pressable>
           <Pressable
-            accessibilityLabel="Open Academic Profile screen"
+            accessibilityLabel="View student profile"
             accessibilityRole="button"
             hitSlop={10}
-            onPress={openAcademicProfile}
+            onPress={() => navigation.navigate('AcademicProfile')}
             style={({ pressed }) => [
               styles.avatar,
               pressed && styles.avatarPressed,
             ]}
           >
-            <Text style={styles.avatarText}>TO</Text>
+            {profile?.user?.profilePicture ? (
+              <Image source={{ uri: profile.user.profilePicture }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>TO</Text>
+            )}
           </Pressable>
         </View>
       </View>
@@ -192,6 +197,15 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: '65%' }]} />
           </View>
+          <Pressable
+            accessibilityLabel="View profile"
+            accessibilityRole="button"
+            onPress={openStudentProfile}
+            style={styles.viewProfileButton}
+          >
+            <Text style={styles.viewProfileButtonText}>View Profile</Text>
+            <Ionicons color={BLUE} name="arrow-forward" size={16} />
+          </Pressable>
         </View>
 
         <View style={styles.assessmentBanner}>
@@ -413,6 +427,11 @@ const styles = StyleSheet.create({
   avatarPressed: {
     opacity: 0.7,
   },
+  avatarImage: {
+    borderRadius: 22,
+    height: 42,
+    width: 42,
+  },
   avatarText: {
     color: BLUE,
     fontSize: 13,
@@ -482,6 +501,18 @@ const styles = StyleSheet.create({
     height: 8,
     marginTop: 8,
     overflow: 'hidden',
+  },
+  viewProfileButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 13,
+  },
+  viewProfileButtonText: {
+    color: BLUE,
+    fontSize: 13,
+    fontWeight: '700',
+    marginRight: 5,
   },
   progressFill: {
     backgroundColor: BLUE,

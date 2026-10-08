@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
-import { saveAcademicProfile } from '../services/api';
+import { getAcademicProfile, saveAcademicProfile } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -94,6 +94,55 @@ export default function AcademicProfileScreen({ navigation }) {
   const [zScore, setZScore] = useState('1.4250');
   const [grades, setGrades] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getAcademicProfile(42)
+      .then((response) => {
+        const savedProfile = response?.academicProfile || response?.data;
+        if (!isMounted || !savedProfile) {
+          return;
+        }
+
+        const profile = savedProfile;
+        let savedGrades = profile.subjectGrades;
+        if (typeof savedGrades === 'string') {
+          try {
+            savedGrades = JSON.parse(savedGrades);
+          } catch (error) {
+            console.warn('Unable to parse saved subject grades.', error);
+            savedGrades = [];
+          }
+        }
+        savedGrades = Array.isArray(savedGrades) ? savedGrades : [];
+        const gradeMap = savedGrades.reduce((result, item) => {
+          if (item?.subject && item?.grade) {
+            result[item.subject] = item.grade;
+          }
+          return result;
+        }, {});
+
+        setStream(STREAM_OPTIONS.includes(profile.subjectStream)
+          ? profile.subjectStream
+          : STREAM_OPTIONS[0]);
+        setDistrict(DISTRICT_OPTIONS.includes(profile.district)
+          ? profile.district
+          : DISTRICT_OPTIONS[0]);
+        if (profile.zScore !== undefined && profile.zScore !== null) {
+          setZScore(String(profile.zScore));
+        }
+        setGrades(gradeMap);
+      })
+      .catch(() => {
+        // A profile is optional for first-time students.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -102,7 +151,7 @@ export default function AcademicProfileScreen({ navigation }) {
     navigation.navigate('Main');
   };
 
-  const handleGenerateMatches = async () => {
+  const handleSaveAcademicProfile = async () => {
     const subjects = STREAM_SUBJECTS[stream];
     const subjectGrades = subjects.map((subject) => ({ subject, grade: grades[subject] }));
     const zScoreValue = Number(zScore);
@@ -118,15 +167,17 @@ export default function AcademicProfileScreen({ navigation }) {
     setIsSaving(true);
     try {
       const response = await saveAcademicProfile({
-        userId: 1,
+        userId: 42,
         subjectStream: stream,
         district,
         zScore: zScoreValue,
         subjectGrades,
       });
-      navigation.navigate('StudentCareerPath', { matches: response?.data || response });
+      navigation.navigate('StudentProfile', {
+        academicProfile: response?.academicProfile || response?.data,
+      });
     } catch (error) {
-      console.warn('Unable to save academic profile.', error);
+      Alert.alert('Unable to save academic profile', error.message);
     } finally {
       setIsSaving(false);
     }
@@ -215,6 +266,18 @@ export default function AcademicProfileScreen({ navigation }) {
                 />
               </View>
             ))}
+            {STREAM_SUBJECTS[stream].some((subject) => grades[subject]) && (
+              <View style={styles.selectedGrades}>
+                <Text style={styles.selectedGradesLabel}>Selected grades</Text>
+                <View style={styles.gradeList}>
+                  {STREAM_SUBJECTS[stream]
+                    .filter((subject) => grades[subject])
+                    .map((subject) => (
+                      <GradeChip key={subject} subject={subject} grade={grades[subject]} />
+                    ))}
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
@@ -230,12 +293,12 @@ export default function AcademicProfileScreen({ navigation }) {
         <Pressable
           accessibilityRole="button"
           disabled={isSaving}
-          onPress={handleGenerateMatches}
+          onPress={handleSaveAcademicProfile}
           style={styles.primaryButton}
         >
           {isSaving && <ActivityIndicator color="#FFFFFF" />}
           <Text style={styles.primaryButtonText}>
-            Generate Career &amp; Course Matches
+            Save
           </Text>
           <Text style={styles.primaryButtonArrow}>→</Text>
         </Pressable>
@@ -387,6 +450,18 @@ const styles = StyleSheet.create({
   gradeList: {
     gap: 8,
     paddingVertical: 2,
+  },
+  selectedGrades: {
+    borderTopColor: BORDER,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+    paddingTop: 12,
+  },
+  selectedGradesLabel: {
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   subjectRow: {
     alignItems: 'center',

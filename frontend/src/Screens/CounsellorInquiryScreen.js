@@ -55,7 +55,7 @@ export default function CounsellorInquiryScreen({ navigation }) {
     setIsSending(true);
     try {
       await sendInquiry({
-        userId: 1,
+        userId: 42,
         counsellorId: selectedCounsellor.id,
         courseTitle: course,
         subject,
