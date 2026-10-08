@@ -19,34 +19,16 @@ const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
 const BACKGROUND = '#F4F7FC';
-const coursesData = [
-  {
-    id: 'software-engineering',
-    title: 'B.Sc. (Hons) in Software Engineering',
-    institute: 'IIT / University of Westminster',
-    match: 94,
-    category: 'Computing & IT',
-    ugcApproved: true,
-  },
-  {
-    id: 'biomedical-science',
-    title: 'B.Sc. (Hons) in Biomedical Science',
-    institute: 'AIC Campus',
-    match: 87,
-    category: 'Science',
-    ugcApproved: true,
-  },
-  {
-    id: 'bit',
-    title: 'Bachelor of Information Technology (BIT)',
-    institute: 'UCSC / University of Colombo',
-    match: 91,
-    category: 'Computing & IT',
-    ugcApproved: true,
-  },
-];
-
 const filters = ['All Courses', 'UGC Approved', 'Computing & IT', 'Engineering', 'Business'];
+
+function normalizeCourse(course) {
+  return {
+    ...course,
+    match: course.match ?? course.match_percentage ?? 0,
+    category: course.category ?? course.stream,
+    ugcApproved: course.ugcApproved ?? course.ugc_approved,
+  };
+}
 
 function CourseCard({ course, navigation }) {
   return (
@@ -78,7 +60,7 @@ function CourseCard({ course, navigation }) {
 }
 
 export default function StudentCourses({ navigation, route }) {
-  const [courses, setCourses] = useState(coursesData);
+  const [courses, setCourses] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All Courses');
   const [searchQuery, setSearchQuery] = useState(route?.params?.filters?.search || '');
   const [isLoading, setIsLoading] = useState(true);
@@ -107,8 +89,8 @@ export default function StudentCourses({ navigation, route }) {
         if (!Array.isArray(remoteCourses)) {
           throw new Error('Course response must contain an array');
         }
-        if (isMounted && remoteCourses.length > 0) {
-          setCourses(remoteCourses);
+        if (isMounted) {
+          setCourses(remoteCourses.map(normalizeCourse));
         }
       } catch (error) {
         console.warn('Unable to load courses from the API; showing fallback courses.', error);

@@ -66,6 +66,13 @@ export async function updateUserProfile(data) {
   });
 }
 
+export async function deleteUserProfile(userId = 42, fields = []) {
+  return request(`/user/profile/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ fields }),
+  });
+}
+
 export async function getCourses(filters = {}) {
   const payload = await request(`/courses${withQueryParams(filters)}`);
   return Array.isArray(payload) ? payload : payload?.courses || [];

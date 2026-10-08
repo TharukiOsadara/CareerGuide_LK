@@ -14,28 +14,13 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
-import { getNotifications, getStudentProfile, markNotificationsRead } from '../services/api';
+import { getCourses, getNotifications, getStudentProfile, markNotificationsRead } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
 const BACKGROUND = '#F4F7FC';
-
-const fallbackCourses = [
-  {
-    id: 'software-engineering',
-    title: 'B.Sc. (Hons) in Software Engineering',
-    institute: 'IIT / University of Westminster',
-    match: '94% Match',
-  },
-  {
-    id: 'biomedical-science',
-    title: 'B.Sc. (Hons) in Biomedical Science',
-    institute: 'AIC Campus',
-    match: '87% Match',
-  },
-];
 
 function CourseCard({ course, navigation }) {
   return (
@@ -66,7 +51,7 @@ function CourseCard({ course, navigation }) {
 
 export default function HomeScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
-  const [courses, setCourses] = useState(fallbackCourses);
+  const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
@@ -80,17 +65,24 @@ export default function HomeScreen({ navigation }) {
       .then((data) => {
         if (!mounted) return;
         setProfile(data);
-        if (Array.isArray(data?.careerPaths) && data.careerPaths.length > 0) {
-          setCourses(data.careerPaths.slice(0, 3).map((career) => ({
-            id: career.id || career.title.toLowerCase().replace(/\s+/g, '-'),
-            title: career.title,
-            institute: career.note || 'Aptitude Assessment',
-            match: career.match,
-          })));
-        }
       })
       .catch((error) => console.warn('Unable to load home profile data.', error))
       .finally(() => mounted && setIsLoading(false));
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    getCourses()
+      .then((data) => {
+        if (mounted) {
+          setCourses(data.slice(0, 3).map((course) => ({
+            ...course,
+            match: `${course.match_percentage ?? 0}% Match`,
+          })));
+        }
+      })
+      .catch((error) => console.warn('Unable to load courses for home screen.', error));
     return () => { mounted = false; };
   }, []);
 

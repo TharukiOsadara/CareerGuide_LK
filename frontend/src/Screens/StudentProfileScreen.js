@@ -9,6 +9,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
 import {
   deleteAcademicProfile,
+  deleteUserProfile,
   getStudentProfile,
   updateUserProfile,
 } from '../services/api';
@@ -80,6 +82,11 @@ export default function StudentProfileScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPictureEditorVisible, setIsPictureEditorVisible] = useState(false);
   const [isUpdatingPicture, setIsUpdatingPicture] = useState(false);
+  const [isProfileEditorVisible, setIsProfileEditorVisible] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ fullName: '', grade: '' });
+  const [isDeleteDetailsVisible, setIsDeleteDetailsVisible] = useState(false);
+  const [detailsToDelete, setDetailsToDelete] = useState([]);
   useEffect(() => {
     let mounted = true;
     getStudentProfile()
@@ -110,6 +117,63 @@ export default function StudentProfileScreen({ navigation, route }) {
   const user = profile?.user;
   const academicProfile = normalizeAcademicProfile(profile?.academicProfile);
   const subjectGrades = academicProfile?.subjectGrades || [];
+  const openProfileEditor = () => {
+    setProfileForm({
+      fullName: user?.full_name || '',
+      grade: user?.grade || '',
+    });
+    setIsProfileEditorVisible(true);
+  };
+
+  const saveProfileDetails = async () => {
+    if (!profileForm.fullName.trim() || !profileForm.grade.trim()) {
+      Alert.alert('Missing details', 'Enter the student name and grade.');
+      return;
+    }
+    setIsUpdatingProfile(true);
+    try {
+      const response = await updateUserProfile({
+        userId: user?.id || 42,
+        fullName: profileForm.fullName,
+        grade: profileForm.grade,
+      });
+      setProfile((current) => ({
+        ...(current || {}),
+        user: { ...(current?.user || {}), ...response.data },
+      }));
+      setIsProfileEditorVisible(false);
+    } catch (error) {
+      Alert.alert('Unable to update profile', error.message);
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const confirmDeleteUserProfile = async () => {
+    if (detailsToDelete.length === 0) {
+      Alert.alert('Select details', 'Choose at least one profile detail to delete.');
+      return;
+    }
+    try {
+      const response = await deleteUserProfile(user?.id || 42, detailsToDelete);
+      setProfile((current) => ({
+        ...(current || {}),
+        user: { ...(current?.user || {}), ...response.data },
+      }));
+      setDetailsToDelete([]);
+      setIsDeleteDetailsVisible(false);
+    } catch (error) {
+      Alert.alert('Unable to delete profile details', error.message);
+    }
+  };
+
+  const toggleDetailToDelete = (detail) => {
+    setDetailsToDelete((current) => (
+      current.includes(detail)
+        ? current.filter((item) => item !== detail)
+        : [...current, detail]
+    ));
+  };
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -213,29 +277,42 @@ export default function StudentProfileScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.identityCard}>
-          <Pressable
-            accessibilityLabel="Change profile picture"
-            accessibilityRole="button"
-            onPress={() => setIsPictureEditorVisible(true)}
-          >
-            {user?.profilePicture ? (
-              <Image source={{ uri: user.profilePicture }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>TO</Text>
-              </View>
-            )}
-            <Text style={styles.changePictureText}>Change</Text>
-          </Pressable>
-          <View style={styles.identityDetails}>
-            <Text style={styles.studentName}>{user?.full_name || 'Savindi Piyarathna'}</Text>
-            <Text style={styles.studentMeta}>
-              Grade 13 · {user?.al_stream || 'Physical Science Stream'} · Index No. 4521
-            </Text>
+          <View style={styles.identityTopRow}>
+            <Pressable
+              accessibilityLabel="Change profile picture"
+              accessibilityRole="button"
+              onPress={() => setIsPictureEditorVisible(true)}
+            >
+              {user?.profilePicture ? (
+                <Image source={{ uri: user.profilePicture }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>TO</Text>
+                </View>
+              )}
+              <Text style={styles.changePictureText}>Change</Text>
+            </Pressable>
+            <View style={styles.identityDetails}>
+              <Text style={styles.studentName}>{user?.full_name || 'Savindi Piyarathna'}</Text>
+              <Text style={styles.studentEmail}>{user?.email || 'Email not available'}</Text>
+              <Text style={styles.studentMeta}>
+                Grade {user?.grade || 'Not set'} · {user?.al_stream || 'Stream not set'} · Index No. 4521
+              </Text>
+            </View>
+            <View style={styles.reviewedBadge}>
+              <Text style={styles.reviewedText}>REVIEWED</Text>
+            </View>
           </View>
-
-          <View style={styles.reviewedBadge}>
-            <Text style={styles.reviewedText}>REVIEWED</Text>
+          <View style={styles.profileActions}>
+            <Pressable onPress={openProfileEditor} style={styles.editProfileButton}>
+              <Text style={styles.editAcademicText}>Edit profile</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setIsDeleteDetailsVisible(true)}
+              style={styles.deleteAcademicButton}
+            >
+              <Text style={styles.deleteAcademicText}>Delete profile</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -393,6 +470,85 @@ export default function StudentProfileScreen({ navigation, route }) {
         </View>
       </Modal>
 
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setIsDeleteDetailsVisible(false)}
+        transparent
+        visible={isDeleteDetailsVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pictureModal}>
+            <Text style={styles.pictureModalTitle}>Delete profile</Text>
+            {[
+              ['grade', 'Grade'],
+              ['profilePicture', 'Profile picture'],
+            ].map(([key, label]) => (
+              <Pressable
+                key={key}
+                onPress={() => toggleDetailToDelete(key)}
+                style={styles.detailDeleteOption}
+              >
+                <View style={[
+                  styles.detailDeleteCheckbox,
+                  detailsToDelete.includes(key) && styles.detailDeleteCheckboxSelected,
+                ]}>
+                  {detailsToDelete.includes(key) && (
+                    <Text style={styles.detailDeleteCheckmark}>✓</Text>
+                  )}
+                </View>
+                <Text style={styles.detailDeleteText}>{label}</Text>
+              </Pressable>
+            ))}
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setIsDeleteDetailsVisible(false)}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={confirmDeleteUserProfile} style={styles.deleteConfirmButton}>
+                <Text style={styles.savePictureText}>Delete selected</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setIsProfileEditorVisible(false)}
+        transparent
+        visible={isProfileEditorVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pictureModal}>
+            <Text style={styles.pictureModalTitle}>Update student profile</Text>
+            <TextInput
+              onChangeText={(fullName) => setProfileForm((current) => ({ ...current, fullName }))}
+              placeholder="Student name"
+              style={styles.profileInput}
+              value={profileForm.fullName}
+            />
+            <TextInput
+              onChangeText={(grade) => setProfileForm((current) => ({ ...current, grade }))}
+              placeholder="Grade"
+              style={styles.profileInput}
+              value={profileForm.grade}
+            />
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setIsProfileEditorVisible(false)} style={styles.cancelButton}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable disabled={isUpdatingProfile} onPress={saveProfileDetails} style={styles.savePictureButton}>
+                {isUpdatingProfile
+                  ? <ActivityIndicator color="#FFFFFF" />
+                  : <Text style={styles.savePictureText}>Save</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <BottomNavigation activeRoute="StudentProfile" navigation={navigation} />
     </SafeAreaView>
   );
@@ -454,12 +610,14 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   identityCard: {
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    flexDirection: 'row',
-    minHeight: 122,
     padding: 16,
+  },
+  identityTopRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    width: '100%',
   },
   avatar: {
     alignItems: 'center',
@@ -492,6 +650,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 7,
   },
+  studentEmail: {
+    color: MUTED,
+    fontSize: 12,
+    marginBottom: 4,
+  },
   studentMeta: {
     color: MUTED,
     fontSize: 12,
@@ -508,6 +671,60 @@ const styles = StyleSheet.create({
     color: '#006644',
     fontSize: 10,
     fontWeight: '800',
+  },
+  profileActions: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    width: '100%',
+  },
+  editProfileButton: {
+    borderColor: BLUE,
+    borderRadius: 7,
+    borderWidth: 1,
+    flex: 1,
+    marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  detailDeleteOption: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingVertical: 10,
+  },
+  detailDeleteCheckbox: {
+    alignItems: 'center',
+    borderColor: BORDER,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  detailDeleteCheckboxSelected: {
+    backgroundColor: BLUE,
+    borderColor: BLUE,
+  },
+  detailDeleteCheckmark: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  detailDeleteText: {
+    color: TEXT,
+    fontSize: 14,
+    marginLeft: 10,
+  },
+  deleteConfirmButton: {
+    alignItems: 'center',
+    backgroundColor: '#DE350B',
+    borderRadius: 8,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 16,
   },
   section: {
     marginTop: 24,
@@ -586,6 +803,8 @@ const styles = StyleSheet.create({
     borderColor: '#DE350B',
     borderRadius: 7,
     borderWidth: 1,
+    flex: 1,
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -776,6 +995,15 @@ const styles = StyleSheet.create({
     color: MUTED,
     fontSize: 12,
     marginTop: 6,
+  },
+  profileInput: {
+    borderColor: BORDER,
+    borderRadius: 8,
+    borderWidth: 1,
+    color: TEXT,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   modalActions: {
     flexDirection: 'row',

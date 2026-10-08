@@ -31,6 +31,7 @@ exports.getStudentProfile = async (req, res) => {
 
     const userResult = await db.query(
       `SELECT u.id, u.full_name, u.email, u.al_stream, u.status,
+              u.grade,
               u.profile_picture AS "profilePicture",
               ap.subject_stream AS "subjectStream",
               ap.district,
@@ -53,6 +54,7 @@ exports.getStudentProfile = async (req, res) => {
         email: userResult.rows[0].email,
         al_stream: userResult.rows[0].al_stream,
         status: userResult.rows[0].status,
+        grade: userResult.rows[0].grade,
         profilePicture: userResult.rows[0].profilePicture,
       },
       academicProfile: userResult.rows[0].subjectStream
@@ -203,28 +205,48 @@ exports.deleteAcademicProfile = async (req, res) => {
 
 exports.updateUserProfile = async (req, res) => {
   const userId = parseUserId(req.body?.userId);
-  const rawZScore = req.body?.zScore ?? req.body?.['Z score'];
-  const zScore = Number(rawZScore);
-  const { profilePicture } = req.body || {};
+  const body = req.body || {};
+  const hasName = body.fullName !== undefined || body.full_name !== undefined || body.name !== undefined;
+  const hasGrade = body.grade !== undefined;
+  const hasPicture = body.profilePicture !== undefined;
+  const hasZScore = body.zScore !== undefined || body['Z score'] !== undefined;
+  const fullName = body.fullName ?? body.full_name ?? body.name;
+  const grade = body.grade;
+  const profilePicture = body.profilePicture;
+  const rawZScore = body.zScore ?? body['Z score'];
+  const zScore = hasZScore ? Number(rawZScore) : null;
 
-  if (!userId || !Number.isFinite(zScore)) {
-    return res.status(400).json({ success: false, error: 'userId and a valid Z score are required.' });
+  if (!userId) {
+    return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
-  if (zScore > 4 || zScore < 0) {
-    return res.status(400).json({ success: false, message: 'GPA cannot exceed 4.00' });
+  if (!hasName && !hasGrade && !hasPicture && !hasZScore) {
+    return res.status(400).json({ success: false, error: 'At least one profile field is required.' });
   }
-  if (profilePicture !== undefined && typeof profilePicture !== 'string') {
+  if (hasName && (typeof fullName !== 'string' || fullName.trim() === '')) {
+    return res.status(400).json({ success: false, error: 'fullName cannot be empty.' });
+  }
+  if (hasGrade && (typeof grade !== 'string' || grade.trim() === '')) {
+    return res.status(400).json({ success: false, error: 'grade cannot be empty.' });
+  }
+  if (hasZScore && (!Number.isFinite(zScore) || zScore > 4 || zScore < 0)) {
+    return res.status(400).json({ success: false, error: 'zScore must be between 0 and 4.' });
+  }
+  if (hasPicture && profilePicture !== null && typeof profilePicture !== 'string') {
     return res.status(400).json({ success: false, error: 'profilePicture must be a URL or base64 string.' });
   }
 
   try {
     const result = await db.query(
       `UPDATE users
-       SET z_score = $1,
-           profile_picture = COALESCE($2, profile_picture)
-       WHERE id = $3
-       RETURNING id, full_name, email, z_score AS "zScore", profile_picture AS "profilePicture"`,
-      [zScore, profilePicture || null, userId]
+       SET full_name = CASE WHEN $1 THEN $2 ELSE full_name END,
+           grade = CASE WHEN $3 THEN $4 ELSE grade END,
+           z_score = CASE WHEN $5 THEN $6 ELSE z_score END,
+           profile_picture = CASE WHEN $7 THEN $8 ELSE profile_picture END
+       WHERE id = $9
+       RETURNING id, full_name, email, al_stream, grade, z_score AS "zScore",
+                 profile_picture AS "profilePicture"`,
+      [hasName, hasName ? fullName.trim() : null, hasGrade, hasGrade ? grade.trim() : null,
+        hasZScore, zScore, hasPicture, profilePicture, userId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'User not found.' });
@@ -232,6 +254,52 @@ exports.updateUserProfile = async (req, res) => {
     return res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     return sendServerError(res, error);
+  }
+};
+
+exports.deleteUserProfile = async (req, res) => {
+  const userId = parseUserId(req.params.userId);
+  const fields = Array.isArray(req.body?.fields) ? req.body.fields : [];
+  const allowedFields = ['grade', 'profilePicture'];
+  const invalidField = fields.find((field) => !allowedFields.includes(field));
+  if (!userId) {
+    return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
+  }
+  if (fields.length === 0 || invalidField) {
+    return res.status(400).json({
+      success: false,
+      error: 'Select one or more valid profile details to delete.',
+    });
+  }
+
+  let client;
+  try {
+    client = await db.connect();
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE users
+       SET grade = CASE WHEN $1 THEN NULL ELSE grade END,
+           profile_picture = CASE WHEN $2 THEN NULL ELSE profile_picture END
+       WHERE id = $3 AND role = 'student'
+       RETURNING id, full_name, email, al_stream, grade, z_score AS "zScore",
+                 profile_picture AS "profilePicture"`,
+      [fields.includes('grade'), fields.includes('profilePicture'), userId]
+    );
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
+    await client.query('COMMIT');
+    return res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    if (client) {
+      await client.query('ROLLBACK');
+    }
+    return sendServerError(res, error);
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 };
 

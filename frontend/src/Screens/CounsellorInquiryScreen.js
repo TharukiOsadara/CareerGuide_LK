@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getCounsellors, sendInquiry } from '../services/api';
+import { getCourses, sendInquiry } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -21,43 +21,41 @@ const BORDER = '#DFE1E6';
 const BACKGROUND = '#F4F7FC';
 
 export default function CounsellorInquiryScreen({ navigation }) {
-  const [course, setCourse] = useState('B.Sc. (Hons) in Software Engineering');
+  const [courses, setCourses] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
   const [subject, setSubject] = useState(
     'Inquiry regarding entry requirements & intake dates',
   );
   const [message, setMessage] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [counsellors, setCounsellors] = useState([]);
-  const [selectedCounsellor, setSelectedCounsellor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isCounsellorListOpen, setIsCounsellorListOpen] = useState(false);
+  const [isCourseListOpen, setIsCourseListOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    getCounsellors()
+    getCourses()
       .then((data) => {
-        const list = Array.isArray(data) ? data : data?.counsellors || [];
         if (mounted) {
-          setCounsellors(list);
-          setSelectedCounsellor(list[0] || null);
+          setCourses(data);
+          setSelectedCourse(data[0] || null);
         }
       })
-      .catch((error) => console.warn('Unable to load counsellors.', error))
+      .catch((error) => console.warn('Unable to load courses for inquiry.', error))
       .finally(() => mounted && setIsLoading(false));
     return () => { mounted = false; };
   }, []);
 
   const handleSendInquiry = async () => {
-    if (!subject.trim() || !message.trim() || !selectedCounsellor) {
+    if (!subject.trim() || !message.trim() || !selectedCourse) {
       return;
     }
     setIsSending(true);
     try {
       await sendInquiry({
         userId: 42,
-        counsellorId: selectedCounsellor.id,
-        courseTitle: course,
+        courseId: selectedCourse.id,
+        courseTitle: selectedCourse.title,
         subject,
         message,
       });
@@ -98,47 +96,43 @@ export default function CounsellorInquiryScreen({ navigation }) {
         <View style={styles.assignmentCard}>
           <Text style={styles.label}>Selected Course</Text>
           <Pressable
-            accessibilityLabel={`Selected course: ${course}`}
+            accessibilityLabel={`Selected course: ${selectedCourse?.title || 'None selected'}`}
             accessibilityRole="button"
+            onPress={() => setIsCourseListOpen((open) => !open)}
             style={styles.courseSelector}
           >
-            <Text style={styles.courseValue}>{course}</Text>
+            <Text style={styles.courseValue}>{selectedCourse?.title || 'Select a course'}</Text>
             <Ionicons color={MUTED} name="chevron-down" size={18} />
           </Pressable>
+          {isCourseListOpen && courses.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => {
+                setSelectedCourse(item);
+                setIsCourseListOpen(false);
+              }}
+              style={styles.courseOption}
+            >
+              <Text style={styles.courseOptionText}>{item.title}</Text>
+            </Pressable>
+          ))}
 
           <Text style={[styles.label, styles.counsellorLabel]}>Assigned Counsellor</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: isCounsellorListOpen }}
-            onPress={() => setIsCounsellorListOpen((open) => !open)}
-            style={styles.counsellorRow}
-          >
+          <View style={styles.counsellorRow}>
             <View style={styles.counsellorAvatar}>
-              <Text style={styles.avatarText}>DJ</Text>
+              <Text style={styles.avatarText}>
+                {(selectedCourse?.counsellor_name || 'NA').slice(0, 2).toUpperCase()}
+              </Text>
             </View>
             <View style={styles.counsellorCopy}>
               <Text style={styles.counsellorName}>
-                {selectedCounsellor?.full_name || 'No counsellor available'}
+                {selectedCourse?.counsellor_name || 'No counsellor assigned'}
               </Text>
               <Text style={styles.counsellorTitle}>
-                {selectedCounsellor?.al_stream
-                  ? `Academic Counsellor - ${selectedCounsellor.al_stream}`
-                  : 'Academic Counsellor'}
+                {selectedCourse?.counsellor_name ? 'Assigned course counsellor' : 'Please select another course'}
               </Text>
             </View>
-          </Pressable>
-            {isCounsellorListOpen && counsellors.map((counsellor) => (
-              <Pressable
-                key={counsellor.id}
-                onPress={() => {
-                  setSelectedCounsellor(counsellor);
-                  setIsCounsellorListOpen(false);
-                }}
-                style={styles.counsellorOption}
-              >
-                <Text style={styles.counsellorOptionText}>{counsellor.full_name}</Text>
-              </Pressable>
-            ))}
+          </View>
         </View>
 
         <View style={styles.formCard}>
@@ -166,7 +160,7 @@ export default function CounsellorInquiryScreen({ navigation }) {
         {isLoading && <ActivityIndicator color={BLUE} />}
         <Pressable
           accessibilityRole="button"
-          disabled={isSending || isLoading}
+          disabled={isSending || isLoading || !selectedCourse?.counsellor_id}
           onPress={handleSendInquiry}
           style={styles.sendButton}
         >
@@ -200,7 +194,8 @@ export default function CounsellorInquiryScreen({ navigation }) {
             <View style={styles.confirmationBox}>
               <MaterialCommunityIcons color={BLUE} name="lock-outline" size={22} />
               <Text style={styles.confirmationText}>
-                Dr. Jayasuriya has been notified and will reply shortly via the Student Portal.
+                {selectedCourse?.counsellor_name || 'The assigned counsellor'} has been notified
+                and will reply shortly via the Student Portal.
               </Text>
             </View>
           </View>
@@ -221,6 +216,8 @@ const styles = StyleSheet.create({
   label: { color: TEXT, fontSize: 13, fontWeight: '700', marginBottom: 8 },
   courseSelector: { alignItems: 'center', borderColor: BORDER, borderRadius: 9, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', minHeight: 48, paddingHorizontal: 12 },
   courseValue: { color: TEXT, flex: 1, fontSize: 13, fontWeight: '600', marginRight: 8 },
+  courseOption: { borderColor: BORDER, borderTopWidth: StyleSheet.hairlineWidth, padding: 10 },
+  courseOptionText: { color: TEXT, fontSize: 13 },
   counsellorLabel: { marginTop: 20 },
   counsellorRow: { alignItems: 'center', flexDirection: 'row' },
   counsellorAvatar: { alignItems: 'center', backgroundColor: '#DEEBFF', borderRadius: 28, height: 56, justifyContent: 'center', width: 56 },
