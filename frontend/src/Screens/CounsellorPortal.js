@@ -5,6 +5,7 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -12,6 +13,15 @@ import {
 import { counsellorApi } from '../counsellor/api';
 import { colors } from '../styles/colors';
 import { styles } from '../counsellor/styles';
+import Icon from '../components/Icon';
+import ClipboardList from 'lucide-react-native/icons/clipboard-list';
+
+const TABS = [
+  { key: 'Dashboard', icon: 'grid' },
+  { key: 'Students', icon: 'users' },
+  { key: 'Guidance', icon: 'clipboard' },
+  { key: 'Settings', icon: 'settings' },
+];
 
 function StatusChip({ status }) {
   const reviewed = status === 'reviewed';
@@ -138,27 +148,59 @@ export default function CounsellorPortal({ navigation, route }) {
         {!loading && !list.length ? <Text style={styles.muted}>No assigned students match these filters.</Text> : null}
       </ScrollView>
 
-      <View style={styles.bottomTabs}>
-        {['Dashboard', 'Students', 'Guidance', 'Settings'].map((item) => (
-          <Pressable key={item} style={styles.tab} onPress={() => {
-            if (item === 'Guidance') {
-              const first = students[0] || dashboard?.students?.[0];
-              if (first) navigation.navigate('CounsellorGuidanceForm', { studentId: first.id });
+      <View style={tabBarStyles.bar} accessibilityRole="tablist">
+        {TABS.map((item) => {
+          const selected = tab === item.key;
+          return (
+          <Pressable
+            key={item.key}
+            style={({ pressed }) => [tabBarStyles.tab, pressed && tabBarStyles.pressed]}
+            accessibilityRole="tab"
+            accessibilityLabel={item.key}
+            accessibilityState={{ selected }}
+            onPress={() => {
+            if (item.key === 'Guidance') {
+              navigation.navigate('CounsellorGuidanceForm');
               return;
             }
-            if (item === 'Settings') {
+            if (item.key === 'Settings') {
               navigation.navigate('CounsellorSettings');
               return;
             }
-            setTab(item);
-          }}>
-            <Text style={{ fontSize: 18 }}>{item === 'Dashboard' ? '⌂' : item === 'Students' ? '♙' : item === 'Guidance' ? '✎' : '⚙'}</Text>
-            <Text style={[styles.tabText, tab === item && styles.activeTab]}>{item}</Text>
+            setTab(item.key);
+          }}
+          >
+            <View style={[tabBarStyles.iconWrap, selected && tabBarStyles.iconWrapActive]}>
+              {item.icon === 'clipboard' ? (
+                <ClipboardList size={20} color={selected ? colors.blue : colors.slate} strokeWidth={selected ? 2.2 : 1.8} />
+              ) : (
+                <Icon name={item.icon} size={20} color={selected ? colors.blue : colors.slate} strokeWidth={selected ? 2.2 : 1.8} />
+              )}
+            </View>
+            <Text style={[tabBarStyles.label, selected && tabBarStyles.active]}>{item.key}</Text>
           </Pressable>
-        ))}
+          );
+        })}
       </View>
     </SafeAreaView>
   );
 }
 
 export { StatusChip };
+
+const tabBarStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
+  pressed: { opacity: 0.7 },
+  iconWrap: { width: 48, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  iconWrapActive: { backgroundColor: colors.blueLight },
+  label: { fontSize: 12, color: colors.muted, fontWeight: '600', marginTop: 2 },
+  active: { color: colors.blue, fontWeight: '800' },
+});

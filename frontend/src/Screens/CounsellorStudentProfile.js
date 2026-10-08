@@ -92,8 +92,13 @@ export default function CounsellorStudentProfile({ route, navigation }) {
           {guidance?.recommendedPathways?.map((pathway) => <Text style={styles.pathwayText} key={pathway}>• {pathway}</Text>)}
         </View>
 
-        <Pressable style={[styles.button, styles.secondaryButton]} onPress={() => navigation.navigate('CounsellorGuidanceForm', { studentId })}>
-          <Text style={[styles.buttonText, styles.secondaryText]}>Provide Recommendations</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Guidance"
+          style={[styles.button, styles.secondaryButton]}
+          onPress={() => navigation.navigate('CounsellorGuidanceForm', { studentId })}
+        >
+          <Text style={[styles.buttonText, styles.secondaryText]}>Guidance</Text>
         </Pressable>
 
         <Pressable style={styles.button} disabled={saving || Boolean(student.status === 'reviewed' && guidance?.sharedWithParent)} onPress={markReviewed}>

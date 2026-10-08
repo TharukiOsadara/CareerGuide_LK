@@ -39,9 +39,38 @@ function toStudent(row) {
   };
 }
 
+// Single source of truth for counsellor assignment and consent scope.
+// Assignment currently comes from parent_student_links.counsellor_id.
+async function getAssignedStudents(counsellorId) {
+  const { rows } = await pool.query(
+    `SELECT s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
+            COALESCE(BOOL_OR(pp.counsellor_access), FALSE) AS counsellor_access,
+            COALESCE(
+              ARRAY_AGG(DISTINCT l.parent_id) FILTER (WHERE pp.counsellor_access = TRUE),
+              ARRAY[]::INTEGER[]
+            ) AS consent_parent_ids
+     FROM parent_student_links l
+     JOIN users s ON s.id = l.student_id
+     LEFT JOIN privacy_preferences pp
+       ON pp.parent_id = l.parent_id AND pp.student_id = l.student_id
+     WHERE l.counsellor_id = $1 AND s.role = 'student'
+     GROUP BY s.id, s.full_name, s.avatar_initials, s.al_stream
+     ORDER BY s.id, s.full_name`,
+    [counsellorId]
+  );
+  return rows;
+}
+
 async function queryStudents(counsellorId, filters = {}) {
-  const values = [counsellorId];
-  const where = ['l.counsellor_id = $1', "s.role = 'student'"];
+  const assignedStudents = await getAssignedStudents(counsellorId);
+  if (!assignedStudents.length) return [];
+
+  const assignedIds = assignedStudents.map((student) => student.student_id);
+  const consentByStudent = new Map(
+    assignedStudents.map((student) => [student.student_id, student.counsellor_access])
+  );
+  const values = [counsellorId, assignedIds];
+  const where = ['s.id = ANY($2::int[])', "s.role = 'student'"];
 
   if (filters.search) {
     values.push(`%${filters.search}%`);
@@ -61,17 +90,11 @@ async function queryStudents(counsellorId, filters = {}) {
             s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
             g.id AS guidance_id, g.guidance_status, g.reviewed_at, g.updated_at AS guidance_updated_at,
             g.shared_with_parent,
-            EXISTS (
-              SELECT 1 FROM privacy_preferences pp
-              JOIN parent_student_links pl ON pl.parent_id = pp.parent_id AND pl.student_id = pp.student_id
-              WHERE pp.student_id = s.id AND pl.counsellor_id = $1 AND pp.counsellor_access = TRUE
-            ) AS counsellor_access,
             top_course.degree_name AS top_match_name,
             top_course.match_percent AS top_match_percent
-     FROM parent_student_links l
-     JOIN users s ON s.id = l.student_id
+     FROM users s
      LEFT JOIN counsellor_guidance_records g
-       ON g.student_id = s.id AND g.counsellor_id = l.counsellor_id
+       ON g.student_id = s.id AND g.counsellor_id = $1
      LEFT JOIN LATERAL (
        SELECT degree_name, match_percent
        FROM courses
@@ -83,7 +106,10 @@ async function queryStudents(counsellorId, filters = {}) {
      ORDER BY s.id, s.full_name`,
     values
   );
-  return rows;
+  return rows.map((row) => ({
+    ...row,
+    counsellor_access: consentByStudent.get(row.student_id) === true,
+  }));
 }
 
 async function listStudents(req, res) {
@@ -94,24 +120,21 @@ async function listStudents(req, res) {
 
 async function getDashboard(req, res) {
   const filters = parseListFilters(req.query);
+  const assignedStudents = await getAssignedStudents(req.user.id);
+  const assignedIds = assignedStudents.map((student) => student.student_id);
   const [students, statsResult] = await Promise.all([
     queryStudents(req.user.id, filters),
     pool.query(
-      `WITH assigned AS (
-         SELECT DISTINCT student_id
-         FROM parent_student_links
-         WHERE counsellor_id = $1
-       )
-       SELECT COUNT(*)::int AS total,
-              COUNT(*) FILTER (
-                WHERE EXISTS (
-                  SELECT 1 FROM counsellor_guidance_records g
-                  WHERE g.counsellor_id = $1 AND g.student_id = assigned.student_id
-                    AND g.guidance_status = 'final' AND g.reviewed_at IS NOT NULL
-                )
-              )::int AS reviewed
-       FROM assigned`,
-      [req.user.id]
+      `SELECT COUNT(*)::int AS total,
+               COUNT(*) FILTER (
+                 WHERE EXISTS (
+                   SELECT 1 FROM counsellor_guidance_records g
+                   WHERE g.counsellor_id = $1 AND g.student_id = assigned.student_id
+                     AND g.guidance_status = 'final' AND g.reviewed_at IS NOT NULL
+                 )
+               )::int AS reviewed
+       FROM unnest($2::int[]) AS assigned(student_id)`,
+      [req.user.id, assignedIds]
     ),
   ]);
   const stats = statsResult.rows[0];
@@ -128,21 +151,8 @@ async function getDashboard(req, res) {
 }
 
 async function findAssignedStudent(counsellorId, studentId) {
-  const { rows } = await pool.query(
-    `SELECT DISTINCT ON (s.id)
-            s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
-            EXISTS (
-              SELECT 1 FROM privacy_preferences pp
-              JOIN parent_student_links pl ON pl.parent_id = pp.parent_id AND pl.student_id = pp.student_id
-              WHERE pp.student_id = s.id AND pl.counsellor_id = $1 AND pp.counsellor_access = TRUE
-            ) AS counsellor_access
-     FROM parent_student_links l
-     JOIN users s ON s.id = l.student_id
-     WHERE l.counsellor_id = $1 AND l.student_id = $2 AND s.role = 'student'
-     ORDER BY s.id`,
-    [counsellorId, studentId]
-  );
-  return rows[0] || null;
+  const students = await getAssignedStudents(counsellorId);
+  return students.find((student) => student.student_id === studentId) || null;
 }
 
 function toGuidance(row) {
@@ -335,19 +345,11 @@ async function markReviewed(req, res) {
     const guidance = await client.query(
       `UPDATE counsellor_guidance_records
        SET guidance_status = 'final',
-           shared_with_parent = EXISTS (
-             SELECT 1
-             FROM privacy_preferences pp
-             JOIN parent_student_links l
-               ON l.parent_id = pp.parent_id AND l.student_id = pp.student_id
-             WHERE l.counsellor_id = $1
-               AND l.student_id = $2
-               AND pp.counsellor_access = TRUE
-           ),
+           shared_with_parent = $3,
            reviewed_at = NOW(), updated_at = NOW()
        WHERE counsellor_id = $1 AND student_id = $2
        RETURNING *`,
-      [req.user.id, studentId]
+      [req.user.id, studentId, assignedStudent.consent_parent_ids.length > 0]
     );
     if (!guidance.rows[0]) {
       await client.query('ROLLBACK');
@@ -360,12 +362,10 @@ async function markReviewed(req, res) {
                'Your counsellor has reviewed the student guidance profile.',
                $1, 'parent', l.parent_id
         FROM parent_student_links l
-        JOIN privacy_preferences pp
-          ON pp.parent_id = l.parent_id AND pp.student_id = l.student_id
-         AND pp.counsellor_access = TRUE
-        WHERE l.counsellor_id = $1 AND l.student_id = $2
-       RETURNING id, target_user_id`,
-      [req.user.id, studentId]
+        WHERE l.student_id = $2
+          AND l.parent_id = ANY($3::int[])
+        RETURNING id, target_user_id`,
+      [req.user.id, studentId, assignedStudent.consent_parent_ids]
     );
     await client.query('COMMIT');
     res.json({ guidance: toGuidance(guidance.rows[0]), notificationsCreated: notifications.rowCount });
@@ -378,6 +378,7 @@ async function markReviewed(req, res) {
 }
 
 async function getSettings(req, res) {
+  await getAssignedStudents(req.user.id);
   const { rows } = await pool.query(
     `SELECT * FROM counsellor_settings WHERE counsellor_id = $1`,
     [req.user.id]
@@ -405,6 +406,7 @@ async function getSettings(req, res) {
 }
 
 async function updateSettings(req, res) {
+  await getAssignedStudents(req.user.id);
   const { value, error } = validateSettings(req.body, { partial: true });
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
   const { rows } = await pool.query(
