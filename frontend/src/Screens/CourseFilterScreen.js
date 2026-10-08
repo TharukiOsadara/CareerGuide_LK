@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
+import { getCourses } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -40,6 +42,8 @@ export default function CourseFilterScreen({ navigation }) {
   const [minZScore, setMinZScore] = useState(INITIAL_FILTERS.minZScore);
   const [maxZScore, setMaxZScore] = useState(INITIAL_FILTERS.maxZScore);
   const [universityType, setUniversityType] = useState(INITIAL_FILTERS.universityType);
+  const [resultCount, setResultCount] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -55,6 +59,27 @@ export default function CourseFilterScreen({ navigation }) {
     setMaxZScore(INITIAL_FILTERS.maxZScore);
     setUniversityType(INITIAL_FILTERS.universityType);
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(true);
+      getCourses({
+        search: searchTerm,
+        stream: selectedStream,
+        minZ: minZScore,
+        maxZ: maxZScore,
+        universityType,
+      })
+        .then((courses) => setResultCount(courses.length))
+        .catch((error) => console.warn('Unable to load filtered courses.', error))
+        .finally(() => setIsLoading(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedStream, minZScore, maxZScore, universityType]);
+
+  const applyFilters = () => navigation.navigate('StudentCourses', {
+    filters: { search: searchTerm, stream: selectedStream, minZ: minZScore, maxZ: maxZScore, universityType },
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
@@ -157,6 +182,7 @@ export default function CourseFilterScreen({ navigation }) {
         </View>
 
         <Text style={styles.sectionLabel}>RECENT SEARCHES / SUGGESTED RESULTS</Text>
+        {isLoading && <ActivityIndicator color={BLUE} />}
         <View style={styles.suggestionsCard}>
           {suggestions.map((suggestion, index) => (
             <Pressable
@@ -177,10 +203,10 @@ export default function CourseFilterScreen({ navigation }) {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('StudentCourses')}
+          onPress={applyFilters}
           style={styles.applyButton}
         >
-          <Text style={styles.applyText}>Apply Filters (24 Results)</Text>
+          <Text style={styles.applyText}>Apply Filters ({resultCount ?? 0} Results)</Text>
         </Pressable>
       </View>
       <BottomNavigation activeRoute="StudentCourses" navigation={navigation} />

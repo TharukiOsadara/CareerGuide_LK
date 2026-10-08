@@ -12,14 +12,13 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
+import { getCourses } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
 const BACKGROUND = '#F4F7FC';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
 const coursesData = [
   {
     id: 'software-engineering',
@@ -78,11 +77,12 @@ function CourseCard({ course, navigation }) {
   );
 }
 
-export default function StudentCourses({ navigation }) {
+export default function StudentCourses({ navigation, route }) {
   const [courses, setCourses] = useState(coursesData);
   const [activeFilter, setActiveFilter] = useState('All Courses');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(route?.params?.filters?.search || '');
   const [isLoading, setIsLoading] = useState(true);
+  const routeFilters = route?.params?.filters || {};
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -96,13 +96,16 @@ export default function StudentCourses({ navigation }) {
 
     async function loadCourses() {
       try {
-        const response = await fetch(`${API_URL}/api/courses`);
-        if (!response.ok) {
-          throw new Error(`Course request failed with status ${response.status}`);
-        }
-        const remoteCourses = await response.json();
+        const remoteCourses = await getCourses({
+          ...routeFilters,
+          search: searchQuery,
+          ugcApproved: activeFilter === 'UGC Approved' ? 'true' : undefined,
+          stream: activeFilter !== 'All Courses' && activeFilter !== 'UGC Approved'
+            ? activeFilter
+            : routeFilters.stream,
+        });
         if (!Array.isArray(remoteCourses)) {
-          throw new Error('Course response must be an array');
+          throw new Error('Course response must contain an array');
         }
         if (isMounted && remoteCourses.length > 0) {
           setCourses(remoteCourses);
@@ -120,7 +123,7 @@ export default function StudentCourses({ navigation }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activeFilter, routeFilters.maxZ, routeFilters.minZ, routeFilters.universityType, routeFilters.stream, searchQuery]);
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();

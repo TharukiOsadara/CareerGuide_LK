@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
+  ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +13,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
+import { getNotifications, getStudentProfile, markNotificationsRead } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -18,7 +21,7 @@ const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
 const BACKGROUND = '#F4F7FC';
 
-const courses = [
+const fallbackCourses = [
   {
     id: 'software-engineering',
     title: 'B.Sc. (Hons) in Software Engineering',
@@ -61,8 +64,63 @@ function CourseCard({ course, navigation }) {
 }
 
 export default function HomeScreen({ navigation }) {
+  const [profile, setProfile] = useState(null);
+  const [courses, setCourses] = useState(fallbackCourses);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
   const openAcademicProfile = () => navigation.navigate('AcademicProfile');
 
+  useEffect(() => {
+    let mounted = true;
+    getStudentProfile()
+      .then((data) => {
+        if (!mounted) return;
+        setProfile(data);
+        if (Array.isArray(data?.careerPaths) && data.careerPaths.length > 0) {
+          setCourses(data.careerPaths.slice(0, 3).map((career) => ({
+            id: career.id || career.title.toLowerCase().replace(/\s+/g, '-'),
+            title: career.title,
+            institute: career.note || 'Aptitude Assessment',
+            match: career.match,
+          })));
+        }
+      })
+      .catch((error) => console.warn('Unable to load home profile data.', error))
+      .finally(() => mounted && setIsLoading(false));
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsNotificationsLoading(true);
+    getNotifications()
+      .then((data) => {
+        if (mounted) setNotifications(data?.notifications || []);
+      })
+      .catch((error) => console.warn('Unable to load notifications.', error))
+      .finally(() => mounted && setIsNotificationsLoading(false));
+    return () => { mounted = false; };
+  }, []);
+
+  const openNotification = async (notification) => {
+    setSelectedNotification(notification);
+    try {
+      await markNotificationsRead([notification.id]);
+      setNotifications((current) => current.filter((item) => item.id !== notification.id));
+    } catch (error) {
+      console.warn('Unable to mark notification as read.', error);
+    }
+  };
+
+  const closeNotifications = () => {
+    setIsNotificationsVisible(false);
+    setSelectedNotification(null);
+  };
+
+  const studentName = profile?.user?.full_name || 'Tharuki';
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -80,10 +138,11 @@ export default function HomeScreen({ navigation }) {
           <Pressable
             accessibilityLabel="Notifications"
             accessibilityRole="button"
+            onPress={() => setIsNotificationsVisible(true)}
             style={styles.notificationButton}
           >
             <Ionicons color={TEXT} name="notifications-outline" size={24} />
-            <View style={styles.notificationDot} />
+            {notifications.length > 0 && <View style={styles.notificationDot} />}
           </Pressable>
           <Pressable
             accessibilityLabel="Open Academic Profile screen"
@@ -122,7 +181,7 @@ export default function HomeScreen({ navigation }) {
         </Pressable>
 
         <View style={styles.progressCard}>
-          <Text style={styles.welcomeTitle}>Welcome back, Tharuki!</Text>
+          <Text style={styles.welcomeTitle}>Welcome back, {studentName}!</Text>
           <Text style={styles.welcomeSubtitle}>
             Complete your profile to unlock verified course applications.
           </Text>
@@ -131,7 +190,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.progressValue}>65%</Text>
           </View>
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+            <View style={[styles.progressFill, { width: '65%' }]} />
           </View>
         </View>
 
@@ -163,6 +222,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.seeAll}>See all</Text>
           </Pressable>
         </View>
+        {isLoading && <ActivityIndicator color={BLUE} />}
 
         {courses.map((course) => (
           <CourseCard course={course} key={course.title} navigation={navigation} />
@@ -170,6 +230,68 @@ export default function HomeScreen({ navigation }) {
       </ScrollView>
 
       <BottomNavigation activeRoute="Main" navigation={navigation} />
+
+      <Modal
+        animationType="slide"
+        onRequestClose={closeNotifications}
+        transparent
+        visible={isNotificationsVisible}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.notificationsCard}>
+            <View style={styles.notificationsHeader}>
+              <Text style={styles.notificationsTitle}>Counsellor Replies &amp; Updates</Text>
+              <Pressable
+                accessibilityLabel="Close notifications"
+                accessibilityRole="button"
+                onPress={closeNotifications}
+                style={styles.closeNotificationsButton}
+              >
+                <Ionicons color={MUTED} name="close" size={23} />
+              </Pressable>
+            </View>
+            {isNotificationsLoading ? (
+              <ActivityIndicator color={BLUE} style={styles.notificationsLoading} />
+            ) : notifications.length === 0 && !selectedNotification ? (
+              <Text style={styles.emptyNotifications}>No unread counsellor replies.</Text>
+            ) : (
+              <>
+                {notifications.map((notification) => (
+                  <Pressable
+                    key={notification.id}
+                    onPress={() => openNotification(notification)}
+                    style={styles.notificationItem}
+                  >
+                    <View style={styles.notificationItemIcon}>
+                      <Ionicons color={BLUE} name="chatbubble-ellipses-outline" size={19} />
+                    </View>
+                    <View style={styles.notificationCopy}>
+                      <Text style={styles.notificationCounsellor}>
+                        {notification.counsellor_name || 'Counsellor'}
+                      </Text>
+                      <Text style={styles.notificationCourse}>{notification.course_title}</Text>
+                      <Text numberOfLines={2} style={styles.notificationExcerpt}>
+                        {notification.reply_message}
+                      </Text>
+                      <Text style={styles.notificationTime}>
+                        {notification.replied_at
+                          ? new Date(notification.replied_at).toLocaleString()
+                          : 'Recently'}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+                {selectedNotification && (
+                  <View style={styles.fullReplyBox}>
+                    <Text style={styles.fullReplyLabel}>Full counsellor reply</Text>
+                    <Text style={styles.fullReplyText}>{selectedNotification.reply_message}</Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -230,6 +352,54 @@ const styles = StyleSheet.create({
     top: 0,
     width: 9,
   },
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  notificationsCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    maxHeight: '82%',
+    padding: 18,
+    width: '100%',
+  },
+  notificationsHeader: {
+    alignItems: 'center',
+    borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 14,
+  },
+  notificationsTitle: { color: TEXT, flex: 1, fontSize: 17, fontWeight: '800' },
+  closeNotificationsButton: { padding: 4 },
+  notificationsLoading: { margin: 28 },
+  emptyNotifications: { color: MUTED, padding: 28, textAlign: 'center' },
+  notificationItem: {
+    borderBottomColor: BORDER,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    paddingVertical: 14,
+  },
+  notificationItemIcon: {
+    alignItems: 'center',
+    backgroundColor: '#DEEBFF',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  notificationCopy: { flex: 1, marginLeft: 11 },
+  notificationCounsellor: { color: TEXT, fontSize: 14, fontWeight: '800' },
+  notificationCourse: { color: BLUE, fontSize: 12, fontWeight: '700', marginTop: 3 },
+  notificationExcerpt: { color: MUTED, fontSize: 12, lineHeight: 17, marginTop: 5 },
+  notificationTime: { color: MUTED, fontSize: 10, marginTop: 5 },
+  fullReplyBox: { backgroundColor: '#EBF3FE', borderRadius: 10, marginTop: 14, padding: 13 },
+  fullReplyLabel: { color: BLUE, fontSize: 12, fontWeight: '800', marginBottom: 5 },
+  fullReplyText: { color: TEXT, fontSize: 13, lineHeight: 19 },
   avatar: {
     alignItems: 'center',
     backgroundColor: '#DEEBFF',

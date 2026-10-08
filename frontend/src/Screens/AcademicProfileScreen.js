@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -10,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
+import { saveAcademicProfile } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -24,7 +27,18 @@ const STREAM_OPTIONS = [
   'Arts Stream',
 ];
 
-const DISTRICT_OPTIONS = ['Colombo', 'Gampaha', 'Kandy', 'Galle'];
+const DISTRICT_OPTIONS = [
+  'Colombo', 'Gampaha', 'Kalutara', 'Kandy', 'Matale', 'Nuwara Eliya',
+  'Galle', 'Matara', 'Hambantota', 'Jaffna', 'Kurunegala', 'Puttalam',
+  'Anuradhapura', 'Polonnaruwa', 'Badulla', 'Ratnapura',
+];
+const STREAM_SUBJECTS = {
+  'Physical Science (Maths Stream)': ['Combined Mathematics', 'Physics', 'Chemistry'],
+  'Biological Science Stream': ['Biology', 'Chemistry', 'Physics'],
+  'Commerce Stream': ['Accounting', 'Business Studies', 'Economics'],
+  'Arts Stream': ['Sinhala / Tamil', 'Logic & Scientific Method', 'Political Science'],
+};
+const GRADE_OPTIONS = ['A', 'B', 'C', 'S', 'F'];
 
 function SelectField({ label, value, options, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,12 +92,44 @@ export default function AcademicProfileScreen({ navigation }) {
   const [stream, setStream] = useState(STREAM_OPTIONS[0]);
   const [district, setDistrict] = useState(DISTRICT_OPTIONS[0]);
   const [zScore, setZScore] = useState('1.4250');
+  const [grades, setGrades] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
     }
     navigation.navigate('Main');
+  };
+
+  const handleGenerateMatches = async () => {
+    const subjects = STREAM_SUBJECTS[stream];
+    const subjectGrades = subjects.map((subject) => ({ subject, grade: grades[subject] }));
+    const zScoreValue = Number(zScore);
+    if (!district || !Number.isFinite(zScoreValue) || zScore.trim() === '' ||
+      subjectGrades.some(({ grade }) => !grade)) {
+      Alert.alert(
+        'Complete your academic profile',
+        'Select a district, enter a valid Z-Score, and choose a grade for all three subjects.',
+      );
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await saveAcademicProfile({
+        userId: 1,
+        subjectStream: stream,
+        district,
+        zScore: zScoreValue,
+        subjectGrades,
+      });
+      navigation.navigate('StudentCareerPath', { matches: response?.data || response });
+    } catch (error) {
+      console.warn('Unable to save academic profile.', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -126,7 +172,10 @@ export default function AcademicProfileScreen({ navigation }) {
         <View style={styles.formCard}>
           <SelectField
             label="A/L Subject Stream"
-            onChange={setStream}
+            onChange={(nextStream) => {
+              setStream(nextStream);
+              setGrades({});
+            }}
             options={STREAM_OPTIONS}
             value={stream}
           />
@@ -155,15 +204,17 @@ export default function AcademicProfileScreen({ navigation }) {
 
           <View style={styles.field}>
             <Text style={styles.label}>Subject Grades</Text>
-            <ScrollView
-              contentContainerStyle={styles.gradeList}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              <GradeChip grade="A" subject="Combined Mathematics" />
-              <GradeChip grade="B" subject="Physics" />
-              <GradeChip grade="B" subject="Chemistry" />
-            </ScrollView>
+            {STREAM_SUBJECTS[stream].map((subject) => (
+              <View key={subject} style={styles.subjectRow}>
+                <Text style={styles.subjectName}>{subject}</Text>
+                <SelectField
+                  label=""
+                  onChange={(grade) => setGrades((current) => ({ ...current, [subject]: grade }))}
+                  options={GRADE_OPTIONS}
+                  value={grades[subject] || 'Select grade'}
+                />
+              </View>
+            ))}
           </View>
         </View>
 
@@ -178,9 +229,11 @@ export default function AcademicProfileScreen({ navigation }) {
       <View style={styles.bottomAction}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('Main')}
+          disabled={isSaving}
+          onPress={handleGenerateMatches}
           style={styles.primaryButton}
         >
+          {isSaving && <ActivityIndicator color="#FFFFFF" />}
           <Text style={styles.primaryButtonText}>
             Generate Career &amp; Course Matches
           </Text>
@@ -334,6 +387,19 @@ const styles = StyleSheet.create({
   gradeList: {
     gap: 8,
     paddingVertical: 2,
+  },
+  subjectRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  subjectName: {
+    color: TEXT,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 10,
   },
   gradeChip: {
     alignItems: 'center',

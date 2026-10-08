@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
+const studentRoutes = require('./routes/studentRoutes');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,10 +12,6 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // PostgreSQL connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
 // Test route
 app.get('/', (req, res) => {
   res.json({ message: 'CareerGuide LK API is running' });
@@ -24,7 +20,8 @@ app.get('/', (req, res) => {
 // Health check
 app.get('/health', async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
+    const db = require('./config/db');
+    const result = await db.query('SELECT NOW()');
     res.json({ 
       status: 'healthy', 
       database: 'connected',
@@ -38,6 +35,8 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+app.use('/api', studentRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
+  ActivityIndicator,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,20 +10,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../Components/BottomNavigation';
+import { getStudentProfile } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
 
-const skills = [
+const fallbackSkills = [
   { name: 'Logical Reasoning', percentage: 92 },
   { name: 'Analytical Thinking', percentage: 88 },
   { name: 'Creative / Design', percentage: 81 },
   { name: 'Communication', percentage: 76 },
 ];
 
-const careers = [
+const fallbackCareers = [
   {
     title: 'Software Engineering',
     match: '96% Match',
@@ -41,6 +43,31 @@ const careers = [
 ];
 
 export default function StudentProfileScreen({ navigation }) {
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    getStudentProfile()
+      .then((data) => mounted && setProfile(data))
+      .catch((error) => console.warn('Unable to load student profile.', error))
+      .finally(() => mounted && setIsLoading(false));
+    return () => { mounted = false; };
+  }, []);
+
+  const skills = profile?.aptitude
+    ? Object.entries(profile.aptitude).map(([name, percentage]) => ({
+        name: name.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase()),
+        percentage,
+      }))
+    : fallbackSkills;
+  const careers = profile?.careerPaths?.length
+    ? profile.careerPaths.map((career) => ({
+        title: career.title,
+        match: career.match,
+        description: career.note,
+      }))
+    : fallbackCareers;
+  const user = profile?.user;
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -83,9 +110,9 @@ export default function StudentProfileScreen({ navigation }) {
             <Text style={styles.avatarText}>TO</Text>
           </View>
           <View style={styles.identityDetails}>
-            <Text style={styles.studentName}>Tharuki Osadara</Text>
+            <Text style={styles.studentName}>{user?.full_name || 'Tharuki Osadara'}</Text>
             <Text style={styles.studentMeta}>
-              Grade 13 · Physical Science Stream · Index No. 4521
+              Grade 13 · {user?.al_stream || 'Physical Science Stream'} · Index No. 4521
             </Text>
           </View>
           <View style={styles.reviewedBadge}>
@@ -95,6 +122,7 @@ export default function StudentProfileScreen({ navigation }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Aptitude &amp; Interest Assessment</Text>
+          {isLoading && <ActivityIndicator color={BLUE} />}
           <View style={styles.assessmentCard}>
             {skills.map((skill) => (
               <View key={skill.name} style={styles.skillRow}>

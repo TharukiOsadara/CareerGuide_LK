@@ -9,6 +9,7 @@ import StudentCourses from './src/Screens/StudentCourses';
 import CourseFilterScreen from './src/Screens/CourseFilterScreen';
 import CourseDetailsScreen from './src/Screens/CourseDetailsScreen';
 import CounsellorInquiryScreen from './src/Screens/CounsellorInquiryScreen';
+import StudentCareerPathScreen from './src/Screens/StudentCareerPathScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +30,7 @@ export default function App() {
         <Stack.Screen name="CourseFilter" component={CourseFilterScreen} />
         <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
         <Stack.Screen name="CounsellorInquiry" component={CounsellorInquiryScreen} />
+        <Stack.Screen name="StudentCareerPath" component={StudentCareerPathScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

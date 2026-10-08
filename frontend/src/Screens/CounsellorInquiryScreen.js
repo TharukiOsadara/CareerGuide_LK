@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   Modal,
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getCounsellors, sendInquiry } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -25,12 +27,46 @@ export default function CounsellorInquiryScreen({ navigation }) {
   );
   const [message, setMessage] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [counsellors, setCounsellors] = useState([]);
+  const [selectedCounsellor, setSelectedCounsellor] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [isCounsellorListOpen, setIsCounsellorListOpen] = useState(false);
 
-  const handleSendInquiry = () => {
-    if (!subject.trim() || !message.trim()) {
+  useEffect(() => {
+    let mounted = true;
+    getCounsellors()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.counsellors || [];
+        if (mounted) {
+          setCounsellors(list);
+          setSelectedCounsellor(list[0] || null);
+        }
+      })
+      .catch((error) => console.warn('Unable to load counsellors.', error))
+      .finally(() => mounted && setIsLoading(false));
+    return () => { mounted = false; };
+  }, []);
+
+  const handleSendInquiry = async () => {
+    if (!subject.trim() || !message.trim() || !selectedCounsellor) {
       return;
     }
-    setIsModalVisible(true);
+    setIsSending(true);
+    try {
+      await sendInquiry({
+        userId: 1,
+        counsellorId: selectedCounsellor.id,
+        courseTitle: course,
+        subject,
+        message,
+      });
+      setIsModalVisible(true);
+    } catch (error) {
+      console.warn('Unable to send counsellor inquiry.', error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const closeModal = () => {
@@ -71,17 +107,38 @@ export default function CounsellorInquiryScreen({ navigation }) {
           </Pressable>
 
           <Text style={[styles.label, styles.counsellorLabel]}>Assigned Counsellor</Text>
-          <View style={styles.counsellorRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isCounsellorListOpen }}
+            onPress={() => setIsCounsellorListOpen((open) => !open)}
+            style={styles.counsellorRow}
+          >
             <View style={styles.counsellorAvatar}>
               <Text style={styles.avatarText}>DJ</Text>
             </View>
             <View style={styles.counsellorCopy}>
-              <Text style={styles.counsellorName}>Dr. Jayasuriya</Text>
+              <Text style={styles.counsellorName}>
+                {selectedCounsellor?.full_name || 'No counsellor available'}
+              </Text>
               <Text style={styles.counsellorTitle}>
-                Senior Academic Counsellor - IT &amp; Computing
+                {selectedCounsellor?.al_stream
+                  ? `Academic Counsellor - ${selectedCounsellor.al_stream}`
+                  : 'Academic Counsellor'}
               </Text>
             </View>
-          </View>
+          </Pressable>
+            {isCounsellorListOpen && counsellors.map((counsellor) => (
+              <Pressable
+                key={counsellor.id}
+                onPress={() => {
+                  setSelectedCounsellor(counsellor);
+                  setIsCounsellorListOpen(false);
+                }}
+                style={styles.counsellorOption}
+              >
+                <Text style={styles.counsellorOptionText}>{counsellor.full_name}</Text>
+              </Pressable>
+            ))}
         </View>
 
         <View style={styles.formCard}>
@@ -106,13 +163,15 @@ export default function CounsellorInquiryScreen({ navigation }) {
           />
         </View>
 
+        {isLoading && <ActivityIndicator color={BLUE} />}
         <Pressable
           accessibilityRole="button"
+          disabled={isSending || isLoading}
           onPress={handleSendInquiry}
           style={styles.sendButton}
         >
           <Ionicons color="#FFFFFF" name="send-outline" size={19} />
-          <Text style={styles.sendButtonText}>Send Inquiry</Text>
+          {isSending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send Inquiry</Text>}
         </Pressable>
       </ScrollView>
 
@@ -169,6 +228,8 @@ const styles = StyleSheet.create({
   counsellorCopy: { flex: 1, marginLeft: 12 },
   counsellorName: { color: TEXT, fontSize: 15, fontWeight: '800' },
   counsellorTitle: { color: MUTED, fontSize: 12, lineHeight: 17, marginTop: 4 },
+  counsellorOption: { borderColor: BORDER, borderTopWidth: StyleSheet.hairlineWidth, padding: 10 },
+  counsellorOptionText: { color: TEXT, fontSize: 13 },
   formCard: { backgroundColor: '#FFFFFF', borderRadius: 16, marginTop: 14, padding: 16 },
   subjectInput: { borderColor: BORDER, borderRadius: 9, borderWidth: 1, color: TEXT, fontSize: 13, minHeight: 48, paddingHorizontal: 12 },
   messageLabel: { marginTop: 18 },
