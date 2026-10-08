@@ -22,9 +22,9 @@ export default function ForgotPassword({ navigation }) {
     if (emailMsg) return;
     setBusy(true);
     try {
-      const res = await api('/api/auth/forgot-password', { method: 'POST', auth: false, body: { email: email.trim() } });
-      // The demo backend returns the reset token so the flow completes end-to-end.
-      navigation.navigate('ResetPassword', { email: email.trim(), resetToken: res.resetToken });
+      // The code is emailed (never returned here); the next screen asks for it.
+      await api('/api/auth/forgot-password', { method: 'POST', auth: false, body: { email: email.trim() } });
+      navigation.navigate('ResetPassword', { email: email.trim() });
     } catch (e) {
       setError(e.message || 'Could not send reset instructions.');
     } finally {
@@ -45,7 +45,7 @@ export default function ForgotPassword({ navigation }) {
           <View style={styles.iconTile}><Icon name="key" size={26} color={colors.blue} /></View>
           <Text style={styles.title}>Forgot Password?</Text>
           <Text style={styles.subtitle}>
-            Enter your registered email address to receive a secure password reset link.
+            Enter your registered email address and we'll send you a 6-digit reset code.
           </Text>
 
           <Text style={styles.label}>Email Address</Text>
@@ -62,7 +62,7 @@ export default function ForgotPassword({ navigation }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Sending…' : 'Send Reset Instructions'}</Text>
+            <Text style={styles.primaryText}>{busy ? 'Sending…' : 'Send Reset Code'}</Text>
             {!busy && <Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />}
           </Pressable>
 

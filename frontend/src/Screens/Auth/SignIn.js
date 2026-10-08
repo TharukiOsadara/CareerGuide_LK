@@ -27,7 +27,10 @@ export default function SignIn({ navigation, route }) {
   const [keep, setKeep] = useState(true);
   const [detectedRole, setDetectedRole] = useState(null);
   const [error, setError] = useState('');
-  const [info, setInfo] = useState(route.params?.justSignedUp ? 'Account created! Please sign in.' : '');
+  const [info, setInfo] = useState(
+    route.params?.justSignedUp ? 'Account created! Please sign in.'
+      : route.params?.passwordReset ? 'Password updated! Sign in with your new password.' : ''
+  );
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [errors, setErrors] = useState({});
