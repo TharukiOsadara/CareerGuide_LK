@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Button from './Button';
 import { colors, font, space } from '../theme';
-import Icon from '../../../components/Icon';
+import Icon from '../../../Components/Icon';
 
 export function LoadingState({ message = 'Loading…' }) {
   return (

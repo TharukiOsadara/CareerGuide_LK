@@ -1,15 +1,15 @@
-ï»¿import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../../components/AdminHeader';
-import AdminNav from '../../components/AdminNav';
-import WelcomeToast from '../../components/WelcomeToast';
+import AdminHeader from '../../Components/AdminHeader';
+import AdminNav from '../../Components/AdminNav';
+import WelcomeToast from '../../Components/WelcomeToast';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../components/Icon';
+import Icon, { IconText } from '../../Components/Icon';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -79,7 +79,7 @@ export default function AdminOverview({ navigation, route }) {
     { type: 'courses', icon: 'graduation-cap', tint: colors.blue, bg: colors.blueLight, value: `${courses.length}`, label: 'Total Courses', note: `${courses.length} Programs` },
     { type: 'zscores', icon: 'chart', tint: colors.orange, bg: colors.yellow, value: `${zScoreCount}`, label: 'Z-Score Updates', note: 'Cut-offs recorded' },
     { type: 'unis', icon: 'landmark', tint: colors.teal, bg: colors.mint, value: `${uniCount}`, label: 'Active Unis', note: 'Institutes' },
-    { type: 'users', icon: 'users', tint: colors.blue, bg: colors.blueChip, value: users ? `${users.length}` : 'â€”', label: 'Registered Users', note: `${activeUsers} Active` },
+    { type: 'users', icon: 'users', tint: colors.blue, bg: colors.blueChip, value: users ? `${users.length}` : '—', label: 'Registered Users', note: `${activeUsers} Active` },
   ];
 
   return (
@@ -151,7 +151,7 @@ export default function AdminOverview({ navigation, route }) {
           />
           <ActionCard
             title="NVQ & Accreditation Mapping"
-            desc="Link course profiles to NVQ Level 1â€“7 frameworks and TVEC approvals."
+            desc="Link course profiles to NVQ Level 1–7 frameworks and TVEC approvals."
             onPress={() => navigation.navigate('AdminCourses')}
           />
 
@@ -164,7 +164,7 @@ export default function AdminOverview({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.courseName} numberOfLines={1}>{c.degreeName}</Text>
                 <Text style={styles.courseMeta} numberOfLines={1}>
-                  {c.uniName}{c.createdAt ? ` Â· ${timeAgo(c.createdAt)}` : ''}
+                  {c.uniName}{c.createdAt ? ` · ${timeAgo(c.createdAt)}` : ''}
                 </Text>
               </View>
               <Pressable

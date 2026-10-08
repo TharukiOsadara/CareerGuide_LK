@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const studentRoutes = require('./routes/studentRoutes');
 const parentRoutes = require('./routes/parent.routes');
-const { pool } = require('./config/db');
+const pool = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courses');
@@ -31,8 +31,6 @@ app.get('/health', async (req, res) => {
 
 app.use('/api', studentRoutes);
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/notifications', notificationRoutes);

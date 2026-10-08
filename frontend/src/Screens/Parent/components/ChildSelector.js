@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useChild } from '../context/ChildContext';
 import { useLeaveGuard } from '../context/LeaveGuardContext';
 import { colors, font, radius, space, TOUCH } from '../theme';
-import Icon from '../../../components/Icon';
+import Icon from '../../../Components/Icon';
 
 function Avatar({ initials, size = 36 }) {
   return (
