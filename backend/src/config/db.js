@@ -1,17 +1,14 @@
 const { Pool } = require('pg');
-const { DATABASE_URL } = require('./env');
 
-// Neon requires SSL. The pooled connection string already carries sslmode=require,
-// but we pass ssl explicitly so local Node doesn't reject the Neon certificate.
 const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PG pool error:', err.message);
+pool.on('error', (error) => {
+  console.error('Unexpected PostgreSQL pool error:', error);
 });
 
-const query = (text, params) => pool.query(text, params);
-
-module.exports = { pool, query };
+module.exports = pool;
