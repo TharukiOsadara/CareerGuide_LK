@@ -24,6 +24,7 @@ router.delete('/user/profile/:userId', controller.deleteUserProfile);
 router.get('/courses', controller.getCourses);
 router.get('/courses/:id', controller.getCourseDetails);
 router.post('/inquiries', controller.sendInquiry);
+router.get('/my-guidance', controller.getMyGuidance);
 router.post('/aptitude-results', controller.saveAptitudeResults);
 router.get('/course-selection', controller.getCourseSelection);
 router.post('/course-selection', controller.setCourseSelection);

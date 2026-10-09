@@ -364,7 +364,7 @@ function GuidanceEditor({ studentId, navigation }) {
           <View style={styles.row}>
             <View style={styles.flex}>
               <Text style={styles.title}>Share with Parent</Text>
-              <Text style={styles.muted}>Recommendations are shared only when privacy consent allows it.</Text>
+              <Text style={styles.muted}>When on, the parent sees the final guidance (summary and pathways) in their Counsellor tab.</Text>
             </View>
             <Switch
               value={sharedWithParent}

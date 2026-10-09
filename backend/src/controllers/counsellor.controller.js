@@ -276,9 +276,6 @@ async function saveGuidance(req, res) {
   }
   const { value, error } = validateGuidance(req.body);
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
-  if (value.sharedWithParent === true && !assignedStudent.counsellor_access) {
-    return res.status(409).json({ error: 'Parent sharing requires counsellor access consent', code: 'CONSENT_REQUIRED' });
-  }
 
   const existing = await pool.query(
     `SELECT guidance_status, reviewed_at
@@ -321,9 +318,6 @@ async function updateGuidance(req, res) {
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
   const student = await findAssignedStudent(req.user.id, studentId);
   if (!student) return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
-  if (value.sharedWithParent === true && !student.counsellor_access) {
-    return res.status(409).json({ error: 'Parent sharing requires counsellor access consent', code: 'CONSENT_REQUIRED' });
-  }
 
   const existing = await pool.query(
     `SELECT guidance_status, reviewed_at
@@ -416,7 +410,7 @@ async function markReviewed(req, res) {
            reviewed_at = NOW(), updated_at = NOW()
        WHERE counsellor_id = $1 AND student_id = $2
        RETURNING *`,
-      [req.user.id, studentId, assignedStudent.consent_parent_ids.length > 0]
+      [req.user.id, studentId, true]
     );
     if (!guidance.rows[0]) {
       await client.query('ROLLBACK');
@@ -430,9 +424,8 @@ async function markReviewed(req, res) {
                $1, 'parent', l.parent_id
         FROM parent_student_links l
         WHERE l.student_id = $2
-          AND l.parent_id = ANY($3::int[])
         RETURNING id, target_user_id`,
-      [req.user.id, studentId, assignedStudent.consent_parent_ids]
+      [req.user.id, studentId]
     );
     await notifyStudentGuidance(client, req.user.id, studentId, guidance.rows[0]);
     await client.query('COMMIT');

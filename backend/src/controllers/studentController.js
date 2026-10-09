@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const matching = require('../services/counsellorMatching');
+const { getStudentGuidance } = require('../services/studentResults');
 
 const DEFAULT_USER_ID = 42;
 
@@ -471,6 +472,25 @@ exports.saveAptitudeResults = async (req, res) => {
       [req.authUserId, stream.trim().slice(0, 60), JSON.stringify(toScores), JSON.stringify(toMatches)]
     );
     return res.json({ success: true });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
+// ---------- My counsellor + their finalised guidance (signed-in students only) ----------
+exports.getMyGuidance = async (req, res) => {
+  if (!req.authUserId) return res.status(401).json({ success: false, error: 'Please sign in as a student first.' });
+  try {
+    const [selection, guidance] = await Promise.all([
+      matching.getSelection(req.authUserId),
+      getStudentGuidance(req.authUserId),
+    ]);
+    return res.json({
+      success: true,
+      counsellor: selection?.counsellor || null,
+      course: selection?.course || null,
+      guidance,
+    });
   } catch (error) {
     return sendServerError(res, error);
   }

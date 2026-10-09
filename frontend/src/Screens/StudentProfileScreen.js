@@ -23,6 +23,7 @@ import {
   deleteUserProfile,
   getStudentProfile,
   updateUserProfile,
+  getMyGuidance,
 } from '../services/api';
 
 const BLUE = '#0052CC';
@@ -83,6 +84,7 @@ export default function StudentProfileScreen({ navigation, route }) {
     academicProfile: normalizeAcademicProfile(route?.params?.academicProfile),
   }));
   const [isLoading, setIsLoading] = useState(true);
+  const [myCounsellor, setMyCounsellor] = useState(null);
   const [isPictureEditorVisible, setIsPictureEditorVisible] = useState(false);
   const [isUpdatingPicture, setIsUpdatingPicture] = useState(false);
   const [isProfileEditorVisible, setIsProfileEditorVisible] = useState(false);
@@ -101,6 +103,10 @@ export default function StudentProfileScreen({ navigation, route }) {
       }))
       .catch((error) => console.warn('Unable to load student profile.', error))
       .finally(() => mounted && setIsLoading(false));
+    // Assigned counsellor (matched through the chosen course) and their finalised guidance.
+    getMyGuidance()
+      .then((data) => mounted && setMyCounsellor(data))
+      .catch(() => mounted && setMyCounsellor({ counsellor: null, guidance: null }));
     return () => { mounted = false; };
   }, []);
 
@@ -398,22 +404,62 @@ export default function StudentProfileScreen({ navigation, route }) {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeadingRow}>
-            <Text style={styles.sectionTitle}>Counsellor Recommendation Notes</Text>
-            <Pressable
-              accessibilityLabel="Edit recommendation notes"
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <Text style={styles.editIcon}>✎</Text>
-            </Pressable>
-          </View>
+          <Text style={styles.sectionTitle}>My Counsellor</Text>
+          {!myCounsellor ? (
+            <ActivityIndicator color="#0B57D0" style={{ marginVertical: 12 }} />
+          ) : myCounsellor.counsellor ? (
+            <View style={styles.counsellorCard}>
+              <View style={styles.counsellorAvatar}>
+                <Text style={styles.counsellorAvatarText}>
+                  {myCounsellor.counsellor.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.counsellorName}>{myCounsellor.counsellor.name}</Text>
+                <Text style={styles.counsellorMeta}>{myCounsellor.counsellor.email}</Text>
+                {myCounsellor.course ? (
+                  <Text style={styles.counsellorMeta}>Guides your course: {myCounsellor.course.title}</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.notesBox}>
+              <Text style={styles.notesText}>
+                You don't have a counsellor yet. Choose a course in the Courses tab and a counsellor who guides it will be assigned to you.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Counsellor Recommendation Notes</Text>
           <View style={styles.notesBox}>
-            <Text style={styles.notesText}>
-              Savindi shows strong potential in technology-focused careers. Encourage
-              further practice in communication and participation in collaborative
-              projects.
-            </Text>
+            {myCounsellor?.guidance ? (
+              <>
+                <Text style={styles.counsellorMeta}>
+                  From {myCounsellor.guidance.counsellor?.name || 'your counsellor'}
+                  {myCounsellor.guidance.lastReviewedAt ? ` · ${new Date(myCounsellor.guidance.lastReviewedAt).toLocaleDateString()}` : ''}
+                  {myCounsellor.guidance.reviewed ? ' · Reviewed' : ''}
+                </Text>
+                {myCounsellor.guidance.summary ? (
+                  <Text style={[styles.notesText, { marginTop: 6 }]}>{myCounsellor.guidance.summary}</Text>
+                ) : null}
+                {myCounsellor.guidance.recommendedPathways?.length ? (
+                  <>
+                    <Text style={[styles.counsellorName, { fontSize: 13, marginTop: 10 }]}>Recommended pathways</Text>
+                    {myCounsellor.guidance.recommendedPathways.map((pathway) => (
+                      <Text key={pathway} style={styles.notesText}>• {pathway}</Text>
+                    ))}
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.notesText}>
+                {myCounsellor?.counsellor
+                  ? `${myCounsellor.counsellor.name} hasn't finalised your career guidance yet. It will appear here once it's ready.`
+                  : 'Guidance from your counsellor will appear here.'}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -546,6 +592,27 @@ export default function StudentProfileScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  counsellorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+  },
+  counsellorAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#0B57D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  counsellorAvatarText: { color: '#FFFFFF', fontWeight: '800' },
+  counsellorName: { color: '#0F172A', fontSize: 15, fontWeight: '800' },
+  counsellorMeta: { color: '#64748B', fontSize: 12, marginTop: 2 },
   container: {
     flex: 1,
     backgroundColor: '#F7F9FC',
