@@ -8,7 +8,6 @@ import RoleTabs from '../../components/RoleTabs';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { ROLES_WITH_ADMIN, homeRouteFor } from '../../config';
-import { getGoogleIdToken } from '../../auth/googleSignIn';
 import { collectErrors, hasErrors, validateEmail, validateLoginPassword } from '../../utils/validation';
 import { colors } from '../../styles/colors';
 import GoogleLogo from '../../components/GoogleLogo';
@@ -68,9 +67,12 @@ export default function SignIn({ navigation, route }) {
     setError(''); setInfo('');
     setGoogleBusy(true);
     try {
-      const idToken = await getGoogleIdToken();
-      if (!idToken) return; // cancelled
-      const user = await googleAuth({ idToken, role });
+      const user = await googleAuth({ role });
+      if (!user) return; // closed the Google page
+      if (!user.profileCompleted) {
+        navigation.reset({ index: 0, routes: [{ name: 'CompleteProfile' }] });
+        return;
+      }
       goHome(user);
     } catch (e) {
       setError(e.message || 'Google sign-in failed.');

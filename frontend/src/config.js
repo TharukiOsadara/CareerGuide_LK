@@ -37,7 +37,3 @@ export const ROLES_WITH_ADMIN = ['student', 'parent', 'counsellor', 'admin'];
 // Counsellors have no dashboard of their own yet, so they share the student one.
 const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'StudentHome', counsellor: 'StudentHome' };
 export const homeRouteFor = (role) => HOME_ROUTE[role] || 'StudentHome';
-
-// Google Sign-In: the OAuth "Web application" client ID from Google Cloud Console.
-// The backend's GOOGLE_CLIENT_ID must contain this same ID.
-export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';

@@ -10,7 +10,6 @@ import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { AL_STREAMS, ROLES, homeRouteFor } from '../../config';
 import { useAuth } from '../../context/AuthContext';
-import { getGoogleIdToken } from '../../auth/googleSignIn';
 import {
   collectErrors, hasErrors, required, validateEmail, validateName, validateNewPassword, validateNumber,
 } from '../../utils/validation';
@@ -48,10 +47,10 @@ export default function SignUp({ navigation }) {
     if (!agree) return setError('Please accept the privacy agreement to continue.');
     setGoogleBusy(true);
     try {
-      const idToken = await getGoogleIdToken();
-      if (!idToken) return; // cancelled
-      const user = await googleAuth({ idToken, role });
-      navigation.reset({ index: 0, routes: [{ name: homeRouteFor(user.role), params: { welcome: true } }] });
+      const user = await googleAuth({ role });
+      if (!user) return; // closed the Google page
+      const next = user.profileCompleted ? homeRouteFor(user.role) : 'CompleteProfile';
+      navigation.reset({ index: 0, routes: [{ name: next, params: { welcome: true } }] });
     } catch (e) {
       setError(e.message || 'Google sign-up failed.');
     } finally {

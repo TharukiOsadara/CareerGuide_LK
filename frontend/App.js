@@ -1,7 +1,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider } from './src/context/AuthContext';
+
+// Lets the Google sign-in popup hand its result back when running in a browser (no-op on phones).
+WebBrowser.maybeCompleteAuthSession();
 
 // Auth / onboarding
 import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
@@ -13,6 +17,7 @@ import JobMarket from './src/Screens/Onboarding/JobMarket';
 import AptitudeInfo from './src/Screens/Onboarding/AptitudeInfo';
 import SignUp from './src/Screens/Auth/SignUp';
 import SignIn from './src/Screens/Auth/SignIn';
+import CompleteProfile from './src/Screens/Auth/CompleteProfile';
 import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
 import ResetPassword from './src/Screens/Pwd/ResetPassword';
 import AdminPortal from './src/Screens/Admin/AdminPortal';
@@ -58,6 +63,7 @@ export default function App() {
             />
             <Stack.Screen name="SignUp" component={SignUp} />
             <Stack.Screen name="SignIn" component={SignIn} />
+            <Stack.Screen name="CompleteProfile" component={CompleteProfile} />
             <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
             <Stack.Screen name="ResetPassword" component={ResetPassword} />
             <Stack.Screen name="AdminPortal" component={AdminPortal} />
