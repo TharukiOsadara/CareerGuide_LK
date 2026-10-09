@@ -1,6 +1,7 @@
 const pool = require('../db');
 const { getQuizResults } = require('../services/studentResults');
 const { parseId, validateGuidance, validateSettings } = require('../validators/counsellor.validators');
+const matching = require('../services/counsellorMatching');
 
 const NOT_SHARED = {
   access: 'not_shared',
@@ -361,19 +362,41 @@ async function deleteGuidance(req, res) {
   if (!(await findAssignedStudent(req.user.id, studentId))) {
     return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
   }
+  // Draft or final: the counsellor can remove their own record and start again.
   const { rows } = await pool.query(
     `DELETE FROM counsellor_guidance_records
-     WHERE counsellor_id = $1 AND student_id = $2 AND guidance_status = 'draft'
-     RETURNING id`,
+     WHERE counsellor_id = $1 AND student_id = $2
+     RETURNING id, guidance_status`,
     [req.user.id, studentId]
   );
-  if (rows[0]) return res.json({ deleted: true, id: rows[0].id });
-  const existing = await pool.query(
-    `SELECT guidance_status FROM counsellor_guidance_records WHERE counsellor_id = $1 AND student_id = $2`,
-    [req.user.id, studentId]
+  if (!rows[0]) return res.status(404).json({ error: 'Guidance record not found', code: 'NOT_FOUND' });
+  res.json({ deleted: true, id: rows[0].id, guidanceStatus: rows[0].guidance_status });
+}
+
+// All guidance records this counsellor has written, for students still assigned to them,
+// plus the assigned students who have no record yet (so the counsellor can create one).
+async function listGuidance(req, res) {
+  const assigned = await getAssignedStudents(req.user.id);
+  const ids = assigned.map((s) => s.student_id);
+  if (!ids.length) return res.json({ records: [], studentsWithout: [] });
+  const { rows } = await pool.query(
+    `SELECT g.*, s.full_name AS student_name, s.al_stream
+     FROM counsellor_guidance_records g
+     JOIN users s ON s.id = g.student_id
+     WHERE g.counsellor_id = $1 AND g.student_id = ANY($2::int[])
+     ORDER BY g.updated_at DESC`,
+    [req.user.id, ids]
   );
-  if (!existing.rows[0]) return res.status(404).json({ error: 'Guidance record not found', code: 'NOT_FOUND' });
-  return res.status(409).json({ error: 'Reviewed guidance cannot be deleted', code: 'REVIEW_LOCKED' });
+  const withRecord = new Set(rows.map((r) => r.student_id));
+  res.json({
+    records: rows.map((r) => ({
+      ...toGuidance(r),
+      student: { id: r.student_id, name: r.student_name, stream: r.al_stream },
+    })),
+    studentsWithout: assigned
+      .filter((s) => !withRecord.has(s.student_id))
+      .map((s) => ({ id: s.student_id, name: s.student_name, stream: s.al_stream })),
+  });
 }
 
 async function markReviewed(req, res) {
@@ -480,6 +503,91 @@ async function updateSettings(req, res) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   } });
+}
+
+function toSettings(row) {
+  return {
+    counsellorId: row.counsellor_id,
+    schoolAffiliation: row.school_affiliation,
+    zone: row.zone,
+    notificationsEnabled: row.notifications_enabled,
+    emailAlertsEnabled: row.email_alerts_enabled,
+    ugcHandbookVersion: row.ugc_handbook_version,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// Create the profile details (first save). 409 if they already exist - use PUT to change them.
+async function createSettings(req, res) {
+  const { value, error } = validateSettings(req.body);
+  if (error) return res.status(400).json({ error, code: 'VALIDATION' });
+  const { rows } = await pool.query(
+    `INSERT INTO counsellor_settings
+       (counsellor_id, school_affiliation, zone, notifications_enabled, email_alerts_enabled, ugc_handbook_version)
+     VALUES ($1, $2, $3, COALESCE($4, TRUE), COALESCE($5, FALSE), $6)
+     ON CONFLICT (counsellor_id) DO NOTHING
+     RETURNING *`,
+    [req.user.id, value.schoolAffiliation ?? null, value.zone ?? null,
+      value.notificationsEnabled ?? null, value.emailAlertsEnabled ?? null, value.ugcHandbookVersion ?? null]
+  );
+  if (!rows[0]) return res.status(409).json({ error: 'Profile details already exist. Update them instead.', code: 'EXISTS' });
+  res.status(201).json({ settings: toSettings(rows[0]) });
+}
+
+// Clear the saved profile details and go back to the defaults.
+async function deleteSettings(req, res) {
+  const { rowCount } = await pool.query('DELETE FROM counsellor_settings WHERE counsellor_id = $1', [req.user.id]);
+  if (!rowCount) return res.status(404).json({ error: 'No saved profile details to clear', code: 'NOT_FOUND' });
+  res.json({ deleted: true });
+}
+
+// ---------- Courses this counsellor guides (drives student matching) ----------
+
+async function listMyCourses(req, res) {
+  const { rows } = await pool.query(
+    `SELECT c.id, c.title, c.institute, c.stream,
+            EXISTS (SELECT 1 FROM counsellor_courses cc WHERE cc.course_id = c.id AND cc.counsellor_id = $1) AS mine,
+            (SELECT COUNT(*)::int FROM student_course_selections s
+             WHERE s.course_id = c.id AND s.counsellor_id = $1) AS my_students
+     FROM courses_list c
+     ORDER BY c.title`,
+    [req.user.id]
+  );
+  const map = (r) => ({ id: r.id, title: r.title, institute: r.institute, stream: r.stream, myStudents: r.my_students });
+  res.json({ courses: rows.filter((r) => r.mine).map(map), available: rows.filter((r) => !r.mine).map(map) });
+}
+
+async function currentCourseIds(counsellorId) {
+  const { rows } = await pool.query('SELECT course_id FROM counsellor_courses WHERE counsellor_id = $1', [counsellorId]);
+  return rows.map((r) => r.course_id);
+}
+
+async function addMyCourse(req, res) {
+  const courseId = parseId(req.body?.courseId);
+  if (!courseId) return res.status(400).json({ error: 'Choose a course', code: 'VALIDATION' });
+  const ids = await currentCourseIds(req.user.id);
+  if (ids.includes(courseId)) return res.status(409).json({ error: 'You already guide this course', code: 'EXISTS' });
+  try {
+    await matching.setCounsellorCourses(req.user.id, [...ids, courseId]);
+  } catch (err) {
+    if (err instanceof matching.MatchingError) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+  res.status(201).json({ added: courseId });
+}
+
+// Students matched on a removed course are re-matched to another counsellor who guides it.
+async function removeMyCourse(req, res) {
+  const courseId = parseId(req.params.courseId);
+  if (!courseId) return res.status(400).json({ error: 'Invalid course', code: 'VALIDATION' });
+  const ids = await currentCourseIds(req.user.id);
+  if (!ids.includes(courseId)) return res.status(404).json({ error: 'You do not guide this course', code: 'NOT_FOUND' });
+  if (ids.length === 1) {
+    return res.status(409).json({ error: 'Keep at least one course so students can be matched to you', code: 'LAST_COURSE' });
+  }
+  const result = await matching.setCounsellorCourses(req.user.id, ids.filter((id) => id !== courseId));
+  res.json({ removed: courseId, rematched: result.rematched, unmatched: result.unmatched });
 }
 
 // ---------- Inquiries sent to this counsellor ----------
@@ -630,7 +738,13 @@ module.exports = {
   saveGuidance,
   updateGuidance,
   deleteGuidance,
+  listGuidance,
   markReviewed,
   getSettings,
+  createSettings,
   updateSettings,
+  deleteSettings,
+  listMyCourses,
+  addMyCourse,
+  removeMyCourse,
 };

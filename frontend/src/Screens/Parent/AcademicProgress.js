@@ -74,7 +74,7 @@ export default function AcademicProgress({ active, goToTab }) {
     }
     return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
   }
-  if (!data) return <Screen />;
+  if (!data) return <Screen><LoadingState /></Screen>;
 
   const { child, assessment, matchedCareers, matchedCourses, disclaimer } = data;
   const name = firstName(child.fullName);
@@ -84,6 +84,7 @@ export default function AcademicProgress({ active, goToTab }) {
   return (
     <Screen>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blue]} />}
       >
