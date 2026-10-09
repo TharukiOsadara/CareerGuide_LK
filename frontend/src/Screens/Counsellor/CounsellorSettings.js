@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
 import { useAuth } from '../../context/AuthContext';
+import ProfileHeader from '../../components/ProfileHeader';
 
 export default function CounsellorSettings({ navigation }) {
   const { signOut } = useAuth();
@@ -29,9 +31,8 @@ export default function CounsellorSettings({ navigation }) {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <ProfileHeader title="Counsellor Settings" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.goBack()}><Text style={{ color: colors.blue, marginBottom: 18 }}>‹ Back</Text></Pressable>
-        <Text style={styles.heading}>Counsellor Settings</Text>
         <Text style={styles.subtitle}>Manage your portal preferences.</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.card}>
