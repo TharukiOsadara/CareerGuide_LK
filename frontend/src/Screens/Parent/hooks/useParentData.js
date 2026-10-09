@@ -29,6 +29,8 @@ export function useParentData(fetcher, { active = true } = {}) {
       try {
         const result = await fetcherRef.current(studentId);
         if (id !== requestId.current) return;
+        // An empty reply would otherwise leave a blank page with no message.
+        if (result == null) throw new Error('No data came back from the server. Pull down or tap Try again.');
         setData(result);
         setError(null);
       } catch (err) {

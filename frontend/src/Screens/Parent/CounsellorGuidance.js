@@ -45,7 +45,7 @@ export default function CounsellorGuidance({ active, navigation }) {
 
   if (loading) return <Screen><LoadingState message="Loading guidance…" /></Screen>;
   if (error && !data) return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
-  if (!data) return <Screen />;
+  if (!data) return <Screen><LoadingState /></Screen>;
 
   const { counsellor, note, inquiries } = data;
   const counsellorName = counsellor?.name || 'the counsellor';
@@ -71,6 +71,7 @@ export default function CounsellorGuidance({ active, navigation }) {
     <Screen>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blue]} />}

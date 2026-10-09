@@ -53,7 +53,7 @@ export default function ParentPrivacy({ active, navigation }) {
 
   if (loading || (data && formSource !== data)) return <Screen><LoadingState message="Loading privacy settings…" /></Screen>;
   if (error && !data) return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
-  if (!data) return <Screen />;
+  if (!data) return <Screen><LoadingState /></Screen>;
 
   const exists = data.exists;
   const name = firstName(selectedChild?.fullName);
@@ -91,6 +91,7 @@ export default function ParentPrivacy({ active, navigation }) {
   return (
     <Screen>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blue]} />}
       >

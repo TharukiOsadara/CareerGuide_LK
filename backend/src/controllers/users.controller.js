@@ -5,6 +5,7 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
 const { publicUser } = require('../utils/token');
 const v = require('../utils/validate');
 const matching = require('../services/counsellorMatching');
+const { userColumns } = require('../utils/userColumns');
 
 const router = express.Router();
 
@@ -17,14 +18,14 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
   if (status) { params.push(status); clauses.push(`status = $${params.length}`); }
   if (q) { params.push(`%${q}%`); clauses.push(`(full_name ILIKE $${params.length} OR email ILIKE $${params.length})`); }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-  const { rows } = await query(`SELECT * FROM users ${where} ORDER BY created_at DESC`, params);
+  const { rows } = await query(`SELECT ${await userColumns()} FROM users ${where} ORDER BY created_at DESC`, params);
   res.json({ users: rows.map(publicUser) });
 });
 
 // Pending admin requests (super admin approves these).
 router.get('/admin-requests', authenticate, requireAdmin, async (req, res) => {
   const { rows } = await query(
-    `SELECT * FROM users
+    `SELECT ${await userColumns()} FROM users
      WHERE role = 'admin' AND admin_approved = FALSE AND admin_rejected = FALSE
      ORDER BY created_at DESC`
   );

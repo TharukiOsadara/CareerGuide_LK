@@ -19,6 +19,13 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// API data is per-user and changes often: never let phones reuse a cached / 304 (empty) reply.
+app.set('etag', false);
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.static('public'));
 
 app.get('/', (req, res) => res.json({ message: 'CareerGuide LK API is running', env: NODE_ENV }));

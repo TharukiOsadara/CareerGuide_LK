@@ -18,22 +18,14 @@ const SCREENS = {
   privacy: ParentPrivacy,
 };
 
-// Bottom-tab shell. Each tab mounts on first visit and then stays mounted (keeps
-// scroll position and typed text); it refetches whenever it becomes active again.
+// Bottom-tab shell. Only the active tab is mounted, in a normal flex layout.
+// (Stacking every tab as a hidden absolute layer left Android showing empty pages.)
 export default function ParentTabs({ navigation }) {
   const { status, error, reload, linkedChildren } = useChild();
   const { requestLeave } = useLeaveGuard();
   const [active, setActive] = useState('home');
-  const [visited, setVisited] = useState({ home: true });
 
-  const goToTab = useCallback(
-    (key) =>
-      requestLeave(() => {
-        setActive(key);
-        setVisited((v) => (v[key] ? v : { ...v, [key]: true }));
-      }),
-    [requestLeave]
-  );
+  const goToTab = useCallback((key) => requestLeave(() => setActive(key)), [requestLeave]);
 
   // Android back: return to Home first instead of leaving the parent portal.
   useEffect(() => {
@@ -68,16 +60,11 @@ export default function ParentTabs({ navigation }) {
     );
   }
 
+  const ActiveScreen = SCREENS[active] || ParentHome;
   return (
     <View style={styles.screen}>
       <View style={styles.body}>
-        {Object.entries(SCREENS).map(([key, Screen]) =>
-          visited[key] ? (
-            <View key={key} style={[styles.page, key !== active && styles.hidden]}>
-              <Screen active={key === active} goToTab={goToTab} navigation={navigation} />
-            </View>
-          ) : null
-        )}
+        <ActiveScreen key={active} active goToTab={goToTab} navigation={navigation} />
       </View>
       <ParentTabBar active={active} onChange={goToTab} />
     </View>
@@ -87,6 +74,4 @@ export default function ParentTabs({ navigation }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1 },
-  page: { ...StyleSheet.absoluteFillObject },
-  hidden: { display: 'none' },
 });

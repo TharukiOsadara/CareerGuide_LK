@@ -31,8 +31,16 @@ export const counsellorApi = {
   }),
   markReviewed: (studentId) => request(`/api/counsellor/students/${studentId}/guidance/review`, { method: 'POST' }),
   deleteGuidance: (studentId) => request(`/api/counsellor/students/${studentId}/guidance`, { method: 'DELETE' }),
+  // All guidance records written by this counsellor + assigned students without one.
+  guidanceRecords: () => request('/api/counsellor/guidance'),
   settings: () => request('/api/counsellor/settings'),
+  createSettings: (body) => request('/api/counsellor/settings', { method: 'POST', body: JSON.stringify(body) }),
   updateSettings: (body) => request('/api/counsellor/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  deleteSettings: () => request('/api/counsellor/settings', { method: 'DELETE' }),
+  // Courses this counsellor guides (students choosing these courses are matched to them).
+  myCourses: () => request('/api/counsellor/my-courses'),
+  addCourse: (courseId) => request('/api/counsellor/my-courses', { method: 'POST', body: JSON.stringify({ courseId }) }),
+  removeCourse: (courseId) => request(`/api/counsellor/my-courses/${courseId}`, { method: 'DELETE' }),
   // Student + parent questions addressed to this counsellor.
   inquiries: () => request('/api/counsellor/inquiries'),
   markParentInquiryRead: (id) => request(`/api/counsellor/inquiries/parent/${id}/read`, { method: 'POST' }),

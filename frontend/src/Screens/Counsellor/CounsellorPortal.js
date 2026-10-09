@@ -172,8 +172,46 @@ export default function CounsellorPortal({ navigation, route }) {
           </>
         )}
 
-        <Text style={styles.sectionTitle}>{tab === 'Dashboard' ? 'Assigned Students' : 'Students'}</Text>
-        {list.map((student) => <StudentCard key={student.id} student={student} navigation={navigation} />)}
+        {tab === 'Dashboard' ? (
+          <>
+            <View style={[styles.row, { marginTop: 8, marginBottom: 10 }]}>
+              <Text style={[styles.sectionTitle, styles.flex, { marginBottom: 0, marginTop: 0 }]}>My students</Text>
+              {list.length ? (
+                <Pressable onPress={() => setTab('Students')} hitSlop={8}>
+                  <Text style={{ color: colors.blue, fontWeight: '800', fontSize: 12 }}>View all ({list.length}) ›</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {list.length ? (
+              <View style={[styles.card, { paddingVertical: 4 }]}>
+                {list.slice(0, 5).map((student, i) => (
+                  <Pressable
+                    key={student.id}
+                    onPress={() => navigation.navigate('CounsellorStudentProfile', { studentId: student.id })}
+                    style={({ pressed }) => [listStyles.item, i > 0 && listStyles.divider, pressed && { opacity: 0.6 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${student.name}, ${student.status === 'reviewed' ? 'reviewed' : 'pending review'}`}
+                  >
+                    <View style={[styles.avatar, listStyles.avatar]}><Text style={[styles.avatarText, { fontSize: 12 }]}>{student.initials}</Text></View>
+                    <View style={[styles.flex, { marginLeft: 10 }]}>
+                      <Text style={styles.studentName} numberOfLines={1}>{student.name}</Text>
+                      <Text style={[styles.muted, { marginTop: 2 }]} numberOfLines={1}>
+                        {student.stream || 'Stream not recorded'}{student.topMatch ? ` · ${student.topMatch.title}` : ''}
+                      </Text>
+                    </View>
+                    <View style={[listStyles.dot, { backgroundColor: student.status === 'reviewed' ? '#198754' : '#E0A100' }]} />
+                    <Text style={listStyles.status}>{student.status === 'reviewed' ? 'Reviewed' : 'Pending'}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Students</Text>
+            {list.map((student) => <StudentCard key={student.id} student={student} navigation={navigation} />)}
+          </>
+        )}
         {!loading && !list.length ? <Text style={styles.muted}>No assigned students match these filters.</Text> : null}
       </ScrollView>
 
@@ -220,6 +258,14 @@ export default function CounsellorPortal({ navigation, route }) {
 }
 
 export { StatusChip };
+
+const listStyles = StyleSheet.create({
+  item: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  divider: { borderTopWidth: 1, borderTopColor: '#EEF2F7' },
+  avatar: { width: 36, height: 36, borderRadius: 18 },
+  dot: { width: 8, height: 8, borderRadius: 4, marginLeft: 8 },
+  status: { color: colors.muted, fontSize: 11, fontWeight: '700', marginLeft: 5 },
+});
 
 const tabBarStyles = StyleSheet.create({
   bar: {

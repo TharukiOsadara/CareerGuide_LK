@@ -145,12 +145,13 @@ async function buildProgress(child) {
 
 async function listChildren(req, res) {
   const { rows } = await pool.query(
-    `SELECT l.student_id, l.counsellor_id, l.relationship,
+    `SELECT l.student_id, COALESCE(sel.counsellor_id, l.counsellor_id) AS counsellor_id, l.relationship,
             s.full_name AS student_name, s.al_stream, s.z_score, s.avatar_initials,
             c.full_name AS counsellor_name
      FROM parent_student_links l
      JOIN users s ON s.id = l.student_id
-     LEFT JOIN users c ON c.id = l.counsellor_id
+     LEFT JOIN student_course_selections sel ON sel.student_id = l.student_id
+     LEFT JOIN users c ON c.id = COALESCE(sel.counsellor_id, l.counsellor_id)
      WHERE l.parent_id = $1
      ORDER BY s.full_name`,
     [req.user.id]
@@ -210,7 +211,7 @@ async function getProgress(req, res) {
 }
 
 async function getGuidance(req, res) {
-  const note = await getCounsellorNote(req.child.student_id, req.user.id);
+  const note = await getCounsellorNote(req.child.student_id);
   res.json({
     counsellor: req.child.counsellor_id
       ? { id: req.child.counsellor_id, name: req.child.counsellor_name }

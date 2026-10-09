@@ -111,6 +111,11 @@ export async function markNotificationsRead(notificationIds, userId = 42) {
   });
 }
 
+// ---- My counsellor and their finalised guidance (signed-in students) ----
+export async function getMyGuidance() {
+  return request('/my-guidance');
+}
+
 // ---- Course choice & matched counsellor (signed-in students) ----
 export async function getCourseSelection() {
   const payload = await request('/course-selection');
