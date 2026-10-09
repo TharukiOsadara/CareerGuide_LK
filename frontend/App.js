@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
+import { ToastProvider } from './src/Screens/Parent/components/Toast';
 
 // Feature Student Screens
 import HomeScreen from './src/Screens/HomeScreen';
@@ -46,6 +47,9 @@ import CounsellorPortal from './src/Screens/CounsellorPortal';
 import CounsellorStudentProfile from './src/Screens/CounsellorStudentProfile';
 import CounsellorGuidanceForm from './src/Screens/CounsellorGuidanceForm';
 import CounsellorSettings from './src/Screens/CounsellorSettings';
+import CounsellorInquiries from './src/Screens/CounsellorInquiries';
+import CounsellorNotifications from './src/Screens/CounsellorNotifications';
+import CounsellorNotificationDetail from './src/Screens/CounsellorNotificationDetail';
 
 const Stack = createNativeStackNavigator();
 const counsellorDevPortal = process.env.EXPO_PUBLIC_ENABLE_COUNSELLOR_DEV_PORTAL === 'true';
@@ -54,6 +58,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+        <ToastProvider>
         <NavigationContainer>
           <Stack.Navigator initialRouteName={counsellorDevPortal ? 'CounsellorPortal' : 'Loading'} screenOptions={{ headerShown: false }}>
             {/* Onboarding + Auth */}
@@ -98,8 +103,12 @@ export default function App() {
             <Stack.Screen name="CounsellorStudentProfile" component={CounsellorStudentProfile} />
             <Stack.Screen name="CounsellorGuidanceForm" component={CounsellorGuidanceForm} />
             <Stack.Screen name="CounsellorSettings" component={CounsellorSettings} />
+            <Stack.Screen name="CounsellorInquiries" component={CounsellorInquiries} />
+            <Stack.Screen name="CounsellorNotifications" component={CounsellorNotifications} />
+            <Stack.Screen name="CounsellorNotificationDetail" component={CounsellorNotificationDetail} />
           </Stack.Navigator>
         </NavigationContainer>
+        </ToastProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

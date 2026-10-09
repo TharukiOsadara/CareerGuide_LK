@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "CareerGuid counsellor",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "counsellorId", "value": "45" },
+    { "key": "studentId", "value": "42" },
+    { "key": "guidanceId", "value": "1" },
+    { "key": "inquiryId", "value": "1" },
+    { "key": "notificationId", "value": "1" }
+    ,{ "key": "courseId", "value": "24" }
+  ],
+  "item": [
+    { "name": "Dashboard", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/dashboard" } },
+    { "name": "Dashboard overview", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/dashboard/overview" } },
+    { "name": "Full student profile", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/student-profiles/{{studentId}}" } },
+    { "name": "Update student profile", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"fullName\":\"Student Name\",\"grade\":\"Grade 13\",\"stream\":\"Physical Science (Maths Stream)\",\"district\":\"Colombo\",\"zScore\":1.42,\"subjectGrades\":[{\"subject\":\"Combined Mathematics\",\"grade\":\"A\"},{\"subject\":\"Physics\",\"grade\":\"B\"},{\"subject\":\"Chemistry\",\"grade\":\"B\"}]}" }, "url": "{{baseUrl}}/api/counsellor/student-profiles/{{studentId}}" } },
+    { "name": "Deactivate student profile (keeps login)", "request": { "method": "DELETE", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/student-profiles/{{studentId}}" } },
+    { "name": "Assigned courses", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/courses" } },
+    { "name": "Assigned students", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/students?page=1&pageSize=20&search=&stream=&courseId=" } },
+    { "name": "Student profile", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/students/{{studentId}}" } },
+    { "name": "Guidance list", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/guidance" } },
+    { "name": "Guidance record", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/guidance/{{guidanceId}}" } },
+    { "name": "Create guidance", "request": { "method": "POST", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"assessmentSummary\":\"Review completed\",\"recommendedPathways\":[\"Software Engineering\"],\"guidanceStatus\":\"draft\",\"sharedWithParent\":false}" }, "url": "{{baseUrl}}/api/counsellor/students/{{studentId}}/guidance" } },
+    { "name": "Update guidance", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"assessmentSummary\":\"Updated review\",\"guidanceStatus\":\"draft\"}" }, "url": "{{baseUrl}}/api/counsellor/students/{{studentId}}/guidance" } },
+    { "name": "Review guidance", "request": { "method": "POST", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/students/{{studentId}}/guidance/review" } },
+    { "name": "Delete guidance", "request": { "method": "DELETE", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/guidance/{{guidanceId}}" } },
+    { "name": "Inquiries", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/inquiries?courseId={{courseId}}" } },
+    { "name": "Inquiry", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/inquiries/{{inquiryId}}" } },
+    { "name": "Reply inquiry", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"replyMessage\":\"Please review the attached course requirements.\"}" }, "url": "{{baseUrl}}/api/counsellor/inquiries/{{inquiryId}}/reply" } },
+    { "name": "Delete inquiry reply", "request": { "method": "DELETE", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/inquiries/{{inquiryId}}/reply" } },
+    { "name": "Profile", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/profile" } },
+    { "name": "Update profile", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"fullName\":\"Updated Counsellor Name\"}" }, "url": "{{baseUrl}}/api/counsellor/profile" } },
+    { "name": "Settings", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/settings" } },
+    { "name": "Update settings", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"notificationsEnabled\":true,\"emailAlertsEnabled\":false}" }, "url": "{{baseUrl}}/api/counsellor/settings" } },
+    { "name": "Change password", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"currentPassword\":\"old-password\",\"newPassword\":\"new-password-123\"}" }, "url": "{{baseUrl}}/api/counsellor/profile/password" } },
+    { "name": "Notifications", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/notifications" } },
+    { "name": "Notification detail", "request": { "method": "GET", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/notifications/{{notificationId}}" } },
+    { "name": "Reply from notification", "request": { "method": "POST", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"replyMessage\":\"Please review the course requirements.\"}" }, "url": "{{baseUrl}}/api/counsellor/notifications/{{notificationId}}/reply" } },
+    { "name": "Edit notification reply", "request": { "method": "PUT", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"replyMessage\":\"Updated course guidance.\"}" }, "url": "{{baseUrl}}/api/counsellor/notifications/{{notificationId}}/replies/{{replyId}}" } },
+    { "name": "Delete notification reply", "request": { "method": "DELETE", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/notifications/{{notificationId}}/replies/{{replyId}}" } },
+    { "name": "Mark notification read", "request": { "method": "POST", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/notifications/{{notificationId}}/read" } },
+    { "name": "Mark all notifications read", "request": { "method": "POST", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/notifications/read-all" } },
+    { "name": "Delete notification", "request": { "method": "DELETE", "header": [{ "key": "x-user-id", "value": "{{counsellorId}}" }], "url": "{{baseUrl}}/api/counsellor/notifications/{{notificationId}}" } }
+  ]
+}

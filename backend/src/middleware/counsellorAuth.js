@@ -15,6 +15,7 @@ async function requireCounsellor(req, res, next) {
     req.user = {
       id: req.user.id,
       role: req.user.role,
+      isSenior: req.user.is_senior === true,
       fullName: req.user.full_name || req.user.fullName,
     };
     return next();
@@ -26,7 +27,7 @@ async function requireCounsellor(req, res, next) {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, full_name, role
+    `SELECT id, full_name, role, is_senior
      FROM users
      WHERE id = $1 AND role = 'counsellor' AND status = 'active'`,
     [userId]
@@ -40,6 +41,7 @@ async function requireCounsellor(req, res, next) {
     id: rows[0].id,
     role: rows[0].role,
     fullName: rows[0].full_name,
+    isSenior: rows[0].is_senior === true,
   };
   next();
 }

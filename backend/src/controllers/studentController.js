@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { notifyInquiryCreated } = require('../services/counsellorInquiryNotifications');
 
 const DEFAULT_USER_ID = 42;
 
@@ -396,27 +397,29 @@ exports.sendInquiry = async (req, res) => {
       );
       assignedCounsellorId = courseResult.rows[0]?.counsellor_id;
     }
-    if (!assignedCounsellorId) {
-      return res.status(400).json({ success: false, error: 'No counsellor is assigned to this course.' });
-    }
-    const counsellor = await db.query(
-      "SELECT id FROM users WHERE id = $1 AND role = 'counsellor' AND status = 'active'",
-      [assignedCounsellorId]
-    );
-    if (counsellor.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Active counsellor not found.' });
+    if (assignedCounsellorId) {
+      const counsellor = await db.query(
+        "SELECT id FROM users WHERE id = $1 AND role = 'counsellor' AND status = 'active'",
+        [assignedCounsellorId]
+      );
+      if (counsellor.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Active counsellor not found.' });
+      }
     }
 
     const result = await db.query(
-      `INSERT INTO inquiries (user_id, counsellor_id, course_title, subject, message)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO inquiries (user_id, counsellor_id, course_id, course_title, subject, message)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [userId, assignedCounsellorId, courseTitle.trim(), subject.trim(), message.trim()]
+      [userId, assignedCounsellorId, courseId || null, courseTitle.trim(), subject.trim(), message.trim()]
     );
+    await notifyInquiryCreated(result.rows[0]);
     return res.status(201).json({
       success: true,
       message: 'Inquiry sent successfully.',
-      counsellorMessage: 'Your assigned counsellor has been notified and will reply shortly via the Student Portal.',
+      counsellorMessage: assignedCounsellorId
+        ? 'Your assigned counsellor has been notified and will reply shortly via the Student Portal.'
+        : 'Senior counsellors have been notified and will reply shortly via the Student Portal.',
       inquiry: result.rows[0],
     });
   } catch (error) {

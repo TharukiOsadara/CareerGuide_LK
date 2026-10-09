@@ -28,6 +28,15 @@ function validateListFilters(query = {}) {
     }
     fields.status = String(query.status).toLowerCase();
   }
+  if (query.courseId !== undefined && (!/^\d+$/.test(String(query.courseId)) || Number(query.courseId) < 1)) {
+    return { error: 'courseId must be a positive integer' };
+  }
+  for (const field of ['page', 'pageSize']) {
+    if (query[field] === undefined) continue;
+    if (!/^\d+$/.test(String(query[field])) || Number(query[field]) < 1) {
+      return { error: `${field} must be a positive integer` };
+    }
+  }
   return { value: fields };
 }
 

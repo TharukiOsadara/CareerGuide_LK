@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../Components/BottomNavigation';
+import BottomNavigation from '../components/BottomNavigation';
 import {
   deleteAcademicProfile,
   deleteUserProfile,

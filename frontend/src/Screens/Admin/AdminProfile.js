@@ -6,9 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import DeleteAccount from '../../Components/DeleteAccount';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
+import DeleteAccount from '../../components/DeleteAccount';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 function formatDate(iso) {
   if (!iso) return 'Never';

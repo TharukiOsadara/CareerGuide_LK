@@ -1,7 +1,6 @@
-const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-const API_BASE_URL = configuredApiUrl.replace(/\/+$/, '').endsWith('/api')
-  ? configuredApiUrl.replace(/\/+$/, '')
-  : `${configuredApiUrl.replace(/\/+$/, '')}/api`;
+import { API_BASE_URL as configuredApiUrl } from '../config';
+
+const API_BASE_URL = configuredApiUrl.replace(/\/+$/, '');
 
 async function request(path, options = {}) {
   try {

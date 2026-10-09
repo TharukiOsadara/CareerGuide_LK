@@ -5,8 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../context/AuthContext';
 import ChildSelector from './ChildSelector';
 import { colors, font, space, TOUCH } from '../theme';
-import BackButton from '../../../Components/BackButton';
-import Icon from '../../../Components/Icon';
+import BackButton from '../../../components/BackButton';
+import Icon from '../../../components/Icon';
 
 export default function ParentHeader({ title, onBack, showChild = true, right }) {
   const insets = useSafeAreaInsets();

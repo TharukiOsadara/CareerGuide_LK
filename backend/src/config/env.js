@@ -6,7 +6,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 
 module.exports = {
-  PORT: process.env.PORT || 3000,
+  PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || 'development',
   DATABASE_URL: (process.env.DATABASE_URL || '').trim(),
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret_change_me',

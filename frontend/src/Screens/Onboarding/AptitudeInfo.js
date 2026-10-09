@@ -2,8 +2,8 @@ import React from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 // Public explainer for the "Aptitude Matcher Quiz" onboarding card.
 const STEPS = [

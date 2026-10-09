@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../Components/Brand';
+import Brand from '../../components/Brand';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
 import { validateEmail } from '../../utils/validation';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
-import FieldError, { errorBorder } from '../../Components/FieldError';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 export default function ForgotPassword({ navigation }) {
   const [email, setEmail] = useState('');
@@ -62,7 +62,7 @@ export default function ForgotPassword({ navigation }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Sending…' : 'Send Reset Code'}</Text>
+            <Text style={styles.primaryText}>{busy ? 'Sendingï¿½' : 'Send Reset Code'}</Text>
             {!busy && <Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />}
           </Pressable>
 

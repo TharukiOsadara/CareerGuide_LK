@@ -1,4 +1,5 @@
 const pool = require('../db');
+const bcrypt = require('bcryptjs');
 const { getQuizResults } = require('../services/studentResults');
 const { parseId, validateGuidance, validateSettings } = require('../validators/counsellor.validators');
 
@@ -13,6 +14,9 @@ function parseListFilters(query) {
     search: typeof query.search === 'string' ? query.search.trim() : '',
     stream: typeof query.stream === 'string' ? query.stream.trim() : '',
     status: ['pending', 'reviewed'].includes(status) ? status : null,
+    courseId: query.courseId ? Number(query.courseId) : null,
+    page: query.page ? Number(query.page) : 1,
+    pageSize: query.pageSize ? Math.min(Number(query.pageSize), 50) : 20,
   };
 }
 
@@ -37,6 +41,30 @@ function toStudent(row) {
     reviewedAt: row.reviewed_at,
     updatedAt: row.guidance_updated_at,
   };
+}
+
+async function isSeniorCounsellor(counsellorId) {
+  const { rows } = await pool.query(
+    `SELECT is_senior FROM users WHERE id = $1 AND role = 'counsellor' AND status = 'active'`, [counsellorId]
+  );
+  return rows[0]?.is_senior === true;
+}
+
+async function findAuthorizedInquiry(inquiryId, counsellorId) {
+  const { rows } = await pool.query(
+    `SELECT i.id, i.user_id AS "studentId", u.full_name AS "studentName", i.course_title AS "courseTitle",
+            i.subject, i.message, i.reply_message AS "replyMessage", i.replied_at AS "repliedAt",
+            i.replied_by AS "repliedBy", rb.full_name AS "repliedByName", i.is_read AS "isRead"
+       FROM inquiries i
+       JOIN users u ON u.id = i.user_id
+       LEFT JOIN users rb ON rb.id = i.replied_by
+       LEFT JOIN courses_list c ON (i.course_id IS NOT NULL AND c.id = i.course_id)
+                                OR (i.course_id IS NULL AND c.title = i.course_title)
+       JOIN users viewer ON viewer.id = $2 AND viewer.role = 'counsellor' AND viewer.status = 'active'
+      WHERE i.id = $1 AND (viewer.is_senior = TRUE OR c.counsellor_id = $2)
+      ORDER BY c.id LIMIT 1`, [inquiryId, counsellorId]
+  );
+  return rows[0] || null;
 }
 
 // Single source of truth for counsellor assignment and consent scope.
@@ -80,6 +108,15 @@ async function queryStudents(counsellorId, filters = {}) {
     values.push(filters.stream);
     where.push(`s.al_stream = $${values.length}`);
   }
+  if (filters.courseId) {
+    values.push(filters.courseId);
+    where.push(`EXISTS (
+      SELECT 1 FROM inquiries course_inquiry
+      JOIN courses_list assigned_course ON assigned_course.title = course_inquiry.course_title
+       AND assigned_course.counsellor_id = $1
+      WHERE course_inquiry.user_id = s.id AND assigned_course.id = $${values.length}
+    )`);
+  }
 
   const statusExpression = "CASE WHEN g.guidance_status = 'final' AND g.reviewed_at IS NOT NULL THEN 'reviewed' ELSE 'pending' END";
   if (filters.status === 'reviewed') where.push(`${statusExpression} = 'reviewed'`);
@@ -115,7 +152,20 @@ async function queryStudents(counsellorId, filters = {}) {
 async function listStudents(req, res) {
   const filters = parseListFilters(req.query);
   const rows = await queryStudents(req.user.id, filters);
-  res.json({ students: rows.map(toStudent) });
+  const start = (filters.page - 1) * filters.pageSize;
+  res.json({
+    students: rows.slice(start, start + filters.pageSize).map(toStudent),
+    pagination: { page: filters.page, pageSize: filters.pageSize, total: rows.length, pages: Math.ceil(rows.length / filters.pageSize) },
+  });
+}
+
+async function listAssignedCourses(req, res) {
+  const senior = await isSeniorCounsellor(req.user.id);
+  const { rows } = await pool.query(
+    `SELECT id, title, stream, institute FROM courses_list
+      WHERE ($1 = TRUE OR counsellor_id = $2) ORDER BY title, institute`, [senior, req.user.id]
+  );
+  res.json({ courses: rows });
 }
 
 async function getDashboard(req, res) {
@@ -139,7 +189,7 @@ async function getDashboard(req, res) {
   ]);
   const stats = statsResult.rows[0];
   res.json({
-    counsellor: { id: req.user.id, name: req.user.fullName, title: 'Senior Counsellor' },
+    counsellor: { id: req.user.id, name: req.user.fullName, title: req.user.isSenior ? 'Senior Counsellor' : 'Counsellor', isSenior: req.user.isSenior === true },
     stats: {
       totalStudents: stats.total,
       reviewed: stats.reviewed,
@@ -175,11 +225,20 @@ async function getStudentProfile(req, res) {
   const student = await findAssignedStudent(req.user.id, studentId);
   if (!student) return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
 
-  const [quiz, guidanceResult] = await Promise.all([
+  const [quiz, guidanceResult, academicResult, inquiryResult] = await Promise.all([
     student.counsellor_access ? getQuizResults(studentId) : null,
     pool.query(
       `SELECT * FROM counsellor_guidance_records WHERE counsellor_id = $1 AND student_id = $2`,
       [req.user.id, studentId]
+    ),
+    pool.query(
+      `SELECT subject_stream AS "subjectStream", district, z_score AS "zScore", subject_grades AS "subjectGrades"
+         FROM academic_profiles WHERE user_id = $1`, [studentId]
+    ),
+    pool.query(
+      `SELECT id, course_title AS "courseTitle", subject, message,
+              reply_message AS "replyMessage", replied_at AS "repliedAt"
+         FROM inquiries WHERE user_id = $1 AND counsellor_id = $2 ORDER BY id DESC`, [studentId, req.user.id]
     ),
   ]);
 
@@ -205,6 +264,8 @@ async function getStudentProfile(req, res) {
         }
       : NOT_SHARED,
     guidance: toGuidance(guidance),
+    academicProfile: academicResult.rows[0] || null,
+    inquiries: inquiryResult.rows,
     decisionSupportDisclaimer: "These matches support, not replace, your counsellor's advice.",
   });
 }
@@ -332,6 +393,36 @@ async function deleteGuidance(req, res) {
   return res.status(409).json({ error: 'Reviewed guidance cannot be deleted', code: 'REVIEW_LOCKED' });
 }
 
+async function listGuidance(req, res) {
+  const { rows } = await pool.query(
+    `SELECT g.*, s.full_name AS student_name
+       FROM counsellor_guidance_records g JOIN users s ON s.id = g.student_id
+      WHERE g.counsellor_id = $1 ORDER BY g.updated_at DESC`, [req.user.id]
+  );
+  res.json({ guidance: rows.map((row) => ({ ...toGuidance(row), studentId: row.student_id, studentName: row.student_name })) });
+}
+
+async function getGuidanceById(req, res) {
+  const id = parseId(req.params.guidanceId);
+  if (!id) return res.status(400).json({ error: 'Invalid guidance id', code: 'VALIDATION' });
+  const { rows } = await pool.query(
+    `SELECT g.*, s.full_name AS student_name FROM counsellor_guidance_records g
+      JOIN users s ON s.id = g.student_id WHERE g.id = $1 AND g.counsellor_id = $2`, [id, req.user.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Guidance record not found', code: 'NOT_FOUND' });
+  res.json({ guidance: { ...toGuidance(rows[0]), studentId: rows[0].student_id, studentName: rows[0].student_name } });
+}
+
+async function deleteGuidanceById(req, res) {
+  const id = parseId(req.params.guidanceId);
+  if (!id) return res.status(400).json({ error: 'Invalid guidance id', code: 'VALIDATION' });
+  const { rows } = await pool.query(
+    `DELETE FROM counsellor_guidance_records WHERE id = $1 AND counsellor_id = $2 AND guidance_status = 'draft' RETURNING id`, [id, req.user.id]
+  );
+  if (!rows[0]) return res.status(409).json({ error: 'Guidance record not found or is review-locked', code: 'REVIEW_LOCKED' });
+  res.json({ deleted: true, id });
+}
+
 async function markReviewed(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
@@ -437,15 +528,323 @@ async function updateSettings(req, res) {
   } });
 }
 
+async function getProfile(req, res) {
+  const { rows } = await pool.query(
+    `SELECT id, full_name AS "fullName", email, role, status, is_senior AS "isSenior", al_stream AS "alStream",
+            profile_picture AS "profilePicture", avatar_initials AS initials
+       FROM users WHERE id = $1 AND role = 'counsellor'`,
+    [req.user.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Counsellor profile not found', code: 'NOT_FOUND' });
+  res.json({ profile: rows[0] });
+}
+
+async function updateProfile(req, res) {
+  const { fullName, profilePicture } = req.body || {};
+  if (fullName !== undefined && (typeof fullName !== 'string' || !fullName.trim())) {
+    return res.status(400).json({ error: 'fullName must be a non-empty string', code: 'VALIDATION' });
+  }
+  if (profilePicture !== undefined && profilePicture !== null && typeof profilePicture !== 'string') {
+    return res.status(400).json({ error: 'profilePicture must be text or null', code: 'VALIDATION' });
+  }
+  if (fullName === undefined && profilePicture === undefined) {
+    return res.status(400).json({ error: 'Nothing to update', code: 'VALIDATION' });
+  }
+  const { rows } = await pool.query(
+    `UPDATE users SET full_name = CASE WHEN $1::boolean THEN $2 ELSE full_name END,
+                      profile_picture = CASE WHEN $3::boolean THEN $4 ELSE profile_picture END
+     WHERE id = $5 AND role = 'counsellor'
+     RETURNING id, full_name AS "fullName", email, role, status, al_stream AS "alStream",
+               profile_picture AS "profilePicture", avatar_initials AS initials`,
+    [fullName !== undefined, fullName === undefined ? null : fullName.trim(),
+      profilePicture !== undefined, profilePicture === undefined ? null : profilePicture, req.user.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Counsellor profile not found', code: 'NOT_FOUND' });
+  res.json({ profile: rows[0] });
+}
+
+async function changePassword(req, res) {
+  const { currentPassword, newPassword } = req.body || {};
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({ error: 'currentPassword is required and newPassword must be at least 8 characters', code: 'VALIDATION' });
+  }
+  const { rows } = await pool.query('SELECT password_hash FROM users WHERE id = $1 AND role = \'counsellor\'', [req.user.id]);
+  if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash || ''))) {
+    return res.status(401).json({ error: 'Current password is incorrect', code: 'INVALID_PASSWORD' });
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, req.user.id]);
+  res.json({ message: 'Password updated successfully' });
+}
+
+async function listInquiries(req, res) {
+  const senior = await isSeniorCounsellor(req.user.id);
+  const courseId = req.query.courseId ? parseId(req.query.courseId) : null;
+  if (req.query.courseId !== undefined && !courseId) return res.status(400).json({ error: 'Invalid course id', code: 'VALIDATION' });
+  const { rows } = await pool.query(
+    `SELECT DISTINCT ON (i.id) i.id, i.user_id AS "studentId", u.full_name AS "studentName", i.course_title AS "courseTitle",
+            i.subject, i.message, i.reply_message AS "replyMessage", i.replied_at AS "repliedAt",
+            i.replied_by AS "repliedBy", rb.full_name AS "repliedByName", i.is_read AS "isRead"
+       FROM inquiries i JOIN users u ON u.id = i.user_id
+       LEFT JOIN users rb ON rb.id = i.replied_by
+       LEFT JOIN courses_list c ON (i.course_id IS NOT NULL AND c.id = i.course_id)
+                                OR (i.course_id IS NULL AND c.title = i.course_title)
+      WHERE ($1 = TRUE OR c.counsellor_id = $2)
+        AND ($3::int IS NULL OR c.id = $3)
+      ORDER BY i.id DESC, c.id`, [senior, req.user.id, courseId]
+  );
+  res.json({ inquiries: rows, isSenior: senior });
+}
+
+async function getInquiry(req, res) {
+  const id = parseId(req.params.inquiryId);
+  if (!id) return res.status(400).json({ error: 'Invalid inquiry id', code: 'VALIDATION' });
+  const inquiry = await findAuthorizedInquiry(id, req.user.id);
+  if (!inquiry) return res.status(403).json({ error: 'You are not assigned to this inquiry', code: 'FORBIDDEN' });
+  res.json({ inquiry });
+}
+
+async function replyToInquiry(req, res) {
+  const id = parseId(req.params.inquiryId);
+  const reply = req.body?.replyMessage;
+  if (!id || typeof reply !== 'string' || !reply.trim()) return res.status(400).json({ error: 'A reply is required', code: 'VALIDATION' });
+  const authorizedInquiry = await findAuthorizedInquiry(id, req.user.id);
+  if (!authorizedInquiry) return res.status(403).json({ error: 'You are not assigned to this inquiry', code: 'FORBIDDEN' });
+  if (authorizedInquiry.replyMessage && authorizedInquiry.repliedBy !== req.user.id) {
+    return res.status(403).json({ error: 'Only the counsellor who wrote the reply can edit it', code: 'FORBIDDEN' });
+  }
+  const { rows } = await pool.query(
+    `UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $3, is_read = FALSE
+      WHERE id = $2 RETURNING id, reply_message AS "replyMessage", replied_at AS "repliedAt", replied_by AS "repliedBy"`,
+    [reply.trim(), id, req.user.id]
+  );
+  res.json({ inquiry: rows[0] });
+}
+
+async function deleteInquiryReply(req, res) {
+  const id = parseId(req.params.inquiryId);
+  if (!id) return res.status(400).json({ error: 'Invalid inquiry id', code: 'VALIDATION' });
+  const authorizedInquiry = await findAuthorizedInquiry(id, req.user.id);
+  if (!authorizedInquiry) return res.status(403).json({ error: 'You are not assigned to this inquiry', code: 'FORBIDDEN' });
+  if (authorizedInquiry.repliedBy && authorizedInquiry.repliedBy !== req.user.id) {
+    return res.status(403).json({ error: 'Only the counsellor who wrote the reply can delete it', code: 'FORBIDDEN' });
+  }
+  const { rows } = await pool.query(
+    `UPDATE inquiries SET reply_message = NULL, replied_at = NULL, replied_by = NULL, is_read = FALSE
+      WHERE id = $1 RETURNING id`, [id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
+  res.json({ deleted: true, id });
+}
+
+async function findNotificationInquiry(notificationId, counsellorId) {
+  const { rows } = await pool.query(
+    `SELECT n.id AS notification_id, i.id AS inquiry_id, i.user_id AS student_id,
+            i.course_title, i.subject, i.message, i.created_at AS inquiry_created_at,
+            s.full_name AS student_name, s.email AS student_email, viewer.is_senior
+       FROM notifications n
+       JOIN inquiries i ON i.id = n.inquiry_id
+       JOIN users s ON s.id = i.user_id AND s.role = 'student'
+       LEFT JOIN courses_list c ON (i.course_id IS NOT NULL AND c.id = i.course_id)
+                                OR (i.course_id IS NULL AND c.title = i.course_title)
+       JOIN users viewer ON viewer.id = $2 AND viewer.role = 'counsellor' AND viewer.status = 'active'
+      WHERE n.id = $1
+        AND ((viewer.is_senior = TRUE AND (n.target_user_id = $2 OR n.target_role = 'counsellor'))
+          OR (viewer.is_senior = FALSE AND n.target_user_id = $2))
+        AND (viewer.is_senior = TRUE OR c.counsellor_id = $2)`,
+    [notificationId, counsellorId]
+  );
+  return rows[0] || null;
+}
+
+async function markOwnedNotificationRead(notificationId, counsellorId) {
+  await pool.query(
+    `INSERT INTO notification_reads (notification_id, user_id)
+       SELECT n.id, $2 FROM notifications n
+        WHERE n.id = $1 AND (n.target_user_id = $2 OR n.target_role IN ('counsellor', 'all'))
+      ON CONFLICT DO NOTHING`, [notificationId, counsellorId]
+  );
+}
+
+async function getNotificationDetail(req, res) {
+  const notificationId = parseId(req.params.notificationId);
+  if (!notificationId) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
+  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
+  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
+  await markOwnedNotificationRead(notificationId, req.user.id);
+  const { rows: replies } = await pool.query(
+    `SELECT r.id, r.author_id AS "authorId", r.author_role AS "authorRole", r.body,
+            r.created_at AS "createdAt", r.updated_at AS "updatedAt"
+       FROM inquiry_replies r WHERE r.inquiry_id = $1 AND r.deleted_at IS NULL
+      ORDER BY r.created_at ASC, r.id ASC`, [inquiry.inquiry_id]
+  );
+  res.json({ notification: { id: notificationId, inquiryId: inquiry.inquiry_id, read: true }, inquiry: {
+    id: inquiry.inquiry_id, studentId: inquiry.student_id, studentName: inquiry.student_name,
+    studentEmail: inquiry.student_email, courseTitle: inquiry.course_title, subject: inquiry.subject,
+    message: inquiry.message, createdAt: inquiry.inquiry_created_at, replies,
+  } });
+}
+
+function validateReplyText(value) {
+  if (typeof value !== 'string' || !value.trim()) return 'replyMessage is required';
+  if (value.trim().length > 4000) return 'replyMessage must be 4000 characters or fewer';
+  return null;
+}
+
+async function replyToNotification(req, res) {
+  const notificationId = parseId(req.params.notificationId);
+  const error = validateReplyText(req.body?.replyMessage);
+  if (!notificationId) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
+  if (error) return res.status(400).json({ error, code: 'VALIDATION' });
+  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
+  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `INSERT INTO inquiry_replies (inquiry_id, author_id, author_role, body)
+       VALUES ($1, $2, 'counsellor', $3) RETURNING id, author_id AS "authorId", author_role AS "authorRole",
+       body, created_at AS "createdAt", updated_at AS "updatedAt"`,
+      [inquiry.inquiry_id, req.user.id, req.body.replyMessage.trim()]
+    );
+    await client.query(
+      `UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $3, is_read = FALSE
+        WHERE id = $2`, [req.body.replyMessage.trim(), inquiry.inquiry_id, req.user.id]
+    );
+    await client.query(
+      `INSERT INTO notification_reads (notification_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [notificationId, req.user.id]
+    );
+    await client.query('COMMIT');
+    res.status(201).json({ reply: rows[0], inquiryId: inquiry.inquiry_id });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally { client.release(); }
+}
+
+async function editNotificationReply(req, res) {
+  const notificationId = parseId(req.params.notificationId);
+  const replyId = parseId(req.params.replyId);
+  const error = validateReplyText(req.body?.replyMessage);
+  if (!notificationId || !replyId) return res.status(400).json({ error: 'Invalid notification or reply id', code: 'VALIDATION' });
+  if (error) return res.status(400).json({ error, code: 'VALIDATION' });
+  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
+  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
+  const { rows } = await pool.query(
+    `UPDATE inquiry_replies SET body = $1, updated_at = NOW()
+      WHERE id = $2 AND inquiry_id = $3 AND author_id = $4 AND author_role = 'counsellor' AND deleted_at IS NULL
+      RETURNING id, author_id AS "authorId", author_role AS "authorRole", body, created_at AS "createdAt", updated_at AS "updatedAt"`,
+    [req.body.replyMessage.trim(), replyId, inquiry.inquiry_id, req.user.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Reply not found or not owned by counsellor', code: 'NOT_FOUND' });
+  await pool.query(`UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $3, is_read = FALSE WHERE id = $2`, [req.body.replyMessage.trim(), inquiry.inquiry_id, req.user.id]);
+  await markOwnedNotificationRead(notificationId, req.user.id);
+  res.json({ reply: rows[0], inquiryId: inquiry.inquiry_id });
+}
+
+async function deleteNotificationReply(req, res) {
+  const notificationId = parseId(req.params.notificationId);
+  const replyId = parseId(req.params.replyId);
+  if (!notificationId || !replyId) return res.status(400).json({ error: 'Invalid notification or reply id', code: 'VALIDATION' });
+  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
+  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
+  const { rows } = await pool.query(
+    `UPDATE inquiry_replies SET deleted_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND inquiry_id = $2 AND author_id = $3 AND author_role = 'counsellor' AND deleted_at IS NULL
+      RETURNING body`, [replyId, inquiry.inquiry_id, req.user.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Reply not found or not owned by counsellor', code: 'NOT_FOUND' });
+  await pool.query(`UPDATE inquiries SET reply_message = NULL, replied_at = NULL, replied_by = NULL, is_read = FALSE WHERE id = $1 AND reply_message = $2`, [inquiry.inquiry_id, rows[0].body]);
+  await markOwnedNotificationRead(notificationId, req.user.id);
+  res.json({ deleted: true, id: replyId });
+}
+
+async function listNotifications(req, res) {
+  const { rows } = await pool.query(
+    `SELECT n.id, n.title, n.body, n.inquiry_id AS "inquiryId", n.sender_id AS "senderId", n.created_at AS "createdAt",
+            i.course_title AS "courseTitle", i.replied_by AS "repliedBy", rb.full_name AS "repliedByName",
+            (r.read_at IS NOT NULL) AS read
+       FROM notifications n
+       JOIN users viewer ON viewer.id = $1 AND viewer.role = 'counsellor' AND viewer.status = 'active'
+       LEFT JOIN inquiries i ON i.id = n.inquiry_id
+       LEFT JOIN users rb ON rb.id = i.replied_by
+       LEFT JOIN courses_list c ON c.title = i.course_title
+       LEFT JOIN notification_reads r
+         ON r.notification_id = n.id AND r.user_id = $1
+      WHERE (n.inquiry_id IS NULL
+             AND (n.target_role IN ('all', 'counsellor') OR n.target_user_id = $1)
+             AND (n.title <> 'New student inquiry' OR n.target_user_id = $1))
+         OR (n.inquiry_id IS NOT NULL
+             AND ((viewer.is_senior = TRUE AND (n.target_user_id = $1 OR n.target_role = 'counsellor'))
+               OR (viewer.is_senior = FALSE AND n.target_user_id = $1))
+             AND (viewer.is_senior = TRUE OR c.counsellor_id = $1))
+      ORDER BY n.created_at DESC`, [req.user.id]
+  );
+  res.json({ notifications: rows, unreadCount: rows.filter((row) => !row.read).length });
+}
+
+async function markNotificationRead(req, res) {
+  const id = parseId(req.params.notificationId);
+  if (!id) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
+  const result = await pool.query(
+    `INSERT INTO notification_reads (notification_id, user_id)
+       SELECT n.id, $2 FROM notifications n
+        WHERE n.id = $1 AND (n.target_role IN ('all', 'counsellor') OR n.target_user_id = $2)
+      ON CONFLICT DO NOTHING RETURNING notification_id`, [id, req.user.id]
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: 'Notification not found', code: 'NOT_FOUND' });
+  res.json({ read: true, id });
+}
+
+async function markAllNotificationsRead(req, res) {
+  await pool.query(
+    `INSERT INTO notification_reads (notification_id, user_id)
+       SELECT n.id, $1 FROM notifications n
+        WHERE n.target_role IN ('all', 'counsellor') OR n.target_user_id = $1
+      ON CONFLICT DO NOTHING`, [req.user.id]
+  );
+  res.json({ read: true });
+}
+
+async function deleteNotification(req, res) {
+  const id = parseId(req.params.notificationId);
+  if (!id) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
+  const result = await pool.query(
+    `DELETE FROM notifications WHERE id = $1 AND target_user_id = $2 RETURNING id`, [id, req.user.id]
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: 'Notification not found', code: 'NOT_FOUND' });
+  res.json({ deleted: true, id });
+}
+
 module.exports = {
   getDashboard,
   listStudents,
+  listAssignedCourses,
   getStudentProfile,
   getGuidance,
   saveGuidance,
   updateGuidance,
   deleteGuidance,
+  listGuidance,
+  getGuidanceById,
+  deleteGuidanceById,
   markReviewed,
   getSettings,
   updateSettings,
+  getProfile,
+  updateProfile,
+  changePassword,
+  listInquiries,
+  getInquiry,
+  replyToInquiry,
+  deleteInquiryReply,
+  listNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification,
+  getNotificationDetail,
+  replyToNotification,
+  editNotificationReply,
+  deleteNotificationReply,
 };

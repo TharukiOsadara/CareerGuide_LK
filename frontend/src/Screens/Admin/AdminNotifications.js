@@ -3,14 +3,14 @@ import {
   Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Field from '../../Components/Field';
-import Dropdown from '../../Components/Dropdown';
+import Field from '../../components/Field';
+import Dropdown from '../../components/Dropdown';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
 import { hasErrors, validateNotification } from '../../utils/validation';
-import FieldError, { errorBorder } from '../../Components/FieldError';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 const AUDIENCE = [
   { label: 'All Users', role: 'all' },
@@ -119,7 +119,7 @@ export default function AdminNotifications({ navigation }) {
           <Text style={styles.fLabel}>Message</Text>
           <TextInput
             style={[styles.multiline, !!errors.body && errorBorder]} multiline value={bodyText}
-            onChangeText={change(setBodyText, 'body')} placeholder="Write your message…"
+            onChangeText={change(setBodyText, 'body')} placeholder="Write your messageï¿½"
             placeholderTextColor={colors.slate400} maxLength={1000}
           />
           <FieldError message={errors.body} />
@@ -134,7 +134,7 @@ export default function AdminNotifications({ navigation }) {
               </Pressable>
             ) : null}
             <Pressable disabled={sending} onPress={submit} style={({ pressed }) => [styles.sendBtn, (pressed || sending) && styles.pressed]}>
-              <Text style={styles.sendText}>{sending ? 'Sending…' : editingId ? 'Update Notification' : 'Send Notification'}</Text>
+              <Text style={styles.sendText}>{sending ? 'Sendingï¿½' : editingId ? 'Update Notification' : 'Send Notification'}</Text>
             </Pressable>
           </View>
         </View>

@@ -4,17 +4,17 @@ import {
   Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../../Components/AdminHeader';
-import AdminNav from '../../Components/AdminNav';
-import Field from '../../Components/Field';
-import Dropdown from '../../Components/Dropdown';
+import AdminHeader from '../../components/AdminHeader';
+import AdminNav from '../../components/AdminNav';
+import Field from '../../components/Field';
+import Dropdown from '../../components/Dropdown';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { colors } from '../../styles/colors';
 import { hasErrors, validateCourse } from '../../utils/validation';
-import Icon, { IconText } from '../../Components/Icon';
-import FieldError, { errorBorder } from '../../Components/FieldError';
+import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 const NUMERIC = ['zScore', 'minZScore', 'islandRank', 'districtRank', 'intakeYear', 'tuitionFee', 'nvqLevel', 'matchPercent'];
 
@@ -144,9 +144,9 @@ export default function AdminCourses({ navigation, route }) {
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}
 
         {loading ? (
-          <Text style={styles.empty}>Loading…</Text>
+          <Text style={styles.empty}>Loadingï¿½</Text>
         ) : courses.length === 0 ? (
-          <Text style={styles.empty}>No courses yet. Tap “Add New” to create one.</Text>
+          <Text style={styles.empty}>No courses yet. Tap ï¿½Add Newï¿½ to create one.</Text>
         ) : courses.map((c) => (
           <View key={c.id} style={styles.card}>
             <Text style={styles.cardTitle} numberOfLines={2}>{c.degreeName}</Text>
@@ -233,7 +233,7 @@ export function CourseModal({
               <View style={styles.col}><Field label="Tuition Fee" icon="wallet" value={form.tuitionFee} onChangeText={setField('tuitionFee')} placeholder="0" keyboardType="numeric" maxLength={12} error={errors.tuitionFee} /></View>
             </View>
             <View style={styles.two}>
-              <View style={styles.col}><Field label="NVQ Level (optional)" icon="tag" value={form.nvqLevel} onChangeText={setField('nvqLevel')} placeholder="1–7" keyboardType="numeric" maxLength={1} error={errors.nvqLevel} /></View>
+              <View style={styles.col}><Field label="NVQ Level (optional)" icon="tag" value={form.nvqLevel} onChangeText={setField('nvqLevel')} placeholder="1ï¿½7" keyboardType="numeric" maxLength={1} error={errors.nvqLevel} /></View>
               <View style={styles.col}><Field label="Match %" icon="target" value={form.matchPercent} onChangeText={setField('matchPercent')} placeholder="85" keyboardType="numeric" maxLength={3} error={errors.matchPercent} /></View>
             </View>
 
@@ -253,14 +253,14 @@ export function CourseModal({
             <Text style={styles.fLabel}>Description</Text>
             <TextInput
               style={[styles.multiline, !!errors.description && errorBorder]} multiline value={form.description}
-              onChangeText={setField('description')} placeholder="Short description of the program…"
+              onChangeText={setField('description')} placeholder="Short description of the programï¿½"
               placeholderTextColor={colors.slate400} maxLength={1000}
             />
             <FieldError message={errors.description} />
             <Text style={styles.fLabel}>Career Path</Text>
             <TextInput
               style={[styles.multiline, !!errors.careerPath && errorBorder]} multiline value={form.careerPath}
-              onChangeText={setField('careerPath')} placeholder="Typical roles & career outcomes…"
+              onChangeText={setField('careerPath')} placeholder="Typical roles & career outcomesï¿½"
               placeholderTextColor={colors.slate400} maxLength={1000}
             />
             <FieldError message={errors.careerPath} />
@@ -271,7 +271,7 @@ export function CourseModal({
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </Pressable>
             <Pressable disabled={saving} onPress={onSave} style={({ pressed }) => [styles.saveBtn, (pressed || saving) && styles.pressed]}>
-              <Text style={styles.saveBtnText}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Course'}</Text>
+              <Text style={styles.saveBtnText}>{saving ? 'Savingï¿½' : editing ? 'Save Changes' : 'Create Course'}</Text>
             </Pressable>
           </View>
         </View>

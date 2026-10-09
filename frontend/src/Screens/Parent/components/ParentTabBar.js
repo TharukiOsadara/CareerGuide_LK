@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, space } from '../theme';
-import Icon from '../../../Components/Icon';
+import Icon from '../../../components/Icon';
 
 export const PARENT_TABS = [
   { key: 'home', label: 'Home', icon: 'home' },
