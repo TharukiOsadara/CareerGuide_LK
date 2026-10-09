@@ -84,3 +84,13 @@ CREATE TABLE IF NOT EXISTS student_course_selections (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_selections_counsellor ON student_course_selections(counsellor_id);
+
+-- Latest aptitude test result per student (from the app's Quiz tab). Shown to the student's
+-- parents and matched counsellor (subject to the parent's privacy choices).
+CREATE TABLE IF NOT EXISTS aptitude_results (
+  student_id   INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  stream       VARCHAR(60) NOT NULL,
+  scores       JSONB NOT NULL DEFAULT '[]'::jsonb,   -- [{ area, percent }] for every career in the set
+  matches      JSONB NOT NULL DEFAULT '[]'::jsonb,   -- [{ title, matchPercent, note }] top matches
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

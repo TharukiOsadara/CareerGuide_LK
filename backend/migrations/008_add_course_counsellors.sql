@@ -1,3 +1,5 @@
+-- Emails match the counsellors' login accounts (firstname@gmail.com; password Firstname@1234,
+-- set directly in the database). Re-running this keeps the same accounts.
 CREATE TEMP TABLE course_counsellor_assignments (
   course_id INTEGER PRIMARY KEY,
   full_name TEXT NOT NULL,
@@ -6,19 +8,19 @@ CREATE TEMP TABLE course_counsellor_assignments (
 
 INSERT INTO course_counsellor_assignments (course_id, full_name, email)
 VALUES
-    (1, 'Nadeesha Perera', 'nadeesha.perera@careerguide.lk'),
-    (2, 'Tharindu Fernando', 'tharindu.fernando@careerguide.lk'),
-    (3, 'Hiruni Wijesinghe', 'hiruni.wijesinghe@careerguide.lk'),
-    (16, 'Kasun Jayawardena', 'kasun.jayawardena@careerguide.lk'),
-    (17, 'Dinithi Senanayake', 'dinithi.senanayake@careerguide.lk'),
-    (18, 'Ravindu Gunathilaka', 'ravindu.gunathilaka@careerguide.lk'),
-    (19, 'Sachini Herath', 'sachini.herath@careerguide.lk'),
-    (20, 'Chamod Silva', 'chamod.silva@careerguide.lk'),
-    (21, 'Ishara Madushani', 'ishara.madushani@careerguide.lk'),
-    (22, 'Malith Rathnayake', 'malith.rathnayake@careerguide.lk'),
-    (23, 'Piumi Karunaratne', 'piumi.karunaratne@careerguide.lk'),
-    (24, 'Ashen Dissanayake', 'ashen.dissanayake@careerguide.lk'),
-    (25, 'Yasara Ekanayake', 'yasara.ekanayake@careerguide.lk');
+    (1, 'Nadeesha Perera', 'nadeesha@gmail.com'),
+    (2, 'Tharindu Fernando', 'tharindu@gmail.com'),
+    (3, 'Hiruni Wijesinghe', 'hiruni@gmail.com'),
+    (16, 'Kasun Jayawardena', 'kasun@gmail.com'),
+    (17, 'Dinithi Senanayake', 'dinithi@gmail.com'),
+    (18, 'Ravindu Gunathilaka', 'ravindu@gmail.com'),
+    (19, 'Sachini Herath', 'sachini@gmail.com'),
+    (20, 'Chamod Silva', 'chamod@gmail.com'),
+    (21, 'Ishara Madushani', 'ishara@gmail.com'),
+    (22, 'Malith Rathnayake', 'malith@gmail.com'),
+    (23, 'Piumi Karunaratne', 'piumi@gmail.com'),
+    (24, 'Ashen Dissanayake', 'ashen@gmail.com'),
+    (25, 'Yasara Ekanayake', 'yasara@gmail.com');
 
 INSERT INTO users (full_name, email, role, provider, status, admin_approved)
 SELECT full_name, email, 'counsellor', 'local', 'active', true

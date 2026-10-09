@@ -4,6 +4,7 @@ import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
 import { StatusChip } from './CounsellorPortal';
+import ProfileHeader from '../../components/ProfileHeader';
 
 export default function CounsellorStudentProfile({ route, navigation }) {
   const { studentId } = route?.params || {};
@@ -56,8 +57,8 @@ export default function CounsellorStudentProfile({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <ProfileHeader title="Student Profile" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.goBack()}><Text style={{ color: colors.blue, marginBottom: 18 }}>‹ Back</Text></Pressable>
         <View style={styles.header}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{student.initials}</Text></View>
           <View style={styles.headerCopy}><Text style={styles.heading}>Student Profile</Text><Text style={styles.subtitle}>{student.stream || 'Stream not recorded'}</Text></View>

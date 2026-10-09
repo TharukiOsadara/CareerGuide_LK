@@ -32,7 +32,6 @@ function initialsOf(name = '') {
 }
 
 function toInquiry(row) {
-  const zScore = child.zScore ?? quiz.zScore ?? null;
   return {
     id: row.id,
     studentId: row.student_id,

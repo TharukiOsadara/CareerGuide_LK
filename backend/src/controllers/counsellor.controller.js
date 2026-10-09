@@ -101,15 +101,18 @@ async function queryStudents(counsellorId, filters = {}) {
             s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
             g.id AS guidance_id, g.guidance_status, g.reviewed_at, g.updated_at AS guidance_updated_at,
             g.shared_with_parent,
-            top_course.degree_name AS top_match_name,
-            top_course.match_percent AS top_match_percent
+            -- Top match: the student's aptitude-test result first, else the best course for their stream.
+            COALESCE(ar.matches->0->>'title', top_course.degree_name) AS top_match_name,
+            COALESCE((ar.matches->0->>'matchPercent')::int, top_course.match_percent) AS top_match_percent
      FROM users s
+     LEFT JOIN aptitude_results ar ON ar.student_id = s.id
      LEFT JOIN counsellor_guidance_records g
        ON g.student_id = s.id AND g.counsellor_id = $1
      LEFT JOIN LATERAL (
        SELECT degree_name, match_percent
        FROM courses
-       WHERE courses.al_stream = s.al_stream
+       WHERE regexp_replace(regexp_replace(lower(courses.al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
+           = regexp_replace(regexp_replace(lower(s.al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
        ORDER BY match_percent DESC NULLS LAST, id
        LIMIT 1
      ) top_course ON TRUE
@@ -180,6 +183,24 @@ function toGuidance(row) {
   };
 }
 
+function suggestedPathways(assessment, student) {
+  const text = `${student?.stream || ''} ${(assessment?.matchedCareers || []).map((item) => item.title).join(' ')}`.toLowerCase();
+  const suggestions = [];
+  const add = (value) => { if (!suggestions.includes(value)) suggestions.push(value); };
+  if (/commerce|business|management|marketing|account/.test(text)) {
+    add('Business Management'); add('Marketing'); add('Accounting & Finance');
+  }
+  if (/biology|medical|health|biomed/.test(text)) {
+    add('Biomedical Science'); add('Medicine & Surgery');
+  }
+  if (/mechanical|engineering/.test(text)) add('Mechanical Engineering');
+  if (/relation|politic|arts/.test(text)) add('International Relations');
+  if (/data|ai|computer|software|math|technology|physical/.test(text)) {
+    add('Data Science & AI'); add('Software Engineering'); add('Information Technology');
+  }
+  return suggestions;
+}
+
 async function getStudentProfile(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
@@ -216,8 +237,20 @@ async function getStudentProfile(req, res) {
         }
       : NOT_SHARED,
     guidance: toGuidance(guidance),
+    suggestedPathways: suggestedPathways(quiz, student),
     decisionSupportDisclaimer: "These matches support, not replace, your counsellor's advice.",
   });
+}
+
+async function notifyStudentGuidance(client, counsellorId, studentId, guidance) {
+  const pathways = Array.isArray(guidance.recommended_pathways) ? guidance.recommended_pathways : [];
+  const summary = guidance.assessment_summary?.trim() || 'Your counsellor has completed your career guidance.';
+  const pathText = pathways.length ? ` Recommended pathways: ${pathways.join(', ')}.` : '';
+  await client.query(
+    `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
+     VALUES ($1, $2, $3, 'student', $4)`,
+    ['Career guidance completed', `${summary}${pathText}`, counsellorId, studentId]
+  );
 }
 
 async function getGuidance(req, res) {
@@ -370,7 +403,7 @@ async function markReviewed(req, res) {
     const notifications = await client.query(
       `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
         SELECT 'Guidance reviewed',
-               'Your counsellor has reviewed the student guidance profile.',
+               'Your counsellor has reviewed your child''s career guidance.',
                $1, 'parent', l.parent_id
         FROM parent_student_links l
         WHERE l.student_id = $2
@@ -378,6 +411,7 @@ async function markReviewed(req, res) {
         RETURNING id, target_user_id`,
       [req.user.id, studentId, assignedStudent.consent_parent_ids]
     );
+    await notifyStudentGuidance(client, req.user.id, studentId, guidance.rows[0]);
     await client.query('COMMIT');
     res.json({ guidance: toGuidance(guidance.rows[0]), notificationsCreated: notifications.rowCount });
   } catch (error) {
@@ -448,7 +482,147 @@ async function updateSettings(req, res) {
   } });
 }
 
+// ---------- Inquiries sent to this counsellor ----------
+// Students ask through the course screens (table `inquiries`); parents ask through the
+// Parent Portal (table `counsellor_inquiries`). A counsellor only sees inquiries addressed to them.
+
+const TOPIC_LABEL = { fees: 'Fees', intake_dates: 'Intake dates', course_choice: 'Course choice', other: 'Other' };
+const inquiryId = (v) => (Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null);
+
+function validReply(text) {
+  const t = typeof text === 'string' ? text.trim() : '';
+  if (t.length < 2) return 'Write a reply first.';
+  if (t.length > 1000) return 'Replies can be up to 1000 characters.';
+  return '';
+}
+
+async function listInquiries(req, res) {
+  const me = req.user.id;
+  const [student, parent] = await Promise.all([
+    pool.query(
+      `SELECT i.id, i.subject, i.message, i.course_title, i.created_at, i.reply_message, i.replied_at,
+              u.id AS student_id, u.full_name AS student_name, u.email AS student_email
+       FROM inquiries i
+       JOIN users u ON u.id = i.user_id
+       WHERE i.counsellor_id = $1
+       ORDER BY (i.reply_message IS NULL) DESC, i.created_at DESC`,
+      [me]
+    ),
+    pool.query(
+      `SELECT q.id, q.topic, q.message, q.status, q.reply, q.replied_at, q.created_at,
+              p.full_name AS parent_name, p.email AS parent_email,
+              s.id AS student_id, s.full_name AS student_name
+       FROM counsellor_inquiries q
+       JOIN users p ON p.id = q.parent_id
+       JOIN users s ON s.id = q.student_id
+       WHERE q.counsellor_id = $1
+       ORDER BY (q.status = 'answered') ASC, q.created_at DESC`,
+      [me]
+    ),
+  ]);
+  const items = [
+    ...student.rows.map((r) => ({
+      type: 'student',
+      id: r.id,
+      from: r.student_name,
+      fromEmail: r.student_email,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      subject: r.subject,
+      context: r.course_title,
+      message: r.message,
+      reply: r.reply_message,
+      repliedAt: r.replied_at,
+      status: r.reply_message ? 'answered' : 'pending',
+      createdAt: r.created_at,
+    })),
+    ...parent.rows.map((r) => ({
+      type: 'parent',
+      id: r.id,
+      from: r.parent_name,
+      fromEmail: r.parent_email,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      subject: `${TOPIC_LABEL[r.topic] || 'Question'} - about ${r.student_name}`,
+      context: TOPIC_LABEL[r.topic] || r.topic,
+      message: r.message,
+      reply: r.reply,
+      repliedAt: r.replied_at,
+      status: r.status === 'answered' ? 'answered' : 'pending',
+      createdAt: r.created_at,
+    })),
+  ].sort((a, b) => (a.status === b.status ? new Date(b.createdAt) - new Date(a.createdAt) : a.status === 'pending' ? -1 : 1));
+  res.json({
+    inquiries: items,
+    counts: {
+      total: items.length,
+      pending: items.filter((i) => i.status === 'pending').length,
+      answered: items.filter((i) => i.status === 'answered').length,
+    },
+  });
+}
+
+// Opening a parent's question marks it "read" (the parent can no longer edit it).
+async function markParentInquiryRead(req, res) {
+  const id = inquiryId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid inquiry', code: 'VALIDATION' });
+  await pool.query(
+    // updated_at is the parent's own edit time (shown as "Edited"), so it is not touched here.
+    `UPDATE counsellor_inquiries SET status = 'read'
+     WHERE id = $1 AND counsellor_id = $2 AND status = 'sent'`,
+    [id, req.user.id]
+  );
+  res.json({ ok: true });
+}
+
+async function replyToInquiry(req, res) {
+  const id = inquiryId(req.params.id);
+  const { type } = req.params;
+  const invalid = !id ? 'Invalid inquiry' : validReply(req.body?.reply);
+  if (invalid) return res.status(400).json({ error: invalid, code: 'VALIDATION' });
+  const reply = req.body.reply.trim();
+
+  let result;
+  if (type === 'student') {
+    // is_read = false so the reply shows as new in the student's notifications.
+    result = await pool.query(
+      `UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $2, is_read = FALSE
+       WHERE id = $3 AND counsellor_id = $2 RETURNING id`,
+      [reply, req.user.id, id]
+    );
+  } else if (type === 'parent') {
+    result = await pool.query(
+      `UPDATE counsellor_inquiries SET reply = $1, replied_at = NOW(), status = 'answered'
+       WHERE id = $3 AND counsellor_id = $2 RETURNING id`,
+      [reply, req.user.id, id]
+    );
+  } else {
+    return res.status(400).json({ error: 'Unknown inquiry type', code: 'VALIDATION' });
+  }
+
+  if (!result.rowCount) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
+  res.json({ ok: true, message: type === 'student' ? 'Reply sent to the student.' : 'Reply sent to the parent.' });
+}
+
+async function deleteInquiry(req, res) {
+  const id = inquiryId(req.params.id);
+  if (!id || !['student', 'parent'].includes(req.params.type)) {
+    return res.status(400).json({ error: 'Invalid inquiry', code: 'VALIDATION' });
+  }
+  const table = req.params.type === 'student' ? 'inquiries' : 'counsellor_inquiries';
+  const result = await pool.query(
+    `DELETE FROM ${table} WHERE id = $1 AND counsellor_id = $2 RETURNING id`,
+    [id, req.user.id]
+  );
+  if (!result.rowCount) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
+  res.json({ deleted: true, id });
+}
+
 module.exports = {
+  listInquiries,
+  markParentInquiryRead,
+  replyToInquiry,
+  deleteInquiry,
   getDashboard,
   listStudents,
   getStudentProfile,

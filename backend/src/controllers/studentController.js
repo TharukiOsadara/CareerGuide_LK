@@ -443,6 +443,39 @@ exports.sendInquiry = async (req, res) => {
   }
 };
 
+// ---------- Aptitude test results (signed-in students only) ----------
+// Saves the latest result so the student's parents and matched counsellor can see it.
+exports.saveAptitudeResults = async (req, res) => {
+  if (!req.authUserId) return res.status(401).json({ success: false, error: 'Please sign in as a student first.' });
+  const { stream, scores, matches } = req.body || {};
+  const clean = (list, max) => (Array.isArray(list) ? list.slice(0, max) : []);
+  const okScores = clean(scores, 10).every((s) => s && typeof s.area === 'string' && Number.isFinite(Number(s.percent)));
+  const okMatches = clean(matches, 5).every((m) => m && typeof m.title === 'string' && Number.isFinite(Number(m.matchPercent)));
+  if (typeof stream !== 'string' || !stream.trim() || !okScores || !okMatches || !clean(matches, 5).length) {
+    return res.status(400).json({ success: false, error: 'Invalid aptitude result.' });
+  }
+  try {
+    const isStudent = (await db.query("SELECT 1 FROM users WHERE id = $1 AND role = 'student'", [req.authUserId])).rowCount > 0;
+    if (!isStudent) return res.status(403).json({ success: false, error: 'Only students can save aptitude results.' });
+    const toScores = clean(scores, 10).map((s) => ({ area: s.area.slice(0, 80), percent: Math.max(0, Math.min(100, Math.round(Number(s.percent)))) }));
+    const toMatches = clean(matches, 5).map((m) => ({
+      title: m.title.slice(0, 120),
+      matchPercent: Math.max(0, Math.min(100, Math.round(Number(m.matchPercent)))),
+      note: typeof m.note === 'string' ? m.note.slice(0, 300) : null,
+    }));
+    await db.query(
+      `INSERT INTO aptitude_results (student_id, stream, scores, matches, completed_at)
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+       ON CONFLICT (student_id) DO UPDATE
+         SET stream = EXCLUDED.stream, scores = EXCLUDED.scores, matches = EXCLUDED.matches, completed_at = NOW()`,
+      [req.authUserId, stream.trim().slice(0, 60), JSON.stringify(toScores), JSON.stringify(toMatches)]
+    );
+    return res.json({ success: true });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
 // ---------- Course choice and matched counsellor (signed-in students only) ----------
 
 function requireLogin(req, res) {

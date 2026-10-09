@@ -3,8 +3,13 @@ import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Switch, Text, T
 import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
+import ProfileHeader from '../../components/ProfileHeader';
 
-const PATHWAYS = ['Software Engineering', 'Data Science & AI', 'Information Technology'];
+const PATHWAYS = [
+  'Software Engineering', 'Biomedical Science', 'Data Science & AI',
+  'Information Technology', 'Business Management', 'Marketing', 'Accounting & Finance',
+  'International Relations', 'Mechanical Engineering', 'Medicine & Surgery',
+];
 
 export default function CounsellorGuidanceForm({ route, navigation }) {
   const { studentId } = route.params || {};
@@ -13,6 +18,7 @@ export default function CounsellorGuidanceForm({ route, navigation }) {
   const [assessment, setAssessment] = useState(null);
   const [summary, setSummary] = useState('');
   const [pathways, setPathways] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [guidanceId, setGuidanceId] = useState(null);
   const [guidanceStatus, setGuidanceStatus] = useState('draft');
   const [sharedWithParent, setSharedWithParent] = useState(false);
@@ -48,6 +54,7 @@ export default function CounsellorGuidanceForm({ route, navigation }) {
         setGuidanceId(guidance?.id || null);
         setSummary(guidance?.assessmentSummary || '');
         setPathways(guidance?.recommendedPathways || []);
+        setSuggestions(guidanceResponse.suggestedPathways || []);
         setGuidanceStatus(guidance?.guidanceStatus || 'draft');
         setSharedWithParent(guidance?.sharedWithParent === true);
       } catch (loadError) {
@@ -130,6 +137,15 @@ export default function CounsellorGuidanceForm({ route, navigation }) {
     }
   };
 
+  const deleteDraft = async () => {
+    if (!guidanceId || guidanceStatus === 'final') return;
+    setSaving(true);
+    try {
+      await counsellorApi.deleteGuidance(studentId);
+      setGuidanceId(null); setSummary(''); setPathways([]); setGuidanceStatus('draft'); setDirty(false);
+    } catch (e) { setError(e.message); } finally { setSaving(false); }
+  };
+
   const updateSharing = async (value) => {
     const previous = sharedWithParent;
     setSharedWithParent(value);
@@ -151,8 +167,8 @@ export default function CounsellorGuidanceForm({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <ProfileHeader title="Career Guidance" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.goBack()}><Text style={{ color: colors.blue, marginBottom: 18 }}>‹ Back</Text></Pressable>
         <View style={styles.row}>
           <View style={styles.flex}><Text style={styles.heading}>Guidance Form</Text><Text style={styles.subtitle}>{student?.name}</Text></View>
           <Text style={styles.muted}>{saving ? 'Saving...' : saved ? 'Draft Saved' : ''}</Text>
@@ -222,6 +238,16 @@ export default function CounsellorGuidanceForm({ route, navigation }) {
         />
 
         <Text style={styles.sectionTitle}>Recommended Pathway</Text>
+        {suggestions.length ? (
+          <View style={styles.card}>
+            <Text style={styles.muted}>Suggested from the student's stream and interest assessment:</Text>
+            {suggestions.map((pathway) => (
+              <Pressable key={`suggested-${pathway}`} style={styles.pathway} onPress={() => togglePathway(pathway)} disabled={guidanceStatus === 'final'}>
+                <Text style={styles.pathwayText}>{pathways.includes(pathway) ? '✓ ' : '+ '}{pathway}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         {PATHWAYS.map((pathway) => {
           const selected = pathways.includes(pathway);
           return (
@@ -257,6 +283,9 @@ export default function CounsellorGuidanceForm({ route, navigation }) {
         </View>
         <Pressable style={[styles.button, styles.secondaryButton]} onPress={markReviewed} disabled={saving || !guidanceId || !studentId}>
           <Text style={[styles.buttonText, styles.secondaryText]}>{saving ? 'Saving...' : 'Mark as Reviewed'}</Text>
+        </Pressable>
+        <Pressable style={[styles.button, { backgroundColor: colors.redLight }]} onPress={deleteDraft} disabled={saving || !guidanceId || guidanceStatus === 'final'}>
+          <Text style={[styles.buttonText, { color: colors.redStrong }]}>Delete Draft</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

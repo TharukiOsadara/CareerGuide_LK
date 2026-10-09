@@ -30,6 +30,15 @@ export const counsellorApi = {
     body: JSON.stringify(body),
   }),
   markReviewed: (studentId) => request(`/api/counsellor/students/${studentId}/guidance/review`, { method: 'POST' }),
+  deleteGuidance: (studentId) => request(`/api/counsellor/students/${studentId}/guidance`, { method: 'DELETE' }),
   settings: () => request('/api/counsellor/settings'),
   updateSettings: (body) => request('/api/counsellor/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  // Student + parent questions addressed to this counsellor.
+  inquiries: () => request('/api/counsellor/inquiries'),
+  markParentInquiryRead: (id) => request(`/api/counsellor/inquiries/parent/${id}/read`, { method: 'POST' }),
+  replyToInquiry: (type, id, reply) => request(`/api/counsellor/inquiries/${type}/${id}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ reply }),
+  }),
+  deleteInquiry: (type, id) => request(`/api/counsellor/inquiries/${type}/${id}`, { method: 'DELETE' }),
 };

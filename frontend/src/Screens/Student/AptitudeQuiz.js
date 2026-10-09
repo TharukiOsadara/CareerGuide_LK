@@ -7,6 +7,7 @@ import Icon, { IconText } from '../../components/Icon';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
 import { STREAM_SETS, scoreAnswers, streamKeyFor } from './aptitudeQuestions';
+import { saveAptitudeResults } from '../../services/api';
 
 // Aptitude test: a different question set per A/L stream. At the end the student's top
 // career paths are shown on the career-path screen.
@@ -36,8 +37,25 @@ export default function AptitudeQuiz({ navigation }) {
     setAnswers(next);
   };
 
-  const finish = () => {
-    const matches = scoreAnswers(streamKey, answers, 3);
+  const [saving, setSaving] = useState(false);
+
+  const finish = async () => {
+    const all = scoreAnswers(streamKey, answers, 5);
+    const matches = all.slice(0, 3);
+    // Save so the student's parents and matched counsellor can see it (the result still
+    // shows if saving fails, e.g. when offline).
+    setSaving(true);
+    try {
+      await saveAptitudeResults({
+        stream: set.label,
+        scores: all.map((m) => ({ area: m.title, percent: m.percent })),
+        matches: matches.map((m) => ({ title: m.title, matchPercent: m.percent, note: m.note })),
+      });
+    } catch (e) {
+      console.warn('Could not save aptitude results.', e);
+    } finally {
+      setSaving(false);
+    }
     navigation.replace('StudentCareerPath', {
       matches,
       stream: set.label,
@@ -125,11 +143,11 @@ export default function AptitudeQuiz({ navigation }) {
                 <Text style={styles.secondaryText}>Back</Text>
               </Pressable>
               <Pressable
-                disabled={chosen == null}
+                disabled={chosen == null || saving}
                 onPress={goNext}
-                style={({ pressed }) => [styles.nextBtn, chosen == null && styles.disabled, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.nextBtn, (chosen == null || saving) && styles.disabled, pressed && styles.pressed]}
               >
-                <Text style={styles.primaryText}>{index + 1 < total ? 'Next' : 'See my career matches'}</Text>
+                <Text style={styles.primaryText}>{saving ? 'Saving…' : index + 1 < total ? 'Next' : 'See my career matches'}</Text>
               </Pressable>
             </View>
           </>

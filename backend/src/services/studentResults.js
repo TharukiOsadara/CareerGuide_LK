@@ -51,7 +51,33 @@ const PLACEHOLDER_NOTES = {
   },
 };
 
+// Real results from the student's aptitude test (Quiz tab), stored in aptitude_results.
+// Falls back to the old placeholder data for students who haven't taken the test.
 async function getQuizResults(studentId) {
+  const sid = Number(studentId);
+  if (Number.isSafeInteger(sid)) {
+    const { rows } = await pool.query(
+      `SELECT a.stream, a.scores, a.matches, a.completed_at, u.z_score, ap.district
+       FROM aptitude_results a
+       JOIN users u ON u.id = a.student_id
+       LEFT JOIN academic_profiles ap ON ap.user_id = a.student_id
+       WHERE a.student_id = $1`,
+      [sid]
+    );
+    const row = rows[0];
+    if (row) {
+      return {
+        status: 'completed',
+        completedAt: row.completed_at,
+        zScore: row.z_score == null ? null : Number(row.z_score),
+        district: row.district || null,
+        stream: row.stream,
+        scores: Array.isArray(row.scores) ? row.scores : [],
+        matchedCareers: Array.isArray(row.matches) ? row.matches : [],
+        source: 'aptitude_test',
+      };
+    }
+  }
   const r = PLACEHOLDER_RESULTS[studentId];
   return r
     ? { ...r, source: 'placeholder' }

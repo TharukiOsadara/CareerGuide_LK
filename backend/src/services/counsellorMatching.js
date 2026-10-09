@@ -38,7 +38,31 @@ async function matchCounsellorForCourse(courseId, client = pool) {
      WHERE c.id = $1`,
     [courseId]
   );
-  return fallback.rows[0]?.counsellor_id || null;
+  if (fallback.rows[0]?.counsellor_id) return fallback.rows[0].counsellor_id;
+
+  // Keep newly created catalogue courses selectable even before an admin
+  // assigns a specialist: attach the least-loaded active counsellor.
+  const available = await client.query(
+    `SELECT u.id
+     FROM users u
+     LEFT JOIN student_course_selections s ON s.counsellor_id = u.id
+     WHERE u.role = 'counsellor' AND u.status = 'active'
+     GROUP BY u.id
+     ORDER BY COUNT(s.student_id), u.id
+     LIMIT 1`
+  );
+  const counsellorId = available.rows[0]?.id;
+  if (!counsellorId) return null;
+  await client.query(
+    `INSERT INTO counsellor_courses (counsellor_id, course_id)
+     VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [counsellorId, courseId]
+  );
+  await client.query(
+    'UPDATE courses_list SET counsellor_id = $1 WHERE id = $2',
+    [counsellorId, courseId]
+  );
+  return counsellorId;
 }
 
 async function getSelection(studentId, client = pool) {
