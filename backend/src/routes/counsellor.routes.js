@@ -20,6 +20,9 @@ router.post('/students/:studentId/guidance', validateStudentId, counsellor.saveG
 router.put('/students/:studentId/guidance', validateStudentId, counsellor.updateGuidance);
 router.delete('/students/:studentId/guidance', validateStudentId, counsellor.deleteGuidance);
 router.post('/students/:studentId/guidance/review', validateStudentId, counsellor.markReviewed);
+router.get('/inquiries', counsellor.listInquiries);
+router.post('/inquiries/parent/:id/read', counsellor.markParentInquiryRead);
+router.post('/inquiries/:type/:id/reply', counsellor.replyToInquiry);
 router.get('/settings', counsellor.getSettings);
 router.put('/settings', counsellor.updateSettings);
 

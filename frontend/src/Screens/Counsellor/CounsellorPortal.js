@@ -20,6 +20,7 @@ const TABS = [
   { key: 'Dashboard', icon: 'grid' },
   { key: 'Students', icon: 'users' },
   { key: 'Guidance', icon: 'clipboard' },
+  { key: 'Inquiries', icon: 'mail' },
   { key: 'Settings', icon: 'settings' },
 ];
 
@@ -161,6 +162,10 @@ export default function CounsellorPortal({ navigation, route }) {
             onPress={() => {
             if (item.key === 'Guidance') {
               navigation.navigate('CounsellorGuidanceForm');
+              return;
+            }
+            if (item.key === 'Inquiries') {
+              navigation.navigate('CounsellorInquiries');
               return;
             }
             if (item.key === 'Settings') {

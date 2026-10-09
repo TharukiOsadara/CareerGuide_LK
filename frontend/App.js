@@ -53,6 +53,7 @@ import CounsellorPortal from './src/Screens/Counsellor/CounsellorPortal';
 import CounsellorStudentProfile from './src/Screens/Counsellor/CounsellorStudentProfile';
 import CounsellorGuidanceForm from './src/Screens/Counsellor/CounsellorGuidanceForm';
 import CounsellorSettings from './src/Screens/Counsellor/CounsellorSettings';
+import CounsellorInquiries from './src/Screens/Counsellor/CounsellorInquiries';
 
 const Stack = createNativeStackNavigator();
 const counsellorDevPortal = process.env.EXPO_PUBLIC_ENABLE_COUNSELLOR_DEV_PORTAL === 'true';
@@ -109,6 +110,7 @@ export default function App() {
             <Stack.Screen name="CounsellorStudentProfile" component={CounsellorStudentProfile} />
             <Stack.Screen name="CounsellorGuidanceForm" component={CounsellorGuidanceForm} />
             <Stack.Screen name="CounsellorSettings" component={CounsellorSettings} />
+            <Stack.Screen name="CounsellorInquiries" component={CounsellorInquiries} />
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>
