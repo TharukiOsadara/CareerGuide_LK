@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const studentRoutes = require('./routes/studentRoutes');
 const parentRoutes = require('./routes/parent.routes');
+const counsellorRoutes = require('./routes/counsellor.routes');
 const pool = require('./config/db');
 
 const authRoutes = require('./routes/auth');
@@ -38,6 +39,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/parent', parentRoutes);
+app.use('/api/counsellor', counsellorRoutes);
 
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
 app.use((err, req, res, next) => {

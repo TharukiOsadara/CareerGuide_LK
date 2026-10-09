@@ -1,4 +1,8 @@
-// PLACEHOLDER for quiz results and counsellor notes.
+const pool = require('../db');
+
+// Quiz/results are still supplied by the existing placeholder provider until
+// the quiz module publishes its database tables. Counsellor guidance is read
+// from the real module tables below.
 // The quiz/results tables (Piyarathna) and counsellor notes are not built yet.
 // When they exist, replace only these two functions with real queries; the
 // returned shape is what the parent API and the PDF report depend on.
@@ -55,9 +59,38 @@ async function getQuizResults(studentId) {
         scores: [], matchedCareers: [], source: 'placeholder' };
 }
 
-async function getCounsellorNote(studentId) {
-  const n = PLACEHOLDER_NOTES[studentId];
-  return n ? { ...n, source: 'placeholder' } : null;
+async function getCounsellorNote(studentId, parentId) {
+  if (!Number.isSafeInteger(Number(studentId)) || !Number.isSafeInteger(Number(parentId))) return null;
+
+  const { rows } = await pool.query(
+    `SELECT g.recommended_pathways, g.reviewed_at
+     FROM counsellor_guidance_records g
+     JOIN parent_student_links l
+       ON l.student_id = g.student_id
+      AND l.counsellor_id = g.counsellor_id
+      AND l.parent_id = $2
+     JOIN privacy_preferences pp
+       ON pp.parent_id = l.parent_id
+      AND pp.student_id = l.student_id
+      AND pp.counsellor_access = TRUE
+     WHERE g.student_id = $1
+       AND g.guidance_status = 'final'
+       AND g.reviewed_at IS NOT NULL
+       AND g.shared_with_parent = TRUE
+     ORDER BY g.reviewed_at DESC
+     LIMIT 1`,
+    [studentId, parentId]
+  );
+
+  if (!rows[0]) return null;
+  return {
+    // Assessment summaries are counsellor-private and are intentionally not
+    // included in any parent-facing response.
+    summary: null,
+    recommendedPathways: rows[0].recommended_pathways,
+    lastReviewedAt: rows[0].reviewed_at,
+    source: 'counsellor_guidance',
+  };
 }
 
 module.exports = { getQuizResults, getCounsellorNote };
