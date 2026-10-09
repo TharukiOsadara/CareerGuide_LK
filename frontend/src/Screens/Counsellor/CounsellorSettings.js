@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import ProfileHeader from '../../components/ProfileHeader';
 
 export default function CounsellorSettings({ navigation }) {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const [settings, setSettings] = useState(null);
   const [error, setError] = useState('');
 
@@ -36,7 +36,7 @@ export default function CounsellorSettings({ navigation }) {
         <Text style={styles.subtitle}>Manage your portal preferences.</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.card}>
-          <View style={styles.row}><View style={styles.avatar}><Text style={styles.avatarText}>CA</Text></View><View style={styles.headerCopy}><Text style={styles.title}>Senior Educational Counsellor</Text><Text style={styles.muted}>Verified Advisor</Text></View></View>
+          <View style={styles.row}><View style={styles.avatar}><Text style={styles.avatarText}>{user?.avatarInitials || (user?.fullName || 'C').split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase()}</Text></View><View style={styles.headerCopy}><Text style={styles.title}>{user?.fullName || 'Counsellor'}</Text><Text style={styles.muted}>Senior Educational Counsellor</Text><Text style={styles.muted}>Verified Advisor</Text></View></View>
           <Text style={[styles.muted, { marginTop: 12 }]}>{settings.schoolAffiliation || 'School affiliation not recorded'}</Text>
           <Text style={styles.muted}>{settings.zone || 'Zone not recorded'}</Text>
         </View>

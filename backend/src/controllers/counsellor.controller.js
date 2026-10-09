@@ -101,15 +101,18 @@ async function queryStudents(counsellorId, filters = {}) {
             s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
             g.id AS guidance_id, g.guidance_status, g.reviewed_at, g.updated_at AS guidance_updated_at,
             g.shared_with_parent,
-            top_course.degree_name AS top_match_name,
-            top_course.match_percent AS top_match_percent
+            -- Top match: the student's aptitude-test result first, else the best course for their stream.
+            COALESCE(ar.matches->0->>'title', top_course.degree_name) AS top_match_name,
+            COALESCE((ar.matches->0->>'matchPercent')::int, top_course.match_percent) AS top_match_percent
      FROM users s
+     LEFT JOIN aptitude_results ar ON ar.student_id = s.id
      LEFT JOIN counsellor_guidance_records g
        ON g.student_id = s.id AND g.counsellor_id = $1
      LEFT JOIN LATERAL (
        SELECT degree_name, match_percent
        FROM courses
-       WHERE courses.al_stream = s.al_stream
+       WHERE regexp_replace(regexp_replace(lower(courses.al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
+           = regexp_replace(regexp_replace(lower(s.al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
        ORDER BY match_percent DESC NULLS LAST, id
        LIMIT 1
      ) top_course ON TRUE
@@ -180,6 +183,24 @@ function toGuidance(row) {
   };
 }
 
+function suggestedPathways(assessment, student) {
+  const text = `${student?.stream || ''} ${(assessment?.matchedCareers || []).map((item) => item.title).join(' ')}`.toLowerCase();
+  const suggestions = [];
+  const add = (value) => { if (!suggestions.includes(value)) suggestions.push(value); };
+  if (/commerce|business|management|marketing|account/.test(text)) {
+    add('Business Management'); add('Marketing'); add('Accounting & Finance');
+  }
+  if (/biology|medical|health|biomed/.test(text)) {
+    add('Biomedical Science'); add('Medicine & Surgery');
+  }
+  if (/mechanical|engineering/.test(text)) add('Mechanical Engineering');
+  if (/relation|politic|arts/.test(text)) add('International Relations');
+  if (/data|ai|computer|software|math|technology|physical/.test(text)) {
+    add('Data Science & AI'); add('Software Engineering'); add('Information Technology');
+  }
+  return suggestions;
+}
+
 async function getStudentProfile(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
@@ -216,8 +237,20 @@ async function getStudentProfile(req, res) {
         }
       : NOT_SHARED,
     guidance: toGuidance(guidance),
+    suggestedPathways: suggestedPathways(quiz, student),
     decisionSupportDisclaimer: "These matches support, not replace, your counsellor's advice.",
   });
+}
+
+async function notifyStudentGuidance(client, counsellorId, studentId, guidance) {
+  const pathways = Array.isArray(guidance.recommended_pathways) ? guidance.recommended_pathways : [];
+  const summary = guidance.assessment_summary?.trim() || 'Your counsellor has completed your career guidance.';
+  const pathText = pathways.length ? ` Recommended pathways: ${pathways.join(', ')}.` : '';
+  await client.query(
+    `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
+     VALUES ($1, $2, $3, 'student', $4)`,
+    ['Career guidance completed', `${summary}${pathText}`, counsellorId, studentId]
+  );
 }
 
 async function getGuidance(req, res) {
@@ -370,7 +403,7 @@ async function markReviewed(req, res) {
     const notifications = await client.query(
       `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
         SELECT 'Guidance reviewed',
-               'Your counsellor has reviewed the student guidance profile.',
+               'Your counsellor has reviewed your child''s career guidance.',
                $1, 'parent', l.parent_id
         FROM parent_student_links l
         WHERE l.student_id = $2
@@ -378,6 +411,7 @@ async function markReviewed(req, res) {
         RETURNING id, target_user_id`,
       [req.user.id, studentId, assignedStudent.consent_parent_ids]
     );
+    await notifyStudentGuidance(client, req.user.id, studentId, guidance.rows[0]);
     await client.query('COMMIT');
     res.json({ guidance: toGuidance(guidance.rows[0]), notificationsCreated: notifications.rowCount });
   } catch (error) {
@@ -533,7 +567,8 @@ async function markParentInquiryRead(req, res) {
   const id = inquiryId(req.params.id);
   if (!id) return res.status(400).json({ error: 'Invalid inquiry', code: 'VALIDATION' });
   await pool.query(
-    `UPDATE counsellor_inquiries SET status = 'read', updated_at = NOW()
+    // updated_at is the parent's own edit time (shown as "Edited"), so it is not touched here.
+    `UPDATE counsellor_inquiries SET status = 'read'
      WHERE id = $1 AND counsellor_id = $2 AND status = 'sent'`,
     [id, req.user.id]
   );
@@ -557,21 +592,37 @@ async function replyToInquiry(req, res) {
     );
   } else if (type === 'parent') {
     result = await pool.query(
-      `UPDATE counsellor_inquiries SET reply = $1, replied_at = NOW(), status = 'answered', updated_at = NOW()
+      `UPDATE counsellor_inquiries SET reply = $1, replied_at = NOW(), status = 'answered'
        WHERE id = $3 AND counsellor_id = $2 RETURNING id`,
       [reply, req.user.id, id]
     );
   } else {
     return res.status(400).json({ error: 'Unknown inquiry type', code: 'VALIDATION' });
   }
+
   if (!result.rowCount) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
   res.json({ ok: true, message: type === 'student' ? 'Reply sent to the student.' : 'Reply sent to the parent.' });
+}
+
+async function deleteInquiry(req, res) {
+  const id = inquiryId(req.params.id);
+  if (!id || !['student', 'parent'].includes(req.params.type)) {
+    return res.status(400).json({ error: 'Invalid inquiry', code: 'VALIDATION' });
+  }
+  const table = req.params.type === 'student' ? 'inquiries' : 'counsellor_inquiries';
+  const result = await pool.query(
+    `DELETE FROM ${table} WHERE id = $1 AND counsellor_id = $2 RETURNING id`,
+    [id, req.user.id]
+  );
+  if (!result.rowCount) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
+  res.json({ deleted: true, id });
 }
 
 module.exports = {
   listInquiries,
   markParentInquiryRead,
   replyToInquiry,
+  deleteInquiry,
   getDashboard,
   listStudents,
   getStudentProfile,

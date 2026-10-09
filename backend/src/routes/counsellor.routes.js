@@ -23,6 +23,8 @@ router.post('/students/:studentId/guidance/review', validateStudentId, counsello
 router.get('/inquiries', counsellor.listInquiries);
 router.post('/inquiries/parent/:id/read', counsellor.markParentInquiryRead);
 router.post('/inquiries/:type/:id/reply', counsellor.replyToInquiry);
+router.put('/inquiries/:type/:id/reply', counsellor.replyToInquiry);
+router.delete('/inquiries/:type/:id', counsellor.deleteInquiry);
 router.get('/settings', counsellor.getSettings);
 router.put('/settings', counsellor.updateSettings);
 

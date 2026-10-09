@@ -124,3 +124,8 @@ export async function chooseCourse(courseId) {
 export async function clearCourseSelection() {
   return request('/course-selection', { method: 'DELETE' });
 }
+
+// ---- Aptitude test result (shown to the student's parents and matched counsellor) ----
+export async function saveAptitudeResults({ stream, scores, matches }) {
+  return request('/aptitude-results', { method: 'POST', body: JSON.stringify({ stream, scores, matches }) });
+}

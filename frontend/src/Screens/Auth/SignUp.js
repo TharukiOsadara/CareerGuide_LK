@@ -24,6 +24,7 @@ export default function SignUp({ navigation }) {
   const { googleAuth } = useAuth();
   const [role, setRole] = useState('student');
   const [counsellorCourses, setCounsellorCourses] = useState([]);
+  const [studentCourse, setStudentCourse] = useState([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [stream, setStream] = useState('');
@@ -97,6 +98,7 @@ export default function SignUp({ navigation }) {
           childEmail1: role === 'parent' ? childEmail1.trim() : null,
           childEmail2: role === 'parent' ? childEmail2.trim() : null,
           counsellorCourseIds: role === 'counsellor' ? counsellorCourses : undefined,
+          courseId: role === 'student' && studentCourse[0] ? studentCourse[0] : undefined,
         },
       });
       navigation.navigate('SignIn', { email: email.trim(), role, justSignedUp: true });
@@ -183,6 +185,20 @@ export default function SignUp({ navigation }) {
                   value={counsellorCourses}
                   onChange={(ids) => { setCounsellorCourses(ids); setErrors((e) => ({ ...e, counsellorCourses: '' })); }}
                   error={errors.counsellorCourses}
+                />
+              </View>
+            </>
+          )}
+
+          {role === 'student' && (
+            <>
+              <Text style={styles.label}>Preferred Course (optional)</Text>
+              <Text style={styles.helper}>Choose one course to help match you with a counsellor.</Text>
+              <View style={{ marginTop: 8 }}>
+                <CoursePicker
+                  value={studentCourse}
+                  onChange={(ids) => setStudentCourse(ids.slice(-1))}
+                  maxHeight={220}
                 />
               </View>
             </>

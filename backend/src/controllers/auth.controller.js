@@ -174,7 +174,7 @@ router.post('/signup', async (req, res) => {
   try {
     const {
       fullName, email, password, role = 'student', alStream, zScore,
-      childEmail1, childEmail2, counsellorCourseIds,
+      childEmail1, childEmail2, counsellorCourseIds, courseId,
     } = req.body;
     if (!['student', 'parent', 'counsellor'].includes(role)) {
       return res.status(400).json({ message: 'Public signup is only for student, parent or counsellor.' });
@@ -188,6 +188,7 @@ router.post('/signup', async (req, res) => {
       role === 'parent' ? v.email(childEmail1, 'Child 1 email') : '',
       role === 'parent' && childEmail2 ? v.email(childEmail2, 'Child 2 email') : '',
       role === 'counsellor' ? v.courseIds(counsellorCourseIds) : '',
+      role === 'student' && courseId ? v.number(courseId, 'Course', { min: 1, integer: true }) : '',
     );
     if (invalid) return res.status(400).json({ message: invalid });
     if (role === 'counsellor') {
@@ -234,6 +235,14 @@ router.post('/signup', async (req, res) => {
          VALUES ($1, $2) ON CONFLICT (parent_id, student_id) DO NOTHING`,
         [user.id, child.id]
       )));
+    }
+    if (role === 'student' && courseId) {
+      try {
+        await matching.selectCourse(user.id, Number(courseId));
+      } catch (matchError) {
+        await query('DELETE FROM users WHERE id = $1', [user.id]);
+        return res.status(matchError.status || 409).json({ message: matchError.message });
+      }
     }
     if (role === 'counsellor') {
       // The courses this counsellor guides: students choosing them can be matched to them.

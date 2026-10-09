@@ -70,6 +70,17 @@ export default function CounsellorPortal({ navigation, route }) {
   const [stream, setStream] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pendingInquiries, setPendingInquiries] = useState(0);
+
+  // Badge on the bell: questions from students/parents still waiting for a reply.
+  useEffect(() => {
+    const refreshBadge = () => counsellorApi.inquiries()
+      .then((d) => setPendingInquiries(d?.counts?.pending || 0))
+      .catch(() => {});
+    refreshBadge();
+    const unsub = navigation.addListener?.('focus', refreshBadge);
+    return unsub;
+  }, [navigation]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,13 +118,30 @@ export default function CounsellorPortal({ navigation, route }) {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.blue} />}
       >
         <View style={styles.header}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>MS</Text></View>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {(dashboard?.counsellor?.name || 'Counsellor').split(/\s+/).map((p) => p[0] || '').join('').slice(0, 2).toUpperCase()}
+            </Text>
+          </View>
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>Counsellor Portal</Text>
             <Text style={styles.title}>{dashboard?.counsellor?.name || 'Counsellor'}</Text>
             <Text style={styles.subtitle}>Senior Counsellor</Text>
           </View>
-          <Text style={{ fontSize: 22 }}>🔔</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Inquiries, ${pendingInquiries} awaiting reply`}
+            hitSlop={10}
+            onPress={() => navigation.navigate('CounsellorInquiries')}
+            style={{ padding: 6 }}
+          >
+            <Icon name="bell" size={23} color={colors.navy} />
+            {pendingInquiries > 0 ? (
+              <View style={{ position: 'absolute', top: 0, right: 0, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.white, fontSize: 10.5, fontWeight: '800' }}>{pendingInquiries > 9 ? '9+' : pendingInquiries}</Text>
+              </View>
+            ) : null}
+          </Pressable>
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}

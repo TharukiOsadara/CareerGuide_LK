@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { counsellorApi } from './api';
@@ -71,6 +71,21 @@ export default function CounsellorInquiries({ navigation }) {
     await load();
   };
 
+  const removeInquiry = () => {
+    if (!open) return;
+    Alert.alert('Delete inquiry?', 'This removes the inquiry from your counsellor inbox.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          await counsellorApi.deleteInquiry(open.type, open.id);
+          setOpen(null);
+          setNotice('Inquiry deleted.');
+          await load();
+        } catch (e) { setError(e.message || 'Could not delete the inquiry.'); }
+      } },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ProfileHeader title="Inquiries" onBack={() => navigation.goBack()} />
@@ -131,7 +146,7 @@ export default function CounsellorInquiries({ navigation }) {
         ))}
       </ScrollView>
 
-      <ReplyModal inquiry={open} onClose={() => setOpen(null)} onSend={sendReply} />
+      <ReplyModal inquiry={open} onClose={() => setOpen(null)} onSend={sendReply} onDelete={removeInquiry} />
     </SafeAreaView>
   );
 }
@@ -145,7 +160,7 @@ function Stat({ value, label, warn }) {
   );
 }
 
-function ReplyModal({ inquiry, onClose, onSend }) {
+function ReplyModal({ inquiry, onClose, onSend, onDelete }) {
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -210,6 +225,9 @@ function ReplyModal({ inquiry, onClose, onSend }) {
               </Pressable>
             ) : null}
           </View>
+          <Pressable onPress={onDelete} style={{ marginTop: 12 }}>
+            <Text style={{ color: colors.redStrong, fontWeight: '700', textAlign: 'center' }}>Delete inquiry</Text>
+          </Pressable>
         </View>
       </View>
     </Modal>
