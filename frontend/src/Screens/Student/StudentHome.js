@@ -16,6 +16,7 @@ import WelcomeToast from '../../components/WelcomeToast';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
+import CourseMatchCard from '../../components/CourseMatchCard';
 import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentHome({ navigation, route }) {
@@ -110,6 +111,9 @@ export default function StudentHome({ navigation, route }) {
               <IconText icon="arrow-right" trailing size={16} color={colors.white} gap={8} textStyle={styles.primaryButtonText}>Start Quiz Now</IconText>
             </Pressable>
           </View>
+
+          {/* Chosen course + matched counsellor */}
+          <CourseMatchCard navigation={navigation} />
 
           {/* Recommended courses */}
           <Text style={styles.sectionTitle}>Top Recommended Courses</Text>

@@ -100,7 +100,15 @@ function notification({ title, body, targetRole }) {
     || (['student', 'parent', 'counsellor', 'admin', 'all'].includes(targetRole || 'all') ? '' : 'Choose a valid audience.');
 }
 
+// Courses a counsellor guides: at least one valid course id.
+function courseIds(ids, label = 'Courses you guide') {
+  if (!Array.isArray(ids) || ids.length === 0) return `${label}: choose at least one course.`;
+  if (ids.length > 20) return `${label}: choose 20 courses or fewer.`;
+  if (!ids.every((id) => Number.isInteger(Number(id)) && Number(id) > 0)) return `${label}: invalid course.`;
+  return '';
+}
+
 // First non-empty message from a list of checks, or ''.
 const first = (...msgs) => msgs.find(Boolean) || '';
 
-module.exports = { required, name, email, newPassword, text, number, course, notification, first, AL_STREAMS };
+module.exports = { required, name, email, newPassword, text, number, course, notification, courseIds, first, AL_STREAMS };

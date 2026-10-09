@@ -5,6 +5,7 @@ import Brand from '../../components/Brand';
 import Field from '../../components/Field';
 import Dropdown from '../../components/Dropdown';
 import FieldError from '../../components/FieldError';
+import CoursePicker from '../../components/CoursePicker';
 import Icon, { IconText } from '../../components/Icon';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
@@ -30,6 +31,7 @@ export default function CompleteProfile({ navigation }) {
   const [relationship, setRelationship] = useState('guardian');
   const [childEmail1, setChildEmail1] = useState('');
   const [childEmail2, setChildEmail2] = useState('');
+  const [counsellorCourses, setCounsellorCourses] = useState([]);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -56,6 +58,8 @@ export default function CompleteProfile({ navigation }) {
           || (c2 === own ? "Use your child's email, not your own." : '')
           || (c2 === c1 ? 'Child 2 email must be different from Child 1.' : ''))
         : '',
+      counsellorCourses: role === 'counsellor' && counsellorCourses.length === 0
+        ? 'Choose at least one course you guide.' : '',
     });
     setErrors(errs);
     if (hasErrors(errs)) return;
@@ -71,6 +75,7 @@ export default function CompleteProfile({ navigation }) {
           relationship: role === 'parent' ? relationship : undefined,
           childEmail1: role === 'parent' ? c1 : undefined,
           childEmail2: role === 'parent' && c2 ? c2 : undefined,
+          counsellorCourseIds: role === 'counsellor' ? counsellorCourses : undefined,
         },
       });
       setUser(updated);
@@ -154,6 +159,20 @@ export default function CompleteProfile({ navigation }) {
                 placeholder="child2@example.com" keyboardType="email-address" maxLength={254} error={errors.childEmail2}
               />
               <Text style={styles.helper}>Your child must already have a CareerGuide student account.</Text>
+            </>
+          )}
+
+          {role === 'counsellor' && (
+            <>
+              <Text style={styles.label}>Courses</Text>
+              <Text style={styles.helper}>Choose the courses you guide. Students who pick these can be matched with you.</Text>
+              <View style={{ marginTop: 8 }}>
+                <CoursePicker
+                  value={counsellorCourses}
+                  onChange={(ids) => { setCounsellorCourses(ids); setErrors((e) => ({ ...e, counsellorCourses: '' })); }}
+                  error={errors.counsellorCourses}
+                />
+              </View>
             </>
           )}
 

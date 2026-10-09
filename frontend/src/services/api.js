@@ -110,3 +110,17 @@ export async function markNotificationsRead(notificationIds, userId = 42) {
     body: JSON.stringify({ userId, notificationIds }),
   });
 }
+
+// ---- Course choice & matched counsellor (signed-in students) ----
+export async function getCourseSelection() {
+  const payload = await request('/course-selection');
+  return payload?.selection || null;
+}
+
+export async function chooseCourse(courseId) {
+  return request('/course-selection', { method: 'POST', body: JSON.stringify({ courseId }) });
+}
+
+export async function clearCourseSelection() {
+  return request('/course-selection', { method: 'DELETE' });
+}

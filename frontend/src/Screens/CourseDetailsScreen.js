@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getCourseDetails } from '../services/api';
+import CourseMatchCard from '../components/CourseMatchCard';
 import BottomNavigation from '../components/BottomNavigation';
 
 const BLUE = '#0052CC';
@@ -180,6 +181,10 @@ export default function CourseDetailsScreen({ navigation, route }) {
             <InfoBox icon="wallet-outline" label="Estimated Fee" value={estimatedFee} note="Total Program" />
           </View>
         </View>
+
+        {course?.id ? (
+          <CourseMatchCard courseId={course.id} courseTitle={displayTitle} navigation={navigation} />
+        ) : null}
 
         <View style={styles.demandBanner}>
           <Text style={styles.demandTitle}>📈 94% HIGH INDUSTRY DEMAND</Text>

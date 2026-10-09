@@ -40,20 +40,31 @@ function toStudent(row) {
 }
 
 // Single source of truth for counsellor assignment and consent scope.
-// Assignment currently comes from parent_student_links.counsellor_id.
+// A counsellor's students are the ones MATCHED to them through the course the student chose
+// (student_course_selections). Students who haven't chosen a course yet fall back to the
+// counsellor on their parent link. Consent: parents' privacy setting when the student has a
+// linked parent; a student with no parent link consented by choosing the course themselves.
 async function getAssignedStudents(counsellorId) {
   const { rows } = await pool.query(
-    `SELECT s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
-            COALESCE(BOOL_OR(pp.counsellor_access), FALSE) AS counsellor_access,
+    `WITH assigned AS (
+       SELECT sel.student_id FROM student_course_selections sel WHERE sel.counsellor_id = $1
+       UNION
+       SELECT l.student_id FROM parent_student_links l
+       WHERE l.counsellor_id = $1
+         AND NOT EXISTS (SELECT 1 FROM student_course_selections x WHERE x.student_id = l.student_id)
+     )
+     SELECT s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
+            CASE WHEN COUNT(l.parent_id) = 0 THEN TRUE
+                 ELSE COALESCE(BOOL_OR(pp.counsellor_access), FALSE) END AS counsellor_access,
             COALESCE(
               ARRAY_AGG(DISTINCT l.parent_id) FILTER (WHERE pp.counsellor_access = TRUE),
               ARRAY[]::INTEGER[]
             ) AS consent_parent_ids
-     FROM parent_student_links l
-     JOIN users s ON s.id = l.student_id
+     FROM assigned a
+     JOIN users s ON s.id = a.student_id AND s.role = 'student'
+     LEFT JOIN parent_student_links l ON l.student_id = s.id
      LEFT JOIN privacy_preferences pp
        ON pp.parent_id = l.parent_id AND pp.student_id = l.student_id
-     WHERE l.counsellor_id = $1 AND s.role = 'student'
      GROUP BY s.id, s.full_name, s.avatar_initials, s.al_stream
      ORDER BY s.id, s.full_name`,
     [counsellorId]

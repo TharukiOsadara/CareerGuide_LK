@@ -4,6 +4,7 @@ const { query } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { publicUser } = require('../utils/token');
 const v = require('../utils/validate');
+const matching = require('../services/counsellorMatching');
 
 const router = express.Router();
 
@@ -86,7 +87,7 @@ router.put('/me', authenticate, async (req, res) => {
 router.put('/me/complete-profile', authenticate, async (req, res) => {
   try {
     const me = req.user;
-    const { fullName, alStream, zScore, childEmail1, childEmail2, relationship = 'guardian' } = req.body || {};
+    const { fullName, alStream, zScore, childEmail1, childEmail2, relationship = 'guardian', counsellorCourseIds } = req.body || {};
     const c1 = (childEmail1 || '').toLowerCase().trim();
     const c2 = (childEmail2 || '').toLowerCase().trim();
     const isStudent = me.role === 'student';
@@ -101,6 +102,7 @@ router.put('/me/complete-profile', authenticate, async (req, res) => {
       isParent && (c1 === me.email || c2 === me.email) ? 'Use your child\'s email, not your own.' : '',
       isParent && c2 && c1 === c2 ? 'Child 2 email must be different from Child 1.' : '',
       isParent && !['mother', 'father', 'guardian'].includes(relationship) ? 'Choose mother, father or guardian.' : '',
+      me.role === 'counsellor' ? v.courseIds(counsellorCourseIds) : '',
     );
     if (invalid) return res.status(400).json({ message: invalid });
 
@@ -122,6 +124,15 @@ router.put('/me/complete-profile', authenticate, async (req, res) => {
            ON CONFLICT (parent_id, student_id) DO UPDATE SET relationship = EXCLUDED.relationship`,
           [me.id, kid.id, relationship]
         );
+      }
+    }
+
+    if (me.role === 'counsellor') {
+      try {
+        await matching.setCounsellorCourses(me.id, counsellorCourseIds);
+      } catch (err) {
+        if (err instanceof matching.MatchingError) return res.status(err.status).json({ message: err.message });
+        throw err;
       }
     }
 

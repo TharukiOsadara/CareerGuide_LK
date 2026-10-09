@@ -18,10 +18,12 @@ import GoogleLogo from '../../components/GoogleLogo';
 import BackButton, { BACK_WIDTH } from '../../components/BackButton';
 import Icon, { IconText } from '../../components/Icon';
 import FieldError, { errorBorder } from '../../components/FieldError';
+import CoursePicker from '../../components/CoursePicker';
 
 export default function SignUp({ navigation }) {
   const { googleAuth } = useAuth();
   const [role, setRole] = useState('student');
+  const [counsellorCourses, setCounsellorCourses] = useState([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [stream, setStream] = useState('');
@@ -77,6 +79,8 @@ export default function SignUp({ navigation }) {
           || (c2 === c1 ? 'Child 2 email must be different from Child 1.' : ''))
         : '',
       password: validateNewPassword(password),
+      counsellorCourses: role === 'counsellor' && counsellorCourses.length === 0
+        ? 'Choose at least one course you guide.' : '',
       agree: agree ? '' : 'Please accept the privacy agreement to continue.',
     });
     setErrors(errs);
@@ -92,6 +96,7 @@ export default function SignUp({ navigation }) {
           zScore: role === 'student' && zScore ? Number(zScore) : null,
           childEmail1: role === 'parent' ? childEmail1.trim() : null,
           childEmail2: role === 'parent' ? childEmail2.trim() : null,
+          counsellorCourseIds: role === 'counsellor' ? counsellorCourses : undefined,
         },
       });
       navigation.navigate('SignIn', { email: email.trim(), role, justSignedUp: true });
@@ -164,6 +169,22 @@ export default function SignUp({ navigation }) {
               </View>
               <FieldError message={errors.childEmail2} />
               <Text style={styles.helper}>The student must already have an active account.</Text>
+            </>
+          )}
+
+          {role === 'counsellor' && (
+            <>
+              <Text style={styles.label}>Courses</Text>
+              <Text style={styles.helper}>
+                Choose the courses you guide. Students who pick one of these courses can be matched with you.
+              </Text>
+              <View style={{ marginTop: 8 }}>
+                <CoursePicker
+                  value={counsellorCourses}
+                  onChange={(ids) => { setCounsellorCourses(ids); setErrors((e) => ({ ...e, counsellorCourses: '' })); }}
+                  error={errors.counsellorCourses}
+                />
+              </View>
             </>
           )}
 

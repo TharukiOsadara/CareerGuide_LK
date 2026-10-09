@@ -43,6 +43,8 @@ import AdminSettings from './src/Screens/Admin/AdminSettings';
 import AdminProfile from './src/Screens/Admin/AdminProfile';
 import AdminNotifications from './src/Screens/Admin/AdminNotifications';
 import AdminStatDetail from './src/Screens/Admin/AdminStatDetail';
+import AdminCounsellors from './src/Screens/Admin/AdminCounsellors';
+import AdminFamilies from './src/Screens/Admin/AdminFamilies';
 // Parent area
 import ParentPortal from './src/Screens/Parent/ParentPortal';
 
@@ -98,6 +100,8 @@ export default function App() {
             <Stack.Screen name="AdminProfile" component={AdminProfile} />
             <Stack.Screen name="AdminNotifications" component={AdminNotifications} />
             <Stack.Screen name="AdminStatDetail" component={AdminStatDetail} />
+            <Stack.Screen name="AdminCounsellors" component={AdminCounsellors} />
+            <Stack.Screen name="AdminFamilies" component={AdminFamilies} />
             {/* Parent Area */}
             <Stack.Screen name="ParentPortal" component={ParentPortal} />
             {/* Counsellor Area */}

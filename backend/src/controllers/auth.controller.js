@@ -11,6 +11,7 @@ const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET } = require('../confi
 const { getPublicUrl } = require('../config/runtime');
 const { generateSecret, verifyCode, otpauthUrl } = require('../utils/totp');
 const v = require('../utils/validate');
+const matching = require('../services/counsellorMatching');
 const { sendMail } = require('../utils/mailer');
 
 const router = express.Router();
@@ -173,7 +174,7 @@ router.post('/signup', async (req, res) => {
   try {
     const {
       fullName, email, password, role = 'student', alStream, zScore,
-      childEmail1, childEmail2,
+      childEmail1, childEmail2, counsellorCourseIds,
     } = req.body;
     if (!['student', 'parent', 'counsellor'].includes(role)) {
       return res.status(400).json({ message: 'Public signup is only for student, parent or counsellor.' });
@@ -186,8 +187,16 @@ router.post('/signup', async (req, res) => {
       role === 'student' ? v.number(zScore, 'Z-score', { min: 0, max: 4, decimals: 4 }) : '',
       role === 'parent' ? v.email(childEmail1, 'Child 1 email') : '',
       role === 'parent' && childEmail2 ? v.email(childEmail2, 'Child 2 email') : '',
+      role === 'counsellor' ? v.courseIds(counsellorCourseIds) : '',
     );
     if (invalid) return res.status(400).json({ message: invalid });
+    if (role === 'counsellor') {
+      const found = await query('SELECT COUNT(*)::int AS n FROM courses_list WHERE id = ANY($1::int[])',
+        [counsellorCourseIds.map(Number)]);
+      if (found.rows[0].n !== new Set(counsellorCourseIds.map(Number)).size) {
+        return res.status(400).json({ message: 'One or more selected courses do not exist.' });
+      }
+    }
     const childEmails = role === 'parent'
       ? [...new Set([childEmail1, childEmail2].map((value) => (value || '').toLowerCase().trim()).filter(Boolean))]
       : [];
@@ -225,6 +234,10 @@ router.post('/signup', async (req, res) => {
          VALUES ($1, $2) ON CONFLICT (parent_id, student_id) DO NOTHING`,
         [user.id, child.id]
       )));
+    }
+    if (role === 'counsellor') {
+      // The courses this counsellor guides: students choosing them can be matched to them.
+      await matching.setCounsellorCourses(user.id, counsellorCourseIds);
     }
     await logAccess(user, 'login', req);
     await openSession(user, req);

@@ -13,6 +13,7 @@ const notificationRoutes = require('./routes/notifications');
 const userRoutes = require('./routes/users');
 const logRoutes = require('./routes/logs');
 const settingsRoutes = require('./routes/settings');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -43,8 +44,13 @@ app.use('/api/logs', logRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/counsellor', counsellorRoutes);
+app.use('/api/admin', adminRoutes);
 
-app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
+// Unknown address: say which one, so a wrong path in the app is easy to spot.
+app.use((req, res) => {
+  console.warn(`404 Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ message: `Route not found: ${req.method} ${req.path}` });
+});
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ message: 'Internal server error.' });
