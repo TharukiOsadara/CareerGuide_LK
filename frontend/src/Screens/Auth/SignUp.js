@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';

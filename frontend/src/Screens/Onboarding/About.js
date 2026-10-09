@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Brand from '../../components/Brand';

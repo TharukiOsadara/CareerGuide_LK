@@ -164,7 +164,7 @@ async function getDashboard(req, res) {
   // Progress is computed alongside the privacy check and dropped if monitoring is off.
   const [privacy, note, countsResult, progress] = await Promise.all([
     effectivePrivacy(user.id, child.student_id),
-    getCounsellorNote(child.student_id),
+    getCounsellorNote(child.student_id, user.id),
     pool.query(
       `SELECT COUNT(*)::int AS total,
               COUNT(*) FILTER (WHERE status <> 'answered')::int AS awaiting_reply,
@@ -193,6 +193,7 @@ async function getDashboard(req, res) {
     counsellor: {
       name: child.counsellor_name || null,
       summary: note?.summary || null,
+      recommendedPathways: note?.recommendedPathways || [],
       lastReviewedAt: note?.lastReviewedAt || null,
     },
     inquiries: { total: counts.total, awaitingReply: counts.awaiting_reply, answered: counts.answered },
@@ -210,7 +211,7 @@ async function getProgress(req, res) {
 }
 
 async function getGuidance(req, res) {
-  const note = await getCounsellorNote(req.child.student_id);
+  const note = await getCounsellorNote(req.child.student_id, req.user.id);
   res.json({
     counsellor: req.child.counsellor_id
       ? { id: req.child.counsellor_id, name: req.child.counsellor_name }
@@ -225,7 +226,7 @@ async function getReport(req, res) {
   const [privacy, progress, note] = await Promise.all([
     effectivePrivacy(user.id, child.student_id),
     buildProgress(child),
-    getCounsellorNote(child.student_id),
+    getCounsellorNote(child.student_id, user.id),
   ]);
   if (!privacy.parentMonitoring) return monitoringOff(res);
 

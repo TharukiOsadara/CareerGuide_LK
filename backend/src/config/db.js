@@ -1,17 +1,19 @@
 const { Pool } = require('pg');
+// Load .env first so DATABASE_URL is set even when a script (e.g. initDb.js) uses the DB directly.
 const { DATABASE_URL } = require('./env');
 
-// Neon requires SSL. The pooled connection string already carries sslmode=require,
-// but we pass ssl explicitly so local Node doesn't reject the Neon certificate.
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PG pool error:', err.message);
+pool.on('error', (error) => {
+  console.error('Unexpected PostgreSQL pool error:', error);
 });
 
-const query = (text, params) => pool.query(text, params);
-
-module.exports = { pool, query };
+// Keep both import styles working across the controllers and startup scripts.
+module.exports = pool;
+module.exports.pool = pool;
+module.exports.query = pool.query.bind(pool);

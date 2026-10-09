@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -51,7 +51,8 @@ export default function StudentHome({ navigation, route }) {
   }, []);
 
   const submitSearch = () => {
-    navigation.navigate('StudentCourses', { query: query.trim() });
+    // Course catalogue (with counsellor matching) - it reads its search text from filters.search.
+    navigation.navigate('StudentCourses', { filters: { search: query.trim() } });
   };
 
   return (
@@ -134,7 +135,7 @@ export default function StudentHome({ navigation, route }) {
                 <Text style={styles.courseUni}>{course.uniName}</Text>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => navigation.navigate('StudentCourses', { focusId: course.id })}
+                  onPress={() => navigation.navigate('StudentCoursesDetail', { focusId: course.id })}
                   style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
                 >
                   <Text style={styles.outlineButtonText}>View Details & Entry Requirements</Text>

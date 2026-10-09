@@ -9,16 +9,17 @@ import Constants from 'expo-constants';
 //
 // Override any time by setting EXPO_PUBLIC_API_URL in the environment.
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
-const LAN_IP = expoHost ? `http://${expoHost}:5000` : 'http://192.168.1.104:5000';
+const LAN_IP = expoHost ? `http://${expoHost}:3000` : 'http://192.168.1.104:3000';
 
 const defaultByPlatform = Platform.select({
   android: LAN_IP,
-  ios: 'http://localhost:5000',
-  default: 'http://localhost:5000',
+  ios: 'http://localhost:3000',
+  default: 'http://localhost:3000',
 });
 
+// Server root without a trailing "/api" (callers add /api/... themselves).
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || defaultByPlatform || LAN_IP;
+  (process.env.EXPO_PUBLIC_API_URL || defaultByPlatform || LAN_IP).replace(/\/+$/, '').replace(/\/api$/, '');
 
 export const AL_STREAMS = [
   'Physical Science (Maths)',
@@ -34,6 +35,5 @@ export const ROLES = ['student', 'parent', 'counsellor'];
 export const ROLES_WITH_ADMIN = ['student', 'parent', 'counsellor', 'admin'];
 
 // Dashboard each role lands on after signing in.
-// Counsellors have no dashboard of their own yet, so they share the student one.
-const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'StudentHome', counsellor: 'StudentHome' };
+const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'StudentHome', counsellor: 'CounsellorPortal' };
 export const homeRouteFor = (role) => HOME_ROUTE[role] || 'StudentHome';

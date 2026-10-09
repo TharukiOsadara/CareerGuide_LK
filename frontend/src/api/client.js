@@ -26,8 +26,9 @@ export async function api(path, { method = 'GET', body, auth = true } = {}) {
   let res;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
+  const requestPath = path.startsWith('/api/') ? path.slice(4) : path;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await fetch(`${API_BASE_URL}${requestPath}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,

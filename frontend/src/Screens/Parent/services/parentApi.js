@@ -16,9 +16,10 @@ async function request(method, path, body) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const token = await tokenStore.get();
+  const baseUrl = API_URL.replace(/\/+$/, '').replace(/\/api$/, '');
   let response;
   try {
-    response = await fetch(`${API_URL}/api/parent${path}`, {
+    response = await fetch(`${baseUrl}/api/parent${path}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
