@@ -31,7 +31,12 @@ async function listCourses(req, res) {
   const { stream, q } = req.query;
   const clauses = [];
   const params = [];
-  if (stream) { params.push(stream); clauses.push(`al_stream = $${params.length}`); }
+  // Loose stream match (ignores case, punctuation and the word "stream").
+  if (stream) {
+    params.push(stream);
+    clauses.push(`regexp_replace(regexp_replace(lower(al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
+      = regexp_replace(regexp_replace(lower($${params.length}), 'stream', '', 'g'), '[^a-z]', '', 'g')`);
+  }
   if (q) { params.push(`%${q}%`); clauses.push(`(degree_name ILIKE $${params.length} OR uni_name ILIKE $${params.length})`); }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await query(

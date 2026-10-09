@@ -10,10 +10,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { counsellorApi } from '../counsellor/api';
-import { colors } from '../styles/colors';
-import { styles } from '../counsellor/styles';
-import Icon from '../components/Icon';
+import { counsellorApi } from './api';
+import { colors } from '../../styles/colors';
+import { styles } from './styles';
+import Icon from '../../components/Icon';
 import ClipboardList from 'lucide-react-native/icons/clipboard-list';
 
 const TABS = [

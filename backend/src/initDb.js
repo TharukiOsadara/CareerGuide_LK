@@ -13,10 +13,12 @@ async function run() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   const parentSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'parent_module.sql'), 'utf8');
   const counsellorSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'counsellor_module.sql'), 'utf8');
+  const studentSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'student_module.sql'), 'utf8');
   console.log('Applying schema...');
   await pool.query(schema);
   await pool.query(parentSchema);
   await pool.query(counsellorSchema);
+  await pool.query(studentSchema);
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS admin_rejected BOOLEAN NOT NULL DEFAULT FALSE
@@ -38,6 +40,18 @@ async function run() {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS reset_attempts INTEGER NOT NULL DEFAULT 0
+  `);
+  // Google sign-in data, and whether a Google user has finished their profile.
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+    ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS google_given_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS google_family_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS google_locale VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS google_linked_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS google_last_login_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN NOT NULL DEFAULT TRUE
   `);
 
   // Seed the primary (super) admin.

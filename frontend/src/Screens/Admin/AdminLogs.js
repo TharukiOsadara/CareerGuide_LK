@@ -3,12 +3,12 @@ import {
   Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminNav from '../../Components/AdminNav';
+import AdminNav from '../../components/AdminNav';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import AdminHeader from '../../Components/AdminHeader';
-import Icon, { IconText } from '../../Components/Icon';
+import AdminHeader from '../../components/AdminHeader';
+import Icon, { IconText } from '../../components/Icon';
 
 const ROLE_CYCLE = ['all', 'student', 'parent', 'counsellor', 'admin'];
 const ACTION_CYCLE = ['all', 'login', 'failed_login', 'logout'];
@@ -165,7 +165,7 @@ export default function AdminLogs({ navigation }) {
           style={styles.search}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search user or IP…"
+          placeholder="Search user or IPâ€¦"
           placeholderTextColor={colors.slate400}
           autoCapitalize="none"
         />
@@ -190,10 +190,10 @@ export default function AdminLogs({ navigation }) {
 
         {/* Stats row */}
         <View style={styles.statsRow}>
-          <StatBox value={stats?.activeSessions ?? '—'} label="Active Sessions" note="Live" />
-          <StatBox value={stats?.todayLogins ?? '—'} label="Today's Logins" />
-          <StatBox value={stats?.failedAttempts ?? '—'} label="Failed Attempts" note="Flagged" danger />
-          <StatBox value={stats?.lockedAccounts ?? '—'} label="Locked" />
+          <StatBox value={stats?.activeSessions ?? 'â€”'} label="Active Sessions" note="Live" />
+          <StatBox value={stats?.todayLogins ?? 'â€”'} label="Today's Logins" />
+          <StatBox value={stats?.failedAttempts ?? 'â€”'} label="Failed Attempts" note="Flagged" danger />
+          <StatBox value={stats?.lockedAccounts ?? 'â€”'} label="Locked" />
         </View>
 
         {/* Live sessions */}
@@ -205,7 +205,7 @@ export default function AdminLogs({ navigation }) {
             <View key={s.id} style={styles.sessionRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowName}>{s.userName}</Text>
-                <Text style={styles.rowMeta}>{s.role} · {clockTime(s.startedAt)} · {s.ip || s.device || ''}</Text>
+                <Text style={styles.rowMeta}>{s.role} Â· {clockTime(s.startedAt)} Â· {s.ip || s.device || ''}</Text>
               </View>
               <Pressable onPress={() => killSession(s.id)} style={({ pressed }) => [styles.killBtn, pressed && styles.pressed]}>
                 <Text style={styles.killBtnText}>Kill</Text>
@@ -241,7 +241,7 @@ export default function AdminLogs({ navigation }) {
                     Action: <Text style={styles.tlActionStrong}>{ACTION_LABEL[l.action] || l.action}</Text>
                   </Text>
                   <Text style={styles.tlMeta} numberOfLines={1}>
-                    {[prettyDevice(l.device), l.ip ? `IP: ${l.ip}` : null].filter(Boolean).join(' · ')}
+                    {[prettyDevice(l.device), l.ip ? `IP: ${l.ip}` : null].filter(Boolean).join(' Â· ')}
                   </Text>
                 </View>
               </View>
@@ -270,7 +270,7 @@ export default function AdminLogs({ navigation }) {
             <IconText icon="warning" size={17} color={colors.orange} gap={8} textStyle={styles.warnTitle}>Unusual Login Location</IconText>
             <Text style={styles.warnBody}>
               User '{a.userName}' logged in from IP {a.ip}
-              {a.usualIp ? ` (Expected: ${a.usualIp})` : ''} · {timeAgo(a.createdAt)}.
+              {a.usualIp ? ` (Expected: ${a.usualIp})` : ''} Â· {timeAgo(a.createdAt)}.
             </Text>
           </View>
         ))}
@@ -287,7 +287,7 @@ export default function AdminLogs({ navigation }) {
                 onPress={() => lockAccount(a)}
                 style={({ pressed }) => [styles.lockBtn, (pressed || lockingId === a.userId) && styles.pressed]}
               >
-                <Text style={styles.lockBtnText}>{lockingId === a.userId ? 'Locking…' : 'Lock Account'}</Text>
+                <Text style={styles.lockBtnText}>{lockingId === a.userId ? 'Lockingâ€¦' : 'Lock Account'}</Text>
               </Pressable>
             ) : (
               <Text style={styles.dangerNote}>
@@ -319,7 +319,7 @@ export default function AdminLogs({ navigation }) {
                 <View key={u.id} style={styles.lockRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowName}>{u.fullName}</Text>
-                    <Text style={styles.rowMeta}>{u.email} · {u.status}</Text>
+                    <Text style={styles.rowMeta}>{u.email} Â· {u.status}</Text>
                   </View>
                   <Pressable onPress={() => unlock(u)} style={({ pressed }) => [styles.unlockBtn, pressed && styles.pressed]}>
                     <Text style={styles.unlockBtnText}>{u.status === 'blocked' ? 'Unblock' : 'Unlock'}</Text>

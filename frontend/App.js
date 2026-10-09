@@ -1,9 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider } from './src/context/AuthContext';
 
-// Feature Student Screens
+// Lets the Google sign-in popup hand its result back when running in a browser (no-op on phones).
+WebBrowser.maybeCompleteAuthSession();
+
+// Student feature screens
 import HomeScreen from './src/Screens/HomeScreen';
 import StudentProfileScreen from './src/Screens/StudentProfileScreen';
 import AcademicProfileScreen from './src/Screens/AcademicProfileScreen';
@@ -13,7 +17,7 @@ import CourseDetailsScreen from './src/Screens/CourseDetailsScreen';
 import CounsellorInquiryScreen from './src/Screens/CounsellorInquiryScreen';
 import StudentCareerPathScreen from './src/Screens/StudentCareerPathScreen';
 
-// Auth / Onboarding
+// Auth / onboarding
 import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
 import Onboarding from './src/Screens/Onboarding/Onboarding';
 import About from './src/Screens/Onboarding/About';
@@ -23,6 +27,7 @@ import JobMarket from './src/Screens/Onboarding/JobMarket';
 import AptitudeInfo from './src/Screens/Onboarding/AptitudeInfo';
 import SignUp from './src/Screens/Auth/SignUp';
 import SignIn from './src/Screens/Auth/SignIn';
+import CompleteProfile from './src/Screens/Auth/CompleteProfile';
 import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
 import ResetPassword from './src/Screens/Pwd/ResetPassword';
 import AdminPortal from './src/Screens/Admin/AdminPortal';
@@ -38,14 +43,16 @@ import AdminSettings from './src/Screens/Admin/AdminSettings';
 import AdminProfile from './src/Screens/Admin/AdminProfile';
 import AdminNotifications from './src/Screens/Admin/AdminNotifications';
 import AdminStatDetail from './src/Screens/Admin/AdminStatDetail';
+import AdminCounsellors from './src/Screens/Admin/AdminCounsellors';
+import AdminFamilies from './src/Screens/Admin/AdminFamilies';
 // Parent area
 import ParentPortal from './src/Screens/Parent/ParentPortal';
 
 // Counsellor Area
-import CounsellorPortal from './src/Screens/CounsellorPortal';
-import CounsellorStudentProfile from './src/Screens/CounsellorStudentProfile';
-import CounsellorGuidanceForm from './src/Screens/CounsellorGuidanceForm';
-import CounsellorSettings from './src/Screens/CounsellorSettings';
+import CounsellorPortal from './src/Screens/Counsellor/CounsellorPortal';
+import CounsellorStudentProfile from './src/Screens/Counsellor/CounsellorStudentProfile';
+import CounsellorGuidanceForm from './src/Screens/Counsellor/CounsellorGuidanceForm';
+import CounsellorSettings from './src/Screens/Counsellor/CounsellorSettings';
 
 const Stack = createNativeStackNavigator();
 const counsellorDevPortal = process.env.EXPO_PUBLIC_ENABLE_COUNSELLOR_DEV_PORTAL === 'true';
@@ -67,6 +74,7 @@ export default function App() {
             <Stack.Screen name="PrivacyConsent" component={PrivacyConsent} options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="SignUp" component={SignUp} />
             <Stack.Screen name="SignIn" component={SignIn} />
+            <Stack.Screen name="CompleteProfile" component={CompleteProfile} />
             <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
             <Stack.Screen name="ResetPassword" component={ResetPassword} />
             <Stack.Screen name="AdminPortal" component={AdminPortal} />
@@ -92,8 +100,11 @@ export default function App() {
             <Stack.Screen name="AdminProfile" component={AdminProfile} />
             <Stack.Screen name="AdminNotifications" component={AdminNotifications} />
             <Stack.Screen name="AdminStatDetail" component={AdminStatDetail} />
+            <Stack.Screen name="AdminCounsellors" component={AdminCounsellors} />
+            <Stack.Screen name="AdminFamilies" component={AdminFamilies} />
             {/* Parent Area */}
             <Stack.Screen name="ParentPortal" component={ParentPortal} />
+            {/* Counsellor Area */}
             <Stack.Screen name="CounsellorPortal" component={CounsellorPortal} />
             <Stack.Screen name="CounsellorStudentProfile" component={CounsellorStudentProfile} />
             <Stack.Screen name="CounsellorGuidanceForm" component={CounsellorGuidanceForm} />

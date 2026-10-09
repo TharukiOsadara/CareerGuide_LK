@@ -7,15 +7,14 @@ const { signToken, publicUser } = require('../utils/token');
 const { authenticate } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
-const { GOOGLE_CLIENT_ID, JWT_SECRET } = require('../config/env');
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET } = require('../config/env');
+const { getPublicUrl } = require('../config/runtime');
 const { generateSecret, verifyCode, otpauthUrl } = require('../utils/totp');
 const v = require('../utils/validate');
+const matching = require('../services/counsellorMatching');
 const { sendMail } = require('../utils/mailer');
 
 const router = express.Router();
-const googleClient = new OAuth2Client();
-// GOOGLE_CLIENT_ID may list several OAuth client IDs (comma-separated); the Web client ID is required.
-const googleAudiences = GOOGLE_CLIENT_ID.split(',').map((s) => s.trim()).filter(Boolean);
 
 const initials = (name = '') =>
   name.trim().split(/\s+/).map((p) => p[0] || '').join('').slice(0, 2).toUpperCase() || 'U';
@@ -175,7 +174,7 @@ router.post('/signup', async (req, res) => {
   try {
     const {
       fullName, email, password, role = 'student', alStream, zScore,
-      childEmail1, childEmail2,
+      childEmail1, childEmail2, counsellorCourseIds,
     } = req.body;
     if (!['student', 'parent', 'counsellor'].includes(role)) {
       return res.status(400).json({ message: 'Public signup is only for student, parent or counsellor.' });
@@ -188,8 +187,16 @@ router.post('/signup', async (req, res) => {
       role === 'student' ? v.number(zScore, 'Z-score', { min: 0, max: 4, decimals: 4 }) : '',
       role === 'parent' ? v.email(childEmail1, 'Child 1 email') : '',
       role === 'parent' && childEmail2 ? v.email(childEmail2, 'Child 2 email') : '',
+      role === 'counsellor' ? v.courseIds(counsellorCourseIds) : '',
     );
     if (invalid) return res.status(400).json({ message: invalid });
+    if (role === 'counsellor') {
+      const found = await query('SELECT COUNT(*)::int AS n FROM courses_list WHERE id = ANY($1::int[])',
+        [counsellorCourseIds.map(Number)]);
+      if (found.rows[0].n !== new Set(counsellorCourseIds.map(Number)).size) {
+        return res.status(400).json({ message: 'One or more selected courses do not exist.' });
+      }
+    }
     const childEmails = role === 'parent'
       ? [...new Set([childEmail1, childEmail2].map((value) => (value || '').toLowerCase().trim()).filter(Boolean))]
       : [];
@@ -227,6 +234,10 @@ router.post('/signup', async (req, res) => {
          VALUES ($1, $2) ON CONFLICT (parent_id, student_id) DO NOTHING`,
         [user.id, child.id]
       )));
+    }
+    if (role === 'counsellor') {
+      // The courses this counsellor guides: students choosing them can be matched to them.
+      await matching.setCounsellorCourses(user.id, counsellorCourseIds);
     }
     await logAccess(user, 'login', req);
     await openSession(user, req);
@@ -325,48 +336,157 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-// --- Google OAuth (verify ID token, upsert user) ---
-router.post('/google', async (req, res) => {
-  try {
-    const { idToken, role = 'student' } = req.body;
-    if (!idToken) return res.status(400).json({ message: 'Google idToken is required.' });
-    if (!GOOGLE_CLIENT_ID) {
-      return res.status(500).json({ message: 'Google sign-in is not configured on the server.' });
-    }
-    const ticket = await googleClient.verifyIdToken({ idToken, audience: googleAudiences });
-    const payload = ticket.getPayload();
-    if (!payload.email || !payload.email_verified) {
-      return res.status(401).json({ message: 'Your Google email address is not verified.' });
-    }
-    const normEmail = payload.email.toLowerCase();
+// --- Google sign-in (browser flow; works inside Expo Go) ---
+// 1. The app opens  GET /google/start  in a browser tab.
+// 2. We send the user to Google; Google sends them back to  GET /google/callback  (PUBLIC_URL).
+// 3. We sign them in and bounce the browser back to the app with a one-time code.
+// 4. The app swaps that code for a session at  POST /google/exchange.
+// The public address can be set when the ngrok tunnel starts, so it is read per request.
+const googleCallback = () => `${getPublicUrl()}/api/auth/google/callback`;
+const googleEnabled = () => Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && getPublicUrl());
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+const STATE_KEY = crypto.createHmac('sha256', JWT_SECRET).update('google-oauth-state').digest('hex');
+const GOOGLE_ROLES = ['student', 'parent', 'counsellor'];
 
-    let { rows } = await query('SELECT * FROM users WHERE email = $1', [normEmail]);
-    let user = rows[0];
-    if (!user) {
-      const ins = await query(
-        `INSERT INTO users (full_name, email, role, provider, google_id, avatar_initials, status, admin_approved, profile_completion)
-         VALUES ($1, $2, $3, 'google', $4, $5, 'active', TRUE, 45) RETURNING *`,
-        [payload.name || normEmail, normEmail, ['student', 'parent', 'counsellor'].includes(role) ? role : 'student', payload.sub, initials(payload.name)]
-      );
-      user = ins.rows[0];
-    }
-    if (user.status === 'blocked' || user.status === 'locked') {
-      return res.status(403).json({ message: `This account is ${user.status}.` });
-    }
-    // Admins must use the Admin Portal (keeps admin approval and staff checks in one place).
-    if (user.role === 'admin') {
-      return res.status(403).json({ message: 'Admin accounts must sign in through the Admin Portal.' });
-    }
-    if (!user.google_id) await query('UPDATE users SET google_id = $1 WHERE id = $2', [payload.sub, user.id]);
-    await query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
-    await logAccess(user, 'login', req);
-    await openSession(user, req);
-    const token = signToken(user);
-    res.json({ token, user: publicUser({ ...user, last_login_at: new Date() }) });
-  } catch (err) {
-    console.error('google auth error', err);
-    res.status(401).json({ message: 'Google sign-in failed.' });
+// Only send the browser back to the app itself (Expo Go / app scheme / local web), never elsewhere.
+const isAllowedReturn = (url) =>
+  /^(exp|exps|careerguidelk):\/\//i.test(url || '') || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url || '');
+
+// One-time codes handed to the app after Google sign-in (short-lived, in memory).
+const googleHandoffs = new Map();
+const HANDOFF_MS = 2 * 60 * 1000;
+
+function withParams(url, params) {
+  const sep = url.includes('?') ? '&' : '?';
+  return url + sep + new URLSearchParams(params).toString();
+}
+
+// Small page that sends the browser back into the app (with a manual link as fallback).
+function backToApp(res, url) {
+  const safe = url.replace(/"/g, '&quot;');
+  res.set('Content-Type', 'text/html').send(`<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>CareerGuide LK</title></head>
+<body style="font-family:system-ui,sans-serif;text-align:center;padding:48px 20px;color:#0F172A">
+<h2 style="color:#0052CC">CareerGuide LK</h2><p>Returning to the app…</p>
+<p><a href="${safe}" style="display:inline-block;background:#0052CC;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Open CareerGuide</a></p>
+<script>window.location.replace(${JSON.stringify(url)});</script></body></html>`);
+}
+
+// Finds or creates the account for a verified Google profile. Throws { status, message } on refusal.
+async function googleLogin(payload, role, req) {
+  if (!payload.email || !payload.email_verified) {
+    throw { status: 401, message: 'Your Google email address is not verified.' };
   }
+  const normEmail = payload.email.toLowerCase();
+  // Everything Google shares with us (with the user's consent) is stored on the account.
+  const g = {
+    sub: payload.sub,
+    name: (payload.name || '').slice(0, 150) || normEmail,
+    given: (payload.given_name || '').slice(0, 100) || null,
+    family: (payload.family_name || '').slice(0, 100) || null,
+    picture: payload.picture || null,
+    locale: (payload.locale || '').slice(0, 20) || null,
+  };
+  const { rows } = await query('SELECT * FROM users WHERE email = $1', [normEmail]);
+  let user = rows[0];
+  if (!user) {
+    // New Google account: created with the chosen role, then the user completes
+    // their profile (A/L stream & Z-score, or their children's emails) in the app.
+    const ins = await query(
+      `INSERT INTO users (full_name, email, role, provider, google_id, avatar_initials, status, admin_approved,
+                          profile_completion, profile_completed, email_verified, avatar_url,
+                          google_given_name, google_family_name, google_locale, google_linked_at)
+       VALUES ($1, $2, $3, 'google', $4, $5, 'active', TRUE, 30, FALSE, TRUE, $6, $7, $8, $9, NOW())
+       RETURNING *`,
+      [g.name, normEmail, GOOGLE_ROLES.includes(role) ? role : 'student', g.sub, initials(g.name),
+        g.picture, g.given, g.family, g.locale]
+    );
+    user = ins.rows[0];
+  }
+  if (user.status === 'blocked' || user.status === 'locked') {
+    throw { status: 403, message: `This account is ${user.status}.` };
+  }
+  // Admins must use the Admin Portal (password + authenticator code).
+  if (user.role === 'admin') {
+    throw { status: 403, message: 'Admin accounts must sign in through the Admin Portal.' };
+  }
+  // Refresh the stored Google details on every Google login (the user's own name is kept).
+  const { rows: updated } = await query(
+    `UPDATE users SET
+       google_id = COALESCE(google_id, $1),
+       google_linked_at = COALESCE(google_linked_at, NOW()),
+       email_verified = TRUE,
+       avatar_url = COALESCE($2, avatar_url),
+       google_given_name = COALESCE($3, google_given_name),
+       google_family_name = COALESCE($4, google_family_name),
+       google_locale = COALESCE($5, google_locale),
+       google_last_login_at = NOW(),
+       last_login_at = NOW()
+     WHERE id = $6 RETURNING *`,
+    [g.sub, g.picture, g.given, g.family, g.locale, user.id]
+  );
+  user = updated[0];
+  await logAccess(user, 'login', req);
+  await openSession(user, req);
+  return { token: signToken(user), user: publicUser(user) };
+}
+
+// Tells the app whether Google sign-in is set up, and where to start it.
+router.get('/google/config', (req, res) => {
+  res.json({ enabled: googleEnabled(), startUrl: googleEnabled() ? `${getPublicUrl()}/api/auth/google/start` : null });
+});
+
+router.get('/google/start', (req, res) => {
+  const { role = 'student', returnTo = '' } = req.query;
+  if (!googleEnabled()) return res.status(503).send('Google sign-in is not configured on the server.');
+  if (!isAllowedReturn(returnTo)) return res.status(400).send('Invalid return address.');
+  const state = jwt.sign(
+    { role: GOOGLE_ROLES.includes(role) ? role : 'student', returnTo },
+    STATE_KEY,
+    { expiresIn: '10m' }
+  );
+  const url = googleClient.generateAuthUrl({
+    scope: ['openid', 'email', 'profile'],
+    prompt: 'select_account',
+    redirect_uri: googleCallback(),
+    state,
+  });
+  res.redirect(url);
+});
+
+router.get('/google/callback', async (req, res) => {
+  let state;
+  try {
+    state = jwt.verify(String(req.query.state || ''), STATE_KEY);
+  } catch {
+    return res.status(400).send('This sign-in link expired. Go back to the app and try again.');
+  }
+  const fail = (message) => backToApp(res, withParams(state.returnTo, { error: message }));
+  if (req.query.error) return fail(req.query.error === 'access_denied' ? 'Google sign-in was cancelled.' : 'Google sign-in failed.');
+  try {
+    const { tokens } = await googleClient.getToken({ code: String(req.query.code || ''), redirect_uri: googleCallback() });
+    const ticket = await googleClient.verifyIdToken({ idToken: tokens.id_token, audience: GOOGLE_CLIENT_ID });
+    const session = await googleLogin(ticket.getPayload(), state.role, req);
+    const code = crypto.randomBytes(24).toString('hex');
+    googleHandoffs.set(code, { ...session, expires: Date.now() + HANDOFF_MS });
+    backToApp(res, withParams(state.returnTo, { code }));
+  } catch (err) {
+    if (err && err.status) return fail(err.message);
+    console.error('google callback error', err);
+    fail('Google sign-in failed. Please try again.');
+  }
+});
+
+// The app trades the one-time code for its session (token + user). Codes work once.
+router.post('/google/exchange', (req, res) => {
+  const code = String(req.body?.code || '');
+  const entry = googleHandoffs.get(code);
+  googleHandoffs.delete(code);
+  for (const [k, v] of googleHandoffs) if (v.expires < Date.now()) googleHandoffs.delete(k);
+  if (!entry || entry.expires < Date.now()) {
+    return res.status(400).json({ message: 'Google sign-in expired. Please try again.' });
+  }
+  res.json({ token: entry.token, user: entry.user });
 });
 
 // --- Forgot password: issue a reset token ---

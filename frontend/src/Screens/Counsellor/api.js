@@ -1,5 +1,5 @@
-import { API_BASE_URL } from '../config';
-import { tokenStore } from '../api/client';
+import { API_BASE_URL } from '../../config';
+import { tokenStore } from '../../api/client';
 
 const API_URL = API_BASE_URL;
 export const COUNSELLOR_USER_ID = process.env.EXPO_PUBLIC_COUNSELLOR_USER_ID || '45';

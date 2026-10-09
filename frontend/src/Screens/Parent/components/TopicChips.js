@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { TOPICS } from '../utils/format';
 import { colors, font, radius, space } from '../theme';
-import Icon from '../../../Components/Icon';
+import Icon from '../../../components/Icon';
 
 // Quick topic choice so parents don't have to type everything (TC-04 < 30 s).
 export default function TopicChips({ value, onChange, disabled = false }) {

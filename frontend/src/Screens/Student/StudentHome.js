@@ -10,13 +10,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../../Components/StudentHeader';
-import StudentNav from '../../Components/StudentNav';
-import WelcomeToast from '../../Components/WelcomeToast';
+import StudentHeader from '../../components/StudentHeader';
+import StudentNav from '../../components/StudentNav';
+import WelcomeToast from '../../components/WelcomeToast';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../Components/Icon';
+import CourseMatchCard from '../../components/CourseMatchCard';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentHome({ navigation, route }) {
   const { user } = useAuth();
@@ -51,7 +52,8 @@ export default function StudentHome({ navigation, route }) {
   }, []);
 
   const submitSearch = () => {
-    navigation.navigate('StudentCourses', { query: query.trim() });
+    // Course catalogue (with counsellor matching) - it reads its search text from filters.search.
+    navigation.navigate('StudentCourses', { filters: { search: query.trim() } });
   };
 
   return (
@@ -67,7 +69,7 @@ export default function StudentHome({ navigation, route }) {
             <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search courses, careers, or institutes…"
+              placeholder="Search courses, careers, or institutesâ€¦"
               placeholderTextColor={colors.slate400}
               value={query}
               onChangeText={setQuery}
@@ -110,6 +112,9 @@ export default function StudentHome({ navigation, route }) {
             </Pressable>
           </View>
 
+          {/* Chosen course + matched counsellor */}
+          <CourseMatchCard navigation={navigation} />
+
           {/* Recommended courses */}
           <Text style={styles.sectionTitle}>Top Recommended Courses</Text>
 
@@ -134,7 +139,7 @@ export default function StudentHome({ navigation, route }) {
                 <Text style={styles.courseUni}>{course.uniName}</Text>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => navigation.navigate('StudentCourses', { focusId: course.id })}
+                  onPress={() => navigation.navigate('StudentCoursesDetail', { focusId: course.id })}
                   style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]}
                 >
                   <Text style={styles.outlineButtonText}>View Details & Entry Requirements</Text>

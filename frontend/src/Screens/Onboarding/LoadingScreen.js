@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import Icon from '../../Components/Icon';
+import Icon from '../../components/Icon';
 
 const DURATION_MS = 3000;
 const useNativeDriver = Platform.OS !== 'web';
@@ -11,7 +11,7 @@ const BLUE = '#0052CC';
 const GREY = '#757575';
 const NAVY = '#0F172A';
 const WHITE = '#FFFFFF';
-const BG = '#EEF4FD'; // light blue base, matching the other pages
+const BG = '#EEF4FD'; // light blue base
 const BLUE_10 = 'rgba(0, 82, 204, 0.102)';
 
 export default function LoadingScreen({ navigation }) {

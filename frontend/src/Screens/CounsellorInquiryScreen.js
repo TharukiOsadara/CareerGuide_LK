@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getCourses, sendInquiry } from '../services/api';
+import { getCourseSelection, getCourses, sendInquiry } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -20,7 +20,7 @@ const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
 const BACKGROUND = '#F4F7FC';
 
-export default function CounsellorInquiryScreen({ navigation }) {
+export default function CounsellorInquiryScreen({ navigation, route }) {
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [subject, setSubject] = useState(
@@ -31,15 +31,21 @@ export default function CounsellorInquiryScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isCourseListOpen, setIsCourseListOpen] = useState(false);
+  const [sendError, setSendError] = useState('');
 
   useEffect(() => {
     let mounted = true;
-    getCourses()
-      .then((data) => {
-        if (mounted) {
-          setCourses(data);
-          setSelectedCourse(data[0] || null);
-        }
+    // A student's questions always go to their ONE matched counsellor, so once they have
+    // chosen a course every course shows that counsellor.
+    Promise.all([getCourses(), getCourseSelection().catch(() => null)])
+      .then(([data, selection]) => {
+        if (!mounted) return;
+        const list = selection?.counsellor
+          ? data.map((c) => ({ ...c, counsellor_id: selection.counsellor.id, counsellor_name: selection.counsellor.name }))
+          : data;
+        const wantedId = Number(route?.params?.courseId) || selection?.course?.id;
+        setCourses(list);
+        setSelectedCourse(list.find((c) => c.id === wantedId) || list[0] || null);
       })
       .catch((error) => console.warn('Unable to load courses for inquiry.', error))
       .finally(() => mounted && setIsLoading(false));
@@ -51,9 +57,10 @@ export default function CounsellorInquiryScreen({ navigation }) {
       return;
     }
     setIsSending(true);
+    setSendError('');
     try {
       await sendInquiry({
-        userId: 42,
+        userId: 42, // dev fallback only; the signed-in student's token takes priority
         courseId: selectedCourse.id,
         courseTitle: selectedCourse.title,
         subject,
@@ -62,6 +69,7 @@ export default function CounsellorInquiryScreen({ navigation }) {
       setIsModalVisible(true);
     } catch (error) {
       console.warn('Unable to send counsellor inquiry.', error);
+      setSendError(error.message || 'Could not send your inquiry. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -158,6 +166,7 @@ export default function CounsellorInquiryScreen({ navigation }) {
         </View>
 
         {isLoading && <ActivityIndicator color={BLUE} />}
+        {sendError ? <Text style={styles.sendError}>{sendError}</Text> : null}
         <Pressable
           accessibilityRole="button"
           disabled={isSending || isLoading || !selectedCourse?.counsellor_id}
@@ -231,6 +240,7 @@ const styles = StyleSheet.create({
   subjectInput: { borderColor: BORDER, borderRadius: 9, borderWidth: 1, color: TEXT, fontSize: 13, minHeight: 48, paddingHorizontal: 12 },
   messageLabel: { marginTop: 18 },
   messageInput: { borderColor: BORDER, borderRadius: 9, borderWidth: 1, color: TEXT, fontSize: 13, height: 140, padding: 12 },
+  sendError: { color: '#DE350B', backgroundColor: '#FFEBE6', borderRadius: 8, padding: 10, marginTop: 14, fontSize: 12.5 },
   sendButton: { alignItems: 'center', backgroundColor: BLUE, borderRadius: 9, flexDirection: 'row', justifyContent: 'center', marginTop: 18, minHeight: 52 },
   sendButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginLeft: 9 },
   modalOverlay: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', flex: 1, justifyContent: 'center', padding: 20 },

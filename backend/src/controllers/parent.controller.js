@@ -85,7 +85,10 @@ async function fetchCourses(alStream) {
     `SELECT id, degree_name, uni_name, min_z_score, district, duration, tuition_fee,
             ugc_approved, nvq_level, match_percent, career_path, updated_at
      FROM courses
-     WHERE al_stream = $1
+     -- Loose match: ignores case, punctuation and the word "stream", so
+     -- "Physical Science (Maths Stream)" matches "Physical Science (Maths)".
+     WHERE regexp_replace(regexp_replace(lower(al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
+         = regexp_replace(regexp_replace(lower($1), 'stream', '', 'g'), '[^a-z]', '', 'g')
      ORDER BY match_percent DESC NULLS LAST, min_z_score DESC
      LIMIT 10`,
     [alStream]
@@ -121,6 +124,8 @@ async function buildProgress(child) {
     getQuizResults(child.student_id),
     fetchCourses(child.al_stream),
   ]);
+  // The student's own Z-score (entered at sign-up) is the real figure; fall back to the quiz data.
+  const zScore = child.z_score ?? quiz.zScore ?? null;
   return {
     child: toChild(child),
     assessment: {

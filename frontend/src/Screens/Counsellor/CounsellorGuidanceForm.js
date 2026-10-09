@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Switch, Text, TextInput, View } from 'react-native';
-import { counsellorApi } from '../counsellor/api';
-import { colors } from '../styles/colors';
-import { styles } from '../counsellor/styles';
+import { counsellorApi } from './api';
+import { colors } from '../../styles/colors';
+import { styles } from './styles';
 
 const PATHWAYS = ['Software Engineering', 'Data Science & AI', 'Information Technology'];
 

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
-import { counsellorApi } from '../counsellor/api';
-import { colors } from '../styles/colors';
-import { styles } from '../counsellor/styles';
+import { counsellorApi } from './api';
+import { colors } from '../../styles/colors';
+import { styles } from './styles';
 import { StatusChip } from './CounsellorPortal';
 
 export default function CounsellorStudentProfile({ route, navigation }) {

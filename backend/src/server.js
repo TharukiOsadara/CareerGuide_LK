@@ -1,4 +1,5 @@
-const { PORT, NODE_ENV } = require('./config/env');
+const { PORT, NODE_ENV, NGROK_AUTHTOKEN, NGROK_DOMAIN, PUBLIC_URL, GOOGLE_CLIENT_ID } = require('./config/env');
+const { setPublicUrl } = require('./config/runtime');
 const express = require('express');
 const cors = require('cors');
 const studentRoutes = require('./routes/studentRoutes');
@@ -12,6 +13,7 @@ const notificationRoutes = require('./routes/notifications');
 const userRoutes = require('./routes/users');
 const logRoutes = require('./routes/logs');
 const settingsRoutes = require('./routes/settings');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -30,7 +32,9 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.use('/api', studentRoutes);
+// Student feature API (profile, academic profile, course catalogue, inquiries).
+// Mounted under /api/student so it doesn't shadow /api/courses and /api/notifications.
+app.use('/api/student', studentRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
@@ -40,11 +44,41 @@ app.use('/api/logs', logRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/counsellor', counsellorRoutes);
+app.use('/api/admin', adminRoutes);
 
-app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
+// Unknown address: say which one, so a wrong path in the app is easy to spot.
+app.use((req, res) => {
+  console.warn(`404 Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ message: `Route not found: ${req.method} ${req.path}` });
+});
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ message: 'Internal server error.' });
 });
 
-app.listen(PORT, () => console.log(`CareerGuide LK API running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`CareerGuide LK API running on port ${PORT}`);
+  // Public https tunnel for Google sign-in (only when an ngrok token is configured).
+  if (NGROK_AUTHTOKEN) {
+    try {
+      const ngrok = require('@ngrok/ngrok');
+      const listener = await ngrok.forward({
+        addr: Number(PORT),
+        authtoken: NGROK_AUTHTOKEN,
+        ...(NGROK_DOMAIN ? { domain: NGROK_DOMAIN } : {}),
+      });
+      const url = listener.url();
+      console.log(`Public URL (ngrok): ${url}`);
+      if (PUBLIC_URL && url !== PUBLIC_URL) {
+        console.warn(`Note: using the ngrok address ${url} instead of ${PUBLIC_URL}.`);
+      }
+      setPublicUrl(url);
+      if (GOOGLE_CLIENT_ID) {
+        console.log(`Google sign-in redirect URI (add this in Google Cloud -> your Web client):
+  ${url}/api/auth/google/callback`);
+      }
+    } catch (err) {
+      console.error('ngrok tunnel failed:', err.message);
+    }
+  }
+});

@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const matching = require('../services/counsellorMatching');
 
 const DEFAULT_USER_ID = 42;
 
@@ -17,6 +18,8 @@ function requiredString(value, fieldName) {
   return null;
 }
 
+// When the request carries a valid login token, req.authUserId is that user's id and is
+// used instead of any userId the client sends (see optionalAuth in studentRoutes.js).
 function parseUserId(value) {
   const userId = Number(value || DEFAULT_USER_ID);
   return Number.isInteger(userId) && userId > 0 ? userId : null;
@@ -24,7 +27,7 @@ function parseUserId(value) {
 
 exports.getStudentProfile = async (req, res) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = parseUserId(req.authUserId || req.query.userId);
     if (!userId) {
       return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
     }
@@ -95,7 +98,7 @@ exports.getCounsellors = async (req, res) => {
 
 exports.saveAcademicProfile = async (req, res) => {
   const { userId: rawUserId, subjectStream, district, zScore, subjectGrades } = req.body || {};
-  const userId = parseUserId(rawUserId);
+  const userId = parseUserId(req.authUserId || rawUserId);
   const validationError =
     !userId ? 'userId must be a positive integer.' :
     requiredString(subjectStream, 'subjectStream') ||
@@ -148,7 +151,7 @@ exports.saveAcademicProfile = async (req, res) => {
 };
 
 exports.getAcademicProfile = async (req, res) => {
-  const userId = parseUserId(req.params.userId);
+  const userId = parseUserId(req.authUserId || req.params.userId);
   if (!userId) {
     return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
@@ -169,7 +172,7 @@ exports.getAcademicProfile = async (req, res) => {
 };
 
 exports.deleteAcademicProfile = async (req, res) => {
-  const userId = parseUserId(req.params.userId);
+  const userId = parseUserId(req.authUserId || req.params.userId);
   if (!userId) {
     return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
@@ -204,7 +207,7 @@ exports.deleteAcademicProfile = async (req, res) => {
 };
 
 exports.updateUserProfile = async (req, res) => {
-  const userId = parseUserId(req.body?.userId);
+  const userId = parseUserId(req.authUserId || req.body?.userId);
   const body = req.body || {};
   const hasName = body.fullName !== undefined || body.full_name !== undefined || body.name !== undefined;
   const hasGrade = body.grade !== undefined;
@@ -258,7 +261,7 @@ exports.updateUserProfile = async (req, res) => {
 };
 
 exports.deleteUserProfile = async (req, res) => {
-  const userId = parseUserId(req.params.userId);
+  const userId = parseUserId(req.authUserId || req.params.userId);
   const fields = Array.isArray(req.body?.fields) ? req.body.fields : [];
   const allowedFields = ['grade', 'profilePicture'];
   const invalidField = fields.find((field) => !allowedFields.includes(field));
@@ -376,7 +379,7 @@ exports.sendInquiry = async (req, res) => {
     subject,
     message,
   } = req.body || {};
-  const userId = parseUserId(rawUserId);
+  const userId = parseUserId(req.authUserId || rawUserId);
   const validationError =
     !userId ? 'userId must be a positive integer.' :
     requiredString(courseTitle, 'courseTitle') ||
@@ -388,13 +391,29 @@ exports.sendInquiry = async (req, res) => {
   }
 
   try {
-    let assignedCounsellorId = counsellorId;
-    if (!assignedCounsellorId && courseId) {
-      const courseResult = await db.query(
-        'SELECT counsellor_id FROM courses_list WHERE id = $1',
-        [courseId]
-      );
-      assignedCounsellorId = courseResult.rows[0]?.counsellor_id;
+    // A student's questions go to their ONE matched counsellor. If they have not chosen a
+    // course yet, asking about a course chooses it (and matches a counsellor).
+    let assignedCounsellorId = null;
+    const isStudent = (await db.query("SELECT 1 FROM users WHERE id = $1 AND role = 'student'", [userId])).rowCount > 0;
+    if (isStudent) {
+      let selection = await matching.getSelection(userId);
+      if ((!selection || !selection.counsellor) && courseId) {
+        try {
+          selection = await matching.selectCourse(userId, courseId);
+        } catch (err) {
+          if (err instanceof matching.MatchingError) {
+            return res.status(err.status).json({ success: false, error: err.message });
+          }
+          throw err;
+        }
+      }
+      assignedCounsellorId = selection?.counsellor?.id || null;
+    } else {
+      assignedCounsellorId = counsellorId || null;
+      if (!assignedCounsellorId && courseId) {
+        const courseResult = await db.query('SELECT counsellor_id FROM courses_list WHERE id = $1', [courseId]);
+        assignedCounsellorId = courseResult.rows[0]?.counsellor_id;
+      }
     }
     if (!assignedCounsellorId) {
       return res.status(400).json({ success: false, error: 'No counsellor is assigned to this course.' });
@@ -408,10 +427,10 @@ exports.sendInquiry = async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO inquiries (user_id, counsellor_id, course_title, subject, message)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO inquiries (user_id, counsellor_id, course_title, subject, message, course_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [userId, assignedCounsellorId, courseTitle.trim(), subject.trim(), message.trim()]
+      [userId, assignedCounsellorId, courseTitle.trim(), subject.trim(), message.trim(), Number(courseId) || null]
     );
     return res.status(201).json({
       success: true,
@@ -424,8 +443,54 @@ exports.sendInquiry = async (req, res) => {
   }
 };
 
+// ---------- Course choice and matched counsellor (signed-in students only) ----------
+
+function requireLogin(req, res) {
+  if (!req.authUserId) {
+    res.status(401).json({ success: false, error: 'Please sign in as a student first.' });
+    return false;
+  }
+  return true;
+}
+
+exports.getCourseSelection = async (req, res) => {
+  if (!requireLogin(req, res)) return;
+  try {
+    return res.json({ success: true, selection: await matching.getSelection(req.authUserId) });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
+exports.setCourseSelection = async (req, res) => {
+  if (!requireLogin(req, res)) return;
+  try {
+    const selection = await matching.selectCourse(req.authUserId, req.body?.courseId);
+    return res.json({
+      success: true,
+      selection,
+      message: `You're matched with ${selection.counsellor?.name || 'a counsellor'} for ${selection.course.title}.`,
+    });
+  } catch (error) {
+    if (error instanceof matching.MatchingError) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
+    return sendServerError(res, error);
+  }
+};
+
+exports.deleteCourseSelection = async (req, res) => {
+  if (!requireLogin(req, res)) return;
+  try {
+    await matching.clearSelection(req.authUserId);
+    return res.json({ success: true, selection: null });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
 exports.getNotifications = async (req, res) => {
-  const userId = parseUserId(req.query.userId);
+  const userId = parseUserId(req.authUserId || req.query.userId);
   if (!userId) {
     return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
@@ -458,7 +523,7 @@ exports.getNotifications = async (req, res) => {
 };
 
 exports.markNotificationsRead = async (req, res) => {
-  const userId = parseUserId(req.body?.userId);
+  const userId = parseUserId(req.authUserId || req.body?.userId);
   const notificationIds = Array.isArray(req.body?.notificationIds)
     ? req.body.notificationIds.map(Number).filter((id) => Number.isInteger(id) && id > 0)
     : [];

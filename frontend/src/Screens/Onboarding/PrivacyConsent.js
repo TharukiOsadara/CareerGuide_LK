@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../Components/Icon';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function PrivacyConsent({ navigation }) {
   const [isChecked, setIsChecked] = useState(true);

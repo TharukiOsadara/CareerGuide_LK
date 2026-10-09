@@ -1,4 +1,5 @@
-import { API_URL } from '../devConfig';
+// Same server address as the rest of the app (src/config.js), so parent screens can't drift.
+import { API_BASE_URL as API_URL } from '../../../config';
 import { tokenStore } from '../../../api/client';
 
 const TIMEOUT_MS = 20000;

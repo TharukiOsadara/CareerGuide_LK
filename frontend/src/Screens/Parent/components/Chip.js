@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, font, radius } from '../theme';
-import Icon from '../../../Components/Icon';
+import Icon from '../../../components/Icon';
 
 const TONES = {
   info: { bg: colors.blueLight, text: colors.blue },

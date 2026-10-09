@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, Switch, Text, View } from 'react-native';
-import { counsellorApi } from '../counsellor/api';
-import { colors } from '../styles/colors';
-import { styles } from '../counsellor/styles';
-import { useAuth } from '../context/AuthContext';
+import { counsellorApi } from './api';
+import { colors } from '../../styles/colors';
+import { styles } from './styles';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CounsellorSettings({ navigation }) {
   const { signOut } = useAuth();

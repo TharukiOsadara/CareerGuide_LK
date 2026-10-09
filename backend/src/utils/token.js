@@ -27,6 +27,11 @@ const publicUser = (u) => ({
   provider: u.provider,
   hasPassword: Boolean(u.password_hash),
   mfaEnabled: Boolean(u.totp_enabled),
+  avatarUrl: u.avatar_url || null,
+  emailVerified: Boolean(u.email_verified),
+  // false only for Google sign-ups that still need to fill in their details.
+  profileCompleted: u.profile_completed !== false,
+  googleLinked: Boolean(u.google_id),
   createdAt: u.created_at,
 });
 
