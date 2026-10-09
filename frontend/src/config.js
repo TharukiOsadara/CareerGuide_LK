@@ -9,12 +9,12 @@ import Constants from 'expo-constants';
 //
 // Override any time by setting EXPO_PUBLIC_API_URL in the environment.
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
-const LAN_IP = expoHost ? `http://${expoHost}:5000` : 'http://192.168.1.104:5000';
+const LAN_IP = expoHost ? `http://${expoHost}:3000` : 'http://192.168.1.104:3000';
 
 const defaultByPlatform = Platform.select({
   android: LAN_IP,
-  ios: 'http://localhost:5000',
-  default: 'http://localhost:5000',
+  ios: 'http://localhost:3000',
+  default: 'http://localhost:3000',
 });
 
 export const API_BASE_URL =

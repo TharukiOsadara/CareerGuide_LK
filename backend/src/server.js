@@ -1,9 +1,10 @@
 const { PORT, NODE_ENV } = require('./config/env');
 const express = require('express');
 const cors = require('cors');
+const studentRoutes = require('./routes/studentRoutes');
 const parentRoutes = require('./routes/parent.routes');
 const counsellorRoutes = require('./routes/counsellor.routes');
-const { pool } = require('./config/db');
+const pool = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courses');
@@ -15,7 +16,7 @@ const settingsRoutes = require('./routes/settings');
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
 app.get('/', (req, res) => res.json({ message: 'CareerGuide LK API is running', env: NODE_ENV }));
@@ -28,6 +29,8 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ status: 'unhealthy', database: 'disconnected', error: error.message });
   }
 });
+
+app.use('/api', studentRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);

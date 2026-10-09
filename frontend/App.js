@@ -3,6 +3,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 
+// Feature Student Screens
+import HomeScreen from './src/Screens/HomeScreen';
+import StudentProfileScreen from './src/Screens/StudentProfileScreen';
+import AcademicProfileScreen from './src/Screens/AcademicProfileScreen';
+import StudentCourses from './src/Screens/StudentCourses';
+import CourseFilterScreen from './src/Screens/CourseFilterScreen';
+import CourseDetailsScreen from './src/Screens/CourseDetailsScreen';
+import CounsellorInquiryScreen from './src/Screens/CounsellorInquiryScreen';
+import StudentCareerPathScreen from './src/Screens/StudentCareerPathScreen';
+
+// Auth / Onboarding
 import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
 import Onboarding from './src/Screens/Onboarding/Onboarding';
 import About from './src/Screens/Onboarding/About';
@@ -27,7 +38,10 @@ import AdminSettings from './src/Screens/Admin/AdminSettings';
 import AdminProfile from './src/Screens/Admin/AdminProfile';
 import AdminNotifications from './src/Screens/Admin/AdminNotifications';
 import AdminStatDetail from './src/Screens/Admin/AdminStatDetail';
+// Parent area
 import ParentPortal from './src/Screens/Parent/ParentPortal';
+
+// Counsellor Area
 import CounsellorPortal from './src/Screens/CounsellorPortal';
 import CounsellorStudentProfile from './src/Screens/CounsellorStudentProfile';
 import CounsellorGuidanceForm from './src/Screens/CounsellorGuidanceForm';
@@ -42,7 +56,9 @@ export default function App() {
       <AuthProvider>
         <NavigationContainer>
           <Stack.Navigator initialRouteName={counsellorDevPortal ? 'CounsellorPortal' : 'Loading'} screenOptions={{ headerShown: false }}>
+            {/* Onboarding + Auth */}
             <Stack.Screen name="Loading" component={LoadingScreen} />
+            <Stack.Screen name="Splash" component={LoadingScreen} />
             <Stack.Screen name="Onboarding" component={Onboarding} />
             <Stack.Screen name="About" component={About} />
             <Stack.Screen name="CourseDatabase" component={CourseDatabase} />
@@ -55,10 +71,19 @@ export default function App() {
             <Stack.Screen name="ResetPassword" component={ResetPassword} />
             <Stack.Screen name="AdminPortal" component={AdminPortal} />
             <Stack.Screen name="AdminCreateAccount" component={AdminCreateAccount} />
+            {/* Student Feature Screens */}
+            <Stack.Screen name="Main" component={HomeScreen} />
+            <Stack.Screen name="StudentProfile" component={StudentProfileScreen} />
+            <Stack.Screen name="AcademicProfile" component={AcademicProfileScreen} />
+            <Stack.Screen name="StudentCourses" component={StudentCourses} />
+            <Stack.Screen name="CourseFilter" component={CourseFilterScreen} />
+            <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
+            <Stack.Screen name="CounsellorInquiry" component={CounsellorInquiryScreen} />
+            <Stack.Screen name="StudentCareerPath" component={StudentCareerPathScreen} />
             <Stack.Screen name="StudentHome" component={StudentHome} />
-            <Stack.Screen name="StudentCourses" component={StudentCoursesDetail} />
             <Stack.Screen name="StudentCoursesDetail" component={StudentCoursesDetail} />
             <Stack.Screen name="StudentNotifications" component={StudentNotifications} />
+            {/* Admin Area */}
             <Stack.Screen name="AdminOverview" component={AdminOverview} />
             <Stack.Screen name="AdminCourses" component={AdminCourses} />
             <Stack.Screen name="AdminZScores" component={AdminZScores} />
@@ -67,6 +92,7 @@ export default function App() {
             <Stack.Screen name="AdminProfile" component={AdminProfile} />
             <Stack.Screen name="AdminNotifications" component={AdminNotifications} />
             <Stack.Screen name="AdminStatDetail" component={AdminStatDetail} />
+            {/* Parent Area */}
             <Stack.Screen name="ParentPortal" component={ParentPortal} />
             <Stack.Screen name="CounsellorPortal" component={CounsellorPortal} />
             <Stack.Screen name="CounsellorStudentProfile" component={CounsellorStudentProfile} />
