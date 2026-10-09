@@ -6,12 +6,16 @@ import { styles } from '../counsellor/styles';
 import { StatusChip } from './CounsellorPortal';
 
 export default function CounsellorStudentProfile({ route, navigation }) {
-  const { studentId } = route.params;
+  const { studentId } = route?.params || {};
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    if (!studentId) {
+      setError('No student was selected.');
+      return;
+    }
     try {
       setProfile(await counsellorApi.student(studentId));
     } catch (loadError) {
@@ -20,6 +24,17 @@ export default function CounsellorStudentProfile({ route, navigation }) {
   }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
+
+  if (!studentId) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Text style={styles.error}>No student was selected.</Text>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Text style={{ color: colors.blue }}>Back</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   if (!profile) {
     return <SafeAreaView style={styles.screen}><ActivityIndicator style={{ marginTop: 40 }} color={colors.blue} /><Text style={styles.error}>{error}</Text></SafeAreaView>;
