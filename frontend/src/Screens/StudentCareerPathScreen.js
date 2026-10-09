@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import ProfileHeader from '../components/ProfileHeader';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -13,16 +13,15 @@ export default function StudentCareerPathScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.back}>
-          <Ionicons color={TEXT} name="chevron-back" size={24} />
-        </Pressable>
-        <Text style={styles.title}>Your Career Matches</Text>
-        <View style={styles.back} />
-      </View>
+      <ProfileHeader
+        title="Your Career Matches"
+        onBack={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main'))}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Career &amp; Course Matches</Text>
-        <Text style={styles.subtitle}>Your academic profile has been saved successfully.</Text>
+        <Text style={styles.subtitle}>
+          {route?.params?.subtitle || 'Your academic profile has been saved successfully.'}
+        </Text>
         {careers.length ? careers.map((career, index) => (
           <View key={career.title || index} style={styles.card}>
             <View style={styles.rank}><Text style={styles.rankText}>{index + 1}</Text></View>
@@ -35,6 +34,23 @@ export default function StudentCareerPathScreen({ navigation, route }) {
         )) : (
           <View style={styles.card}><Text style={styles.note}>Matches will appear here once course data is available.</Text></View>
         )}
+
+        {route?.params?.fromQuiz ? (
+          <>
+            <Text style={styles.disclaimer}>
+              These results are guidance to support your decision, not a final answer. Talk them through with your counsellor.
+            </Text>
+            <Pressable onPress={() => navigation.navigate('StudentCourses')} style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>Explore matching courses</Text>
+            </Pressable>
+            <Pressable onPress={() => navigation.replace('AptitudeQuiz')} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Retake the test</Text>
+            </Pressable>
+            <Pressable onPress={() => navigation.navigate('Main')} style={styles.linkButton}>
+              <Text style={styles.linkText}>Back to home</Text>
+            </Pressable>
+          </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -55,4 +71,11 @@ const styles = StyleSheet.create({
   careerTitle: { color: TEXT, fontSize: 16, fontWeight: '800' },
   match: { color: BLUE, fontSize: 13, fontWeight: '700', marginTop: 4 },
   note: { color: MUTED, fontSize: 12, lineHeight: 18, marginTop: 4 },
+  disclaimer: { color: MUTED, fontSize: 12, lineHeight: 18, marginTop: 4, marginBottom: 6 },
+  primaryButton: { alignItems: 'center', backgroundColor: BLUE, borderRadius: 11, marginTop: 12, paddingVertical: 14 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  secondaryButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: BLUE, borderRadius: 11, borderWidth: 1.5, marginTop: 10, paddingVertical: 13 },
+  secondaryButtonText: { color: BLUE, fontSize: 14, fontWeight: '800' },
+  linkButton: { alignItems: 'center', marginTop: 14, paddingVertical: 6 },
+  linkText: { color: MUTED, fontSize: 13, fontWeight: '700' },
 });

@@ -35,5 +35,6 @@ export const ROLES = ['student', 'parent', 'counsellor'];
 export const ROLES_WITH_ADMIN = ['student', 'parent', 'counsellor', 'admin'];
 
 // Dashboard each role lands on after signing in.
-const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'StudentHome', counsellor: 'CounsellorPortal' };
-export const homeRouteFor = (role) => HOME_ROUTE[role] || 'StudentHome';
+// Students land on the 4-tab home (route "Main").
+const HOME_ROUTE = { admin: 'AdminOverview', parent: 'ParentPortal', student: 'Main', counsellor: 'CounsellorPortal' };
+export const homeRouteFor = (role) => HOME_ROUTE[role] || 'Main';

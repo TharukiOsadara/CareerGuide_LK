@@ -15,6 +15,9 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../components/BottomNavigation';
+import ProfileHeader from '../components/ProfileHeader';
+import DeleteAccount from '../components/DeleteAccount';
+import { useAuth } from '../context/AuthContext';
 import {
   deleteAcademicProfile,
   deleteUserProfile,
@@ -174,6 +177,12 @@ export default function StudentProfileScreen({ navigation, route }) {
         : [...current, detail]
     ));
   };
+  const { signOut } = useAuth();
+  const handleSignOut = async () => {
+    try { await signOut(); } catch {}
+    navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
+  };
+
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -251,26 +260,7 @@ export default function StudentProfileScreen({ navigation, route }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F7FC' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#F7F9FC" />
 
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={goBackToPreviousScreen}
-          style={styles.backButton}
-        >
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Student Profile</Text>
-        <Pressable
-          accessibilityLabel="Follow up with student"
-          accessibilityRole="button"
-          style={styles.followButton}
-        >
-          <Text style={styles.followIcon}>⚑</Text>
-          <Text style={styles.followText}>Follow-up</Text>
-        </Pressable>
-      </View>
+      <ProfileHeader title="Student Profile" onBack={goBackToPreviousScreen} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -434,9 +424,10 @@ export default function StudentProfileScreen({ navigation, route }) {
           <Text style={styles.primaryButtonText}>Tap to send inquiry to counsellor</Text>
           <Text style={styles.primaryButtonArrow}>→</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton}>
+        <Pressable onPress={handleSignOut} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Sign Out</Text>
         </Pressable>
+        <DeleteAccount onDeleted={() => navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })} />
       </ScrollView>
 
       <Modal

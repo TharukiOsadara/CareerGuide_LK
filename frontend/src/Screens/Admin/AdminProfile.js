@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
 import DeleteAccount from '../../components/DeleteAccount';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import ProfileHeader from '../../components/ProfileHeader';
 import Icon, { IconText } from '../../components/Icon';
 
 function formatDate(iso) {
@@ -56,11 +56,7 @@ export default function AdminProfile({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
-      <View style={styles.header}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={styles.hTitle}>Admin Profile</Text>
-        <View style={{ width: BACK_WIDTH }} />
-      </View>
+      <ProfileHeader title="Admin Profile" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator>
         {error ? <View style={styles.errBanner}><Text style={styles.errText}>{error}</Text></View> : null}

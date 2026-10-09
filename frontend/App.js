@@ -16,6 +16,7 @@ import CourseFilterScreen from './src/Screens/CourseFilterScreen';
 import CourseDetailsScreen from './src/Screens/CourseDetailsScreen';
 import CounsellorInquiryScreen from './src/Screens/CounsellorInquiryScreen';
 import StudentCareerPathScreen from './src/Screens/StudentCareerPathScreen';
+import AptitudeQuiz from './src/Screens/Student/AptitudeQuiz';
 
 // Auth / onboarding
 import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
@@ -32,7 +33,6 @@ import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
 import ResetPassword from './src/Screens/Pwd/ResetPassword';
 import AdminPortal from './src/Screens/Admin/AdminPortal';
 import AdminCreateAccount from './src/Screens/Admin/AdminCreateAccount';
-import StudentHome from './src/Screens/Student/StudentHome';
 import StudentCoursesDetail from './src/Screens/Student/StudentCoursesdetail';
 import StudentNotifications from './src/Screens/Student/StudentNotifications';
 import AdminOverview from './src/Screens/Admin/AdminOverview';
@@ -88,7 +88,7 @@ export default function App() {
             <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
             <Stack.Screen name="CounsellorInquiry" component={CounsellorInquiryScreen} />
             <Stack.Screen name="StudentCareerPath" component={StudentCareerPathScreen} />
-            <Stack.Screen name="StudentHome" component={StudentHome} />
+            <Stack.Screen name="AptitudeQuiz" component={AptitudeQuiz} />
             <Stack.Screen name="StudentCoursesDetail" component={StudentCoursesDetail} />
             <Stack.Screen name="StudentNotifications" component={StudentNotifications} />
             {/* Admin Area */}

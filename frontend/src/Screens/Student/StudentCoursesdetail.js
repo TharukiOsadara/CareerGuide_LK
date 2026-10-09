@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import StudentHeader from '../../components/StudentHeader';
-import StudentNav from '../../components/StudentNav';
+import BottomNavigation from '../../components/BottomNavigation';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
@@ -151,7 +151,7 @@ export default function StudentCourses({ navigation, route }) {
         )}
       </ScrollView>
 
-      <StudentNav active="StudentCourses" navigation={navigation} />
+      <BottomNavigation activeRoute="StudentCourses" navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.white },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 14, paddingTop: 10, paddingBottom: 24 },
+  scrollContent: { padding: 14, paddingTop: 10, paddingBottom: 100 }, // room for the bottom tab bar
 
   banner: { backgroundColor: colors.redLight, borderRadius: 10, padding: 10, marginBottom: 12 },
   bannerText: { color: colors.redStrong, fontSize: 11.5 },
