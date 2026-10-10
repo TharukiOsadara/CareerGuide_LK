@@ -33,6 +33,7 @@ exports.getStudentProfile = async (req, res) => {
       `SELECT u.id, u.full_name, u.email, u.al_stream, u.status,
               sp.grade,
               sp.profile_picture AS "profilePicture",
+              ap.full_name AS "academicFullName",
               ap.subject_stream AS "subjectStream",
               ap.district,
               ap.z_score AS "zScore",
@@ -60,6 +61,7 @@ exports.getStudentProfile = async (req, res) => {
       },
       academicProfile: userResult.rows[0].subjectStream
         ? {
+            fullName: userResult.rows[0].academicFullName,
             subjectStream: userResult.rows[0].subjectStream,
             district: userResult.rows[0].district,
             zScore: userResult.rows[0].zScore,
@@ -139,6 +141,12 @@ exports.saveAcademicProfile = async (req, res) => {
       'UPDATE users SET z_score = $1, al_stream = $2 WHERE id = $3',
       [Number(zScore), subjectStream.trim(), userId]
     );
+    await client.query(
+      `UPDATE student_profiles
+       SET full_name = $1, updated_at = NOW()
+       WHERE user_id = $2`,
+      [userResult.rows[0].full_name, userId]
+    );
     await client.query('COMMIT');
     return res.json({
       success: true,
@@ -191,10 +199,18 @@ exports.deleteAcademicProfile = async (req, res) => {
       client = await db.connect();
       await client.query('BEGIN');
       const result = await client.query(
-        'DELETE FROM academic_profiles WHERE user_id = $1 RETURNING user_id',
+        `DELETE FROM academic_profiles
+         WHERE user_id = $1
+           AND EXISTS (SELECT 1 FROM users WHERE id = $1 AND role = 'student')
+         RETURNING user_id`,
         [userId]
       );
-      await client.query('UPDATE users SET z_score = NULL WHERE id = $1', [userId]);
+      await client.query(
+        `UPDATE users
+         SET z_score = NULL, al_stream = NULL
+         WHERE id = $1 AND role = 'student'`,
+        [userId]
+      );
       await client.query('COMMIT');
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Academic profile not found.' });
@@ -462,11 +478,17 @@ exports.sendInquiry = async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO inquiries (user_id, counsellor_id, course_title, subject, message)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO inquiries
+         (user_id, student_full_name, counsellor_id, course_title, subject, message)
+       SELECT u.id, u.full_name, $2, $3, $4, $5
+       FROM users u
+       WHERE u.id = $1 AND u.role = 'student'
        RETURNING *`,
       [userId, assignedCounsellorId, courseTitle.trim(), subject.trim(), message.trim()]
     );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
     return res.status(201).json({
       success: true,
       message: 'Inquiry sent successfully.',

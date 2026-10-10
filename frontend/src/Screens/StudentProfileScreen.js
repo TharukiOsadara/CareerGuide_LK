@@ -70,6 +70,7 @@ function normalizeAcademicProfile(value) {
   }
 
   return {
+    fullName: value.fullName ?? value.full_name,
     subjectStream: value.subjectStream ?? value.subject_stream,
     district: value.district,
     zScore: value.zScore ?? value.z_score,
