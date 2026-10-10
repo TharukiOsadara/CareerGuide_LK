@@ -1,3 +1,4 @@
+const { userColumns } = require('../utils/userColumns');
 const { verifyToken } = require('../utils/token');
 const { query } = require('../config/db');
 
@@ -9,7 +10,7 @@ async function authenticate(req, res, next) {
 
   try {
     const payload = verifyToken(token);
-    const { rows } = await query('SELECT * FROM users WHERE id = $1', [payload.id]);
+    const { rows } = await query(`SELECT ${await userColumns()} FROM users WHERE id = $1`, [payload.id]);
     if (!rows.length) return res.status(401).json({ message: 'Account no longer exists.' });
 
     const user = rows[0];

@@ -21,7 +21,9 @@
     },
     "plugins": [
       "expo-status-bar",
-      "expo-sharing"
-    ]
+      "expo-sharing",
+      "expo-web-browser"
+    ],
+    "scheme": "careerguidelk"
   }
 }

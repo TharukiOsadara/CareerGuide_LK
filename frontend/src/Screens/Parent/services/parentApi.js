@@ -1,4 +1,5 @@
-import { API_URL } from '../devConfig';
+// Same server address as the rest of the app (src/config.js), so parent screens can't drift.
+import { API_BASE_URL as API_URL } from '../../../config';
 import { tokenStore } from '../../../api/client';
 
 const TIMEOUT_MS = 20000;
@@ -22,6 +23,9 @@ async function request(method, path, body) {
       method,
       headers: {
         'Content-Type': 'application/json',
+        // Always fetch fresh data (no cached or 304 replies with an empty body).
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -39,7 +43,12 @@ async function request(method, path, body) {
     clearTimeout(timer);
   }
 
-  const data = await response.json().catch(() => null);
+  const text = await response.text().catch(() => '');
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (response.ok && data === null && method === 'GET') {
+    throw new ApiError('The server sent an empty reply. Please try again.', response.status, 'EMPTY');
+  }
   if (!response.ok) {
     throw new ApiError(data?.error || 'Something went wrong. Please try again.', response.status, data?.code);
   }

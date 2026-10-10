@@ -12,9 +12,13 @@ const initials = (name) =>
 async function run() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   const parentSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'parent_module.sql'), 'utf8');
+  const counsellorSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'counsellor_module.sql'), 'utf8');
+  const studentSchema = fs.readFileSync(path.join(__dirname, '..', 'db', 'student_module.sql'), 'utf8');
   console.log('Applying schema...');
   await pool.query(schema);
   await pool.query(parentSchema);
+  await pool.query(counsellorSchema);
+  await pool.query(studentSchema);
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS admin_rejected BOOLEAN NOT NULL DEFAULT FALSE
@@ -36,6 +40,18 @@ async function run() {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS reset_attempts INTEGER NOT NULL DEFAULT 0
+  `);
+  // Google sign-in data, and whether a Google user has finished their profile.
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+    ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS google_given_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS google_family_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS google_locale VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS google_linked_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS google_last_login_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN NOT NULL DEFAULT TRUE
   `);
 
   // Seed the primary (super) admin.
@@ -92,6 +108,82 @@ async function run() {
     }
     console.log(`Seeded ${courses.length} courses.`);
   }
+
+  const signupCourses = [
+    ['B.Sc. (Hons) Software Engineering', 'CareerGuide Catalogue', 'Physical Science (Maths)'],
+    ['B.Sc. (Hons) Biomedical Science', 'CareerGuide Catalogue', 'Biological Science'],
+    ['BSc (Hons) Data Science & AI', 'CareerGuide Catalogue', 'Physical Science (Maths)'],
+    ['B.Sc. (Hons) Information Technology', 'CareerGuide Catalogue', 'Technology'],
+    ['Bachelor of Information Technology', 'CareerGuide Catalogue', 'Technology'],
+    ['MBBS (Medicine & Surgery)', 'CareerGuide Catalogue', 'Biological Science'],
+    ['(Hons) Business Management', 'CareerGuide Catalogue', 'Commerce'],
+    ['B.B.A. (Hons) Marketing', 'CareerGuide Catalogue', 'Commerce'],
+    ['B.Com (Hons) Accounting & Finance', 'CareerGuide Catalogue', 'Commerce'],
+    ['B.A. (Hons) International Relations', 'CareerGuide Catalogue', 'Arts'],
+    ['B.Sc. (Hons) Mechanical Engineering', 'CareerGuide Catalogue', 'Physical Science (Maths)'],
+  ];
+  for (const [title, institute, stream] of signupCourses) {
+    await pool.query(
+      `INSERT INTO courses_list (title, institute, stream)
+       SELECT $1, $2, $3
+       WHERE NOT EXISTS (SELECT 1 FROM courses_list WHERE lower(title) = lower($1::varchar))`,
+      [title, institute, stream]
+    );
+  }
+
+  // Ensure every catalogue course can be selected by a student. Existing
+  // counsellor choices are preserved; only courses with no active guide are
+  // assigned, distributing them across the active counsellors.
+  await pool.query(`
+    WITH active_counsellors AS (
+      SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 AS position,
+             COUNT(*) OVER () AS total
+      FROM users
+      WHERE role = 'counsellor' AND status = 'active'
+    ),
+    unassigned_courses AS (
+      SELECT c.id, ROW_NUMBER() OVER (ORDER BY c.id) - 1 AS position
+      FROM courses_list c
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM counsellor_courses cc
+        JOIN users u ON u.id = cc.counsellor_id
+        WHERE cc.course_id = c.id
+          AND u.role = 'counsellor'
+          AND u.status = 'active'
+      )
+    )
+    INSERT INTO counsellor_courses (counsellor_id, course_id)
+    SELECT counsellor.id, course.id
+    FROM unassigned_courses course
+    JOIN active_counsellors counsellor
+      ON counsellor.position = MOD(course.position, counsellor.total)
+    ON CONFLICT DO NOTHING
+  `);
+
+  await pool.query(`
+    UPDATE courses_list c
+    SET counsellor_id = (
+      SELECT cc.counsellor_id
+      FROM counsellor_courses cc
+      JOIN users u ON u.id = cc.counsellor_id
+      WHERE cc.course_id = c.id
+        AND u.role = 'counsellor'
+        AND u.status = 'active'
+      ORDER BY cc.created_at, cc.counsellor_id
+      LIMIT 1
+    )
+    WHERE c.counsellor_id IS NULL
+       OR NOT EXISTS (
+         SELECT 1
+         FROM counsellor_courses cc
+         JOIN users u ON u.id = cc.counsellor_id
+         WHERE cc.course_id = c.id
+           AND cc.counsellor_id = c.counsellor_id
+           AND u.role = 'counsellor'
+           AND u.status = 'active'
+       )
+  `);
 
   console.log('Database init complete.');
   await pool.end();

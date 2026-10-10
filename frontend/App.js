@@ -1,9 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider } from './src/context/AuthContext';
 
-// Feature Student Screens
+// Lets the Google sign-in popup hand its result back when running in a browser (no-op on phones).
+WebBrowser.maybeCompleteAuthSession();
+
+// Student feature screens
 import HomeScreen from './src/Screens/HomeScreen';
 import StudentProfileScreen from './src/Screens/StudentProfileScreen';
 import AcademicProfileScreen from './src/Screens/AcademicProfileScreen';
@@ -12,8 +16,9 @@ import CourseFilterScreen from './src/Screens/CourseFilterScreen';
 import CourseDetailsScreen from './src/Screens/CourseDetailsScreen';
 import CounsellorInquiryScreen from './src/Screens/CounsellorInquiryScreen';
 import StudentCareerPathScreen from './src/Screens/StudentCareerPathScreen';
+import AptitudeQuiz from './src/Screens/Student/AptitudeQuiz';
 
-// Auth / Onboarding
+// Auth / onboarding
 import LoadingScreen from './src/Screens/Onboarding/LoadingScreen';
 import Onboarding from './src/Screens/Onboarding/Onboarding';
 import About from './src/Screens/Onboarding/About';
@@ -23,17 +28,13 @@ import JobMarket from './src/Screens/Onboarding/JobMarket';
 import AptitudeInfo from './src/Screens/Onboarding/AptitudeInfo';
 import SignUp from './src/Screens/Auth/SignUp';
 import SignIn from './src/Screens/Auth/SignIn';
+import CompleteProfile from './src/Screens/Auth/CompleteProfile';
 import ForgotPassword from './src/Screens/Pwd/ForgotPassword';
 import ResetPassword from './src/Screens/Pwd/ResetPassword';
 import AdminPortal from './src/Screens/Admin/AdminPortal';
 import AdminCreateAccount from './src/Screens/Admin/AdminCreateAccount';
-
-// Student area
-import StudentHome from './src/Screens/Student/StudentHome';
 import StudentCoursesDetail from './src/Screens/Student/StudentCoursesdetail';
 import StudentNotifications from './src/Screens/Student/StudentNotifications';
-
-// Admin area
 import AdminOverview from './src/Screens/Admin/AdminOverview';
 import AdminCourses from './src/Screens/Admin/AdminCourses';
 import AdminZScores from './src/Screens/Admin/AdminZScores';
@@ -42,18 +43,27 @@ import AdminSettings from './src/Screens/Admin/AdminSettings';
 import AdminProfile from './src/Screens/Admin/AdminProfile';
 import AdminNotifications from './src/Screens/Admin/AdminNotifications';
 import AdminStatDetail from './src/Screens/Admin/AdminStatDetail';
-
+import AdminCounsellors from './src/Screens/Admin/AdminCounsellors';
+import AdminFamilies from './src/Screens/Admin/AdminFamilies';
 // Parent area
 import ParentPortal from './src/Screens/Parent/ParentPortal';
 
+// Counsellor Area
+import CounsellorPortal from './src/Screens/Counsellor/CounsellorPortal';
+import CounsellorStudentProfile from './src/Screens/Counsellor/CounsellorStudentProfile';
+import CounsellorGuidanceForm from './src/Screens/Counsellor/CounsellorGuidanceForm';
+import CounsellorSettings from './src/Screens/Counsellor/CounsellorSettings';
+import CounsellorInquiries from './src/Screens/Counsellor/CounsellorInquiries';
+
 const Stack = createNativeStackNavigator();
+const counsellorDevPortal = process.env.EXPO_PUBLIC_ENABLE_COUNSELLOR_DEV_PORTAL === 'true';
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="Loading" screenOptions={{ headerShown: false }}>
+          <Stack.Navigator initialRouteName={counsellorDevPortal ? 'CounsellorPortal' : 'Loading'} screenOptions={{ headerShown: false }}>
             {/* Onboarding + Auth */}
             <Stack.Screen name="Loading" component={LoadingScreen} />
             <Stack.Screen name="Splash" component={LoadingScreen} />
@@ -62,18 +72,14 @@ export default function App() {
             <Stack.Screen name="CourseDatabase" component={CourseDatabase} />
             <Stack.Screen name="JobMarket" component={JobMarket} />
             <Stack.Screen name="AptitudeInfo" component={AptitudeInfo} />
-            <Stack.Screen
-              name="PrivacyConsent"
-              component={PrivacyConsent}
-              options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}
-            />
+            <Stack.Screen name="PrivacyConsent" component={PrivacyConsent} options={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="SignUp" component={SignUp} />
             <Stack.Screen name="SignIn" component={SignIn} />
+            <Stack.Screen name="CompleteProfile" component={CompleteProfile} />
             <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
             <Stack.Screen name="ResetPassword" component={ResetPassword} />
             <Stack.Screen name="AdminPortal" component={AdminPortal} />
             <Stack.Screen name="AdminCreateAccount" component={AdminCreateAccount} />
-
             {/* Student Feature Screens */}
             <Stack.Screen name="Main" component={HomeScreen} />
             <Stack.Screen name="StudentProfile" component={StudentProfileScreen} />
@@ -83,10 +89,9 @@ export default function App() {
             <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
             <Stack.Screen name="CounsellorInquiry" component={CounsellorInquiryScreen} />
             <Stack.Screen name="StudentCareerPath" component={StudentCareerPathScreen} />
-            <Stack.Screen name="StudentHome" component={StudentHome} />
+            <Stack.Screen name="AptitudeQuiz" component={AptitudeQuiz} />
             <Stack.Screen name="StudentCoursesDetail" component={StudentCoursesDetail} />
             <Stack.Screen name="StudentNotifications" component={StudentNotifications} />
-
             {/* Admin Area */}
             <Stack.Screen name="AdminOverview" component={AdminOverview} />
             <Stack.Screen name="AdminCourses" component={AdminCourses} />
@@ -96,9 +101,16 @@ export default function App() {
             <Stack.Screen name="AdminProfile" component={AdminProfile} />
             <Stack.Screen name="AdminNotifications" component={AdminNotifications} />
             <Stack.Screen name="AdminStatDetail" component={AdminStatDetail} />
-
+            <Stack.Screen name="AdminCounsellors" component={AdminCounsellors} />
+            <Stack.Screen name="AdminFamilies" component={AdminFamilies} />
             {/* Parent Area */}
             <Stack.Screen name="ParentPortal" component={ParentPortal} />
+            {/* Counsellor Area */}
+            <Stack.Screen name="CounsellorPortal" component={CounsellorPortal} />
+            <Stack.Screen name="CounsellorStudentProfile" component={CounsellorStudentProfile} />
+            <Stack.Screen name="CounsellorGuidanceForm" component={CounsellorGuidanceForm} />
+            <Stack.Screen name="CounsellorSettings" component={CounsellorSettings} />
+            <Stack.Screen name="CounsellorInquiries" component={CounsellorInquiries} />
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>

@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../../Components/StudentHeader';
-import StudentNav from '../../Components/StudentNav';
+import StudentHeader from '../../components/StudentHeader';
+import BottomNavigation from '../../components/BottomNavigation';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../Components/Icon';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function StudentCourses({ navigation, route }) {
   const { user } = useAuth();
@@ -69,7 +69,7 @@ export default function StudentCourses({ navigation, route }) {
           <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search courses…"
+            placeholder="Search coursesâ€¦"
             placeholderTextColor={colors.slate400}
             value={query}
             onChangeText={setQuery}
@@ -124,7 +124,7 @@ export default function StudentCourses({ navigation, route }) {
                 </View>
                 <View style={styles.metaRow}>
                   <Meta label="Tuition" value={course.tuitionFee} />
-                  <Meta label="NVQ Level" value={course.nvqLevel != null ? `${course.nvqLevel}` : '—'} />
+                  <Meta label="NVQ Level" value={course.nvqLevel != null ? `${course.nvqLevel}` : 'â€”'} />
                 </View>
 
                 {open && (
@@ -151,7 +151,7 @@ export default function StudentCourses({ navigation, route }) {
         )}
       </ScrollView>
 
-      <StudentNav active="StudentCourses" navigation={navigation} />
+      <BottomNavigation activeRoute="StudentCourses" navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -173,13 +173,13 @@ function Meta({ label, value }) {
   return (
     <View style={styles.meta}>
       <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value || '—'}</Text>
+      <Text style={styles.metaValue}>{value || 'â€”'}</Text>
     </View>
   );
 }
 
 function fmtZ(z) {
-  if (z == null) return '—';
+  if (z == null) return 'â€”';
   const n = Number(z);
   return Number.isNaN(n) ? `${z}` : n.toFixed(4);
 }
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.white },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 14, paddingTop: 10, paddingBottom: 24 },
+  scrollContent: { padding: 14, paddingTop: 10, paddingBottom: 100 }, // room for the bottom tab bar
 
   banner: { backgroundColor: colors.redLight, borderRadius: 10, padding: 10, marginBottom: 12 },
   bannerText: { color: colors.redStrong, fontSize: 11.5 },

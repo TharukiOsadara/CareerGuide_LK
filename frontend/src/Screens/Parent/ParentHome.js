@@ -32,7 +32,7 @@ export default function ParentHome({ active, goToTab }) {
 
   if (loading) return <Screen><LoadingState message="Loading your child's summary…" /></Screen>;
   if (error && !data) return <Screen><ErrorState error={error} onRetry={reload} /></Screen>;
-  if (!data) return <Screen />;
+  if (!data) return <Screen><LoadingState /></Screen>;
 
   const { child, assessment, topMatches, coursesMatched, counsellor, inquiries, privacy, monitoringOff } = data;
   const name = firstName(child.fullName);
@@ -41,6 +41,7 @@ export default function ParentHome({ active, goToTab }) {
   return (
     <Screen>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blue]} />}
       >
