@@ -3,26 +3,28 @@ import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../Components/Brand';
-import RoleTabs from '../../Components/RoleTabs';
-import Dropdown from '../../Components/Dropdown';
-import PasswordStrength from '../../Components/PasswordStrength';
+import Brand from '../../components/Brand';
+import RoleTabs from '../../components/RoleTabs';
+import Dropdown from '../../components/Dropdown';
+import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { AL_STREAMS, ROLES, homeRouteFor } from '../../config';
 import { useAuth } from '../../context/AuthContext';
-import { getGoogleIdToken } from '../../auth/googleSignIn';
 import {
   collectErrors, hasErrors, required, validateEmail, validateName, validateNewPassword, validateNumber,
 } from '../../utils/validation';
 import { colors } from '../../styles/colors';
-import GoogleLogo from '../../Components/GoogleLogo';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
-import FieldError, { errorBorder } from '../../Components/FieldError';
+import GoogleLogo from '../../components/GoogleLogo';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
+import CoursePicker from '../../components/CoursePicker';
 
 export default function SignUp({ navigation }) {
   const { googleAuth } = useAuth();
   const [role, setRole] = useState('student');
+  const [counsellorCourses, setCounsellorCourses] = useState([]);
+  const [studentCourse, setStudentCourse] = useState([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [stream, setStream] = useState('');
@@ -48,10 +50,10 @@ export default function SignUp({ navigation }) {
     if (!agree) return setError('Please accept the privacy agreement to continue.');
     setGoogleBusy(true);
     try {
-      const idToken = await getGoogleIdToken();
-      if (!idToken) return; // cancelled
-      const user = await googleAuth({ idToken, role });
-      navigation.reset({ index: 0, routes: [{ name: homeRouteFor(user.role), params: { welcome: true } }] });
+      const user = await googleAuth({ role });
+      if (!user) return; // closed the Google page
+      const next = user.profileCompleted ? homeRouteFor(user.role) : 'CompleteProfile';
+      navigation.reset({ index: 0, routes: [{ name: next, params: { welcome: true } }] });
     } catch (e) {
       setError(e.message || 'Google sign-up failed.');
     } finally {
@@ -78,6 +80,8 @@ export default function SignUp({ navigation }) {
           || (c2 === c1 ? 'Child 2 email must be different from Child 1.' : ''))
         : '',
       password: validateNewPassword(password),
+      counsellorCourses: role === 'counsellor' && counsellorCourses.length === 0
+        ? 'Choose at least one course you guide.' : '',
       agree: agree ? '' : 'Please accept the privacy agreement to continue.',
     });
     setErrors(errs);
@@ -93,6 +97,8 @@ export default function SignUp({ navigation }) {
           zScore: role === 'student' && zScore ? Number(zScore) : null,
           childEmail1: role === 'parent' ? childEmail1.trim() : null,
           childEmail2: role === 'parent' ? childEmail2.trim() : null,
+          counsellorCourseIds: role === 'counsellor' ? counsellorCourses : undefined,
+          courseId: role === 'student' && studentCourse[0] ? studentCourse[0] : undefined,
         },
       });
       navigation.navigate('SignIn', { email: email.trim(), role, justSignedUp: true });
@@ -168,6 +174,36 @@ export default function SignUp({ navigation }) {
             </>
           )}
 
+          {role === 'counsellor' && (
+            <>
+              <Text style={styles.label}>Courses</Text>
+              <Text style={styles.helper}>
+                Choose the courses you guide. Students who pick one of these courses can be matched with you.
+              </Text>
+              <View style={{ marginTop: 8 }}>
+                <CoursePicker
+                  value={counsellorCourses}
+                  onChange={(ids) => { setCounsellorCourses(ids); setErrors((e) => ({ ...e, counsellorCourses: '' })); }}
+                  error={errors.counsellorCourses}
+                />
+              </View>
+            </>
+          )}
+
+          {role === 'student' && (
+            <>
+              <Text style={styles.label}>Preferred Course (optional)</Text>
+              <Text style={styles.helper}>Choose one course to help match you with a counsellor.</Text>
+              <View style={{ marginTop: 8 }}>
+                <CoursePicker
+                  value={studentCourse}
+                  onChange={(ids) => setStudentCourse(ids.slice(-1))}
+                  maxHeight={220}
+                />
+              </View>
+            </>
+          )}
+
           <Text style={styles.label}>Create Password</Text>
           <View style={[styles.inputBox, !!errors.password && errorBorder]}>
             <Icon name="lock" size={17} color={colors.blue} style={styles.inputIcon} />
@@ -190,7 +226,7 @@ export default function SignUp({ navigation }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Creating…' : 'Create Free Account'}</Text>
+            <Text style={styles.primaryText}>{busy ? 'Creatingâ€¦' : 'Create Free Account'}</Text>
             {!busy && <Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />}
           </Pressable>
 
@@ -198,7 +234,7 @@ export default function SignUp({ navigation }) {
 
           <Pressable disabled={googleBusy || busy} onPress={continueWithGoogle} style={({ pressed }) => [styles.googleBtn, (pressed || googleBusy) && styles.pressed]}>
             <GoogleLogo size={18} style={styles.googleG} />
-            <Text style={styles.googleText}>{googleBusy ? 'Connecting to Google…' : 'Sign up with Google'}</Text>
+            <Text style={styles.googleText}>{googleBusy ? 'Connecting to Googleâ€¦' : 'Sign up with Google'}</Text>
           </Pressable>
         </View>
 

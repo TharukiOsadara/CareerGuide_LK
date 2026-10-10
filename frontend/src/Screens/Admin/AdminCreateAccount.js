@@ -3,13 +3,13 @@ import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Field from '../../Components/Field';
-import PasswordStrength from '../../Components/PasswordStrength';
+import Field from '../../components/Field';
+import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
 import { collectErrors, hasErrors, validateEmail, validateName, validateNewPassword } from '../../utils/validation';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
 
 export default function AdminCreateAccount({ navigation }) {
   const [fullName, setFullName] = useState('');
@@ -83,7 +83,7 @@ export default function AdminCreateAccount({ navigation }) {
           <PasswordStrength value={password} />
 
           <Pressable disabled={submitting} onPress={submit} style={({ pressed }) => [styles.submitBtn, (pressed || submitting) && styles.pressed]}>
-            <Text style={styles.submitText}>{submitting ? 'Submitting…' : 'Request Admin Account'}</Text>
+            <Text style={styles.submitText}>{submitting ? 'Submittingâ€¦' : 'Request Admin Account'}</Text>
           </Pressable>
         </View>
 

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/colors';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon from '../../Components/Icon';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon from '../../components/Icon';
 
 // Public "Job Market Indicators" page opened from the onboarding Core Utilities card.
 // Figures are indicative content kept here in one place; swap INSIGHTS for an API

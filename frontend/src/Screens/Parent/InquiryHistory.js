@@ -54,6 +54,7 @@ export default function InquiryHistory({ navigation }) {
         })}
       </View>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blue]} />}
       >

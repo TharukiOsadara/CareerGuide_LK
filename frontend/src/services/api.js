@@ -1,14 +1,18 @@
-const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-const API_BASE_URL = configuredApiUrl.replace(/\/+$/, '').endsWith('/api')
-  ? configuredApiUrl.replace(/\/+$/, '')
-  : `${configuredApiUrl.replace(/\/+$/, '')}/api`;
+import { API_BASE_URL as SERVER_URL } from '../config';
+import { tokenStore } from '../api/client';
+
+// Student feature endpoints live under /api/student on the same server as the rest of the app.
+const API_BASE_URL = `${SERVER_URL}/api/student`;
 
 async function request(path, options = {}) {
   try {
+    // Send the login token so the backend acts as the signed-in student.
+    const token = await tokenStore.get();
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
     });
@@ -105,4 +109,28 @@ export async function markNotificationsRead(notificationIds, userId = 42) {
     method: 'PUT',
     body: JSON.stringify({ userId, notificationIds }),
   });
+}
+
+// ---- My counsellor and their finalised guidance (signed-in students) ----
+export async function getMyGuidance() {
+  return request('/my-guidance');
+}
+
+// ---- Course choice & matched counsellor (signed-in students) ----
+export async function getCourseSelection() {
+  const payload = await request('/course-selection');
+  return payload?.selection || null;
+}
+
+export async function chooseCourse(courseId) {
+  return request('/course-selection', { method: 'POST', body: JSON.stringify({ courseId }) });
+}
+
+export async function clearCourseSelection() {
+  return request('/course-selection', { method: 'DELETE' });
+}
+
+// ---- Aptitude test result (shown to the student's parents and matched counsellor) ----
+export async function saveAptitudeResults({ stream, scores, matches }) {
+  return request('/aptitude-results', { method: 'POST', body: JSON.stringify({ stream, scores, matches }) });
 }

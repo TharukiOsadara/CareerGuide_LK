@@ -3,13 +3,13 @@ import {
   Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../../Components/AdminHeader';
-import AdminNav from '../../Components/AdminNav';
-import WelcomeToast from '../../Components/WelcomeToast';
+import AdminHeader from '../../components/AdminHeader';
+import AdminNav from '../../components/AdminNav';
+import WelcomeToast from '../../components/WelcomeToast';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../Components/Icon';
+import Icon, { IconText } from '../../components/Icon';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -29,20 +29,23 @@ export default function AdminOverview({ navigation, route }) {
   const [stats, setStats] = useState(null);
   const [courses, setCourses] = useState([]);
   const [users, setUsers] = useState(null);
+  const [summary, setSummary] = useState(null); // counsellors, matches, parent links
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const [s, c, u] = await Promise.allSettled([
+      const [s, c, u, sm] = await Promise.allSettled([
         api('/api/logs/stats'),
         api('/api/courses'),
         api('/api/users'),
+        api('/api/admin/summary'),
       ]);
       if (s.status === 'fulfilled') setStats(s.value);
       if (c.status === 'fulfilled') setCourses(c.value.courses || []);
       if (u.status === 'fulfilled') setUsers(u.value.users || []);
-      const failed = [s, c, u].find((r) => r.status === 'rejected');
+      if (sm.status === 'fulfilled') setSummary(sm.value);
+      const failed = [s, c, u, sm].find((r) => r.status === 'rejected');
       if (failed) setError(failed.reason?.message || 'Some data could not be loaded.');
     } catch (e) {
       setError(e.message || 'Failed to load dashboard.');
@@ -79,7 +82,11 @@ export default function AdminOverview({ navigation, route }) {
     { type: 'courses', icon: 'graduation-cap', tint: colors.blue, bg: colors.blueLight, value: `${courses.length}`, label: 'Total Courses', note: `${courses.length} Programs` },
     { type: 'zscores', icon: 'chart', tint: colors.orange, bg: colors.yellow, value: `${zScoreCount}`, label: 'Z-Score Updates', note: 'Cut-offs recorded' },
     { type: 'unis', icon: 'landmark', tint: colors.teal, bg: colors.mint, value: `${uniCount}`, label: 'Active Unis', note: 'Institutes' },
-    { type: 'users', icon: 'users', tint: colors.blue, bg: colors.blueChip, value: users ? `${users.length}` : '�', label: 'Registered Users', note: `${activeUsers} Active` },
+    { type: 'users', icon: 'users', tint: colors.blue, bg: colors.blueChip, value: users ? `${users.length}` : '—', label: 'Registered Users', note: `${activeUsers} Active` },
+    // These open their own management pages (with full create / edit / delete).
+    { route: 'AdminCounsellors', icon: 'user-cog', tint: colors.teal, bg: colors.mint, value: summary ? `${summary.counsellors}` : '—', label: 'Counsellors', note: summary ? `${summary.coursesWithoutCounsellor} course(s) unguided` : '' },
+    { route: 'AdminCounsellors', params: { tab: 'matches' }, icon: 'target', tint: colors.greenDark, bg: colors.greenPale, value: summary ? `${summary.matchedStudents}` : '—', label: 'Matched Students', note: summary ? `of ${summary.students} students` : '' },
+    { route: 'AdminFamilies', icon: 'users', tint: colors.orange, bg: colors.yellow, value: summary ? `${summary.familyLinks}` : '—', label: 'Parent Links', note: summary ? `${summary.parents} parent account(s)` : '' },
   ];
 
   return (
@@ -123,7 +130,7 @@ export default function AdminOverview({ navigation, route }) {
                 key={s.label}
                 accessibilityRole="button"
                 accessibilityLabel={`${s.label}: ${s.value}. View details`}
-                onPress={() => navigation.navigate('AdminStatDetail', { type: s.type })}
+                onPress={() => (s.route ? navigation.navigate(s.route, s.params) : navigation.navigate('AdminStatDetail', { type: s.type }))}
                 style={({ pressed }) => [styles.statCard, pressed && styles.pressed]}
               >
                 <View style={styles.statTop}>
@@ -150,8 +157,20 @@ export default function AdminOverview({ navigation, route }) {
             onPress={() => navigation.navigate('AdminCourses', { create: true })}
           />
           <ActionCard
+            title="Counsellors & Courses"
+            desc="See which courses each counsellor guides, edit them, and manage which counsellor each student is matched to."
+            cta="Manage Counsellors"
+            onPress={() => navigation.navigate('AdminCounsellors')}
+          />
+          <ActionCard
+            title="Parents & Children"
+            desc="See every parent-child link, add new links, change the relationship or remove a link."
+            cta="Manage Parent Links"
+            onPress={() => navigation.navigate('AdminFamilies')}
+          />
+          <ActionCard
             title="NVQ & Accreditation Mapping"
-            desc="Link course profiles to NVQ Level 1�7 frameworks and TVEC approvals."
+            desc="Link course profiles to NVQ Level 1–7 frameworks and TVEC approvals."
             onPress={() => navigation.navigate('AdminCourses')}
           />
 
@@ -164,7 +183,7 @@ export default function AdminOverview({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.courseName} numberOfLines={1}>{c.degreeName}</Text>
                 <Text style={styles.courseMeta} numberOfLines={1}>
-                  {c.uniName}{c.createdAt ? ` � ${timeAgo(c.createdAt)}` : ''}
+                  {c.uniName}{c.createdAt ? ` · ${timeAgo(c.createdAt)}` : ''}
                 </Text>
               </View>
               <Pressable
@@ -201,7 +220,7 @@ export default function AdminOverview({ navigation, route }) {
   );
 }
 
-function ActionCard({ title, desc, onPress }) {
+function ActionCard({ title, desc, onPress, cta = 'Manage Criteria' }) {
   return (
     <View style={styles.actionCard}>
       <Text style={styles.actionTitle}>{title}</Text>
@@ -211,7 +230,7 @@ function ActionCard({ title, desc, onPress }) {
         onPress={onPress}
         style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
       >
-        <IconText icon="arrow-right" trailing size={14} color={colors.white} textStyle={styles.actionBtnText}>Manage Criteria</IconText>
+        <IconText icon="arrow-right" trailing size={14} color={colors.white} textStyle={styles.actionBtnText}>{cta}</IconText>
       </Pressable>
     </View>
   );

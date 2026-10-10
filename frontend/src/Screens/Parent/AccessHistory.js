@@ -23,6 +23,7 @@ export default function AccessHistory({ navigation }) {
     <View style={styles.screen}>
       {header}
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[colors.blue]} />}
       >

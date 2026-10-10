@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../Components/Brand';
-import PasswordStrength from '../../Components/PasswordStrength';
+import Brand from '../../components/Brand';
+import PasswordStrength from '../../components/PasswordStrength';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
 import { collectErrors, hasErrors, validateCode6, validateNewPassword } from '../../utils/validation';
-import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
-import Icon, { IconText } from '../../Components/Icon';
-import FieldError, { errorBorder } from '../../Components/FieldError';
+import BackButton, { BACK_WIDTH } from '../../components/BackButton';
+import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../components/FieldError';
 
 export default function ResetPassword({ navigation, route }) {
   const { email } = route.params || {};
@@ -101,7 +101,7 @@ export default function ResetPassword({ navigation, route }) {
           </View>
           <FieldError message={errors.code} style={{ alignSelf: 'flex-start' }} />
           <Pressable onPress={resend} disabled={resending || !email} hitSlop={8} style={styles.resend}>
-            <Text style={styles.resendText}>{resending ? 'Sending…' : "Didn't get it? Resend code"}</Text>
+            <Text style={styles.resendText}>{resending ? 'Sendingâ€¦' : "Didn't get it? Resend code"}</Text>
           </Pressable>
 
           <Text style={styles.label}>New Password</Text>
@@ -124,13 +124,13 @@ export default function ResetPassword({ navigation, route }) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable disabled={busy || success} onPress={submit} style={({ pressed }) => [styles.primaryBtn, (pressed || busy || success) && styles.pressed]}>
-            <Text style={styles.primaryText}>{busy ? 'Updating…' : 'Reset Password & Sign In'}</Text>
+            <Text style={styles.primaryText}>{busy ? 'Updatingâ€¦' : 'Reset Password & Sign In'}</Text>
             {!busy && <Icon name="arrow-right" size={18} color={colors.white} style={styles.arrow} />}
           </Pressable>
 
           {success && (
             <View style={styles.successBox}>
-              <IconText icon="check-circle" size={16} color={colors.greenDark} center textStyle={styles.successText}>Password updated successfully! Redirecting to Sign In…</IconText>
+              <IconText icon="check-circle" size={16} color={colors.greenDark} center textStyle={styles.successText}>Password updated successfully! Redirecting to Sign Inâ€¦</IconText>
             </View>
           )}
         </View>
