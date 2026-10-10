@@ -20,7 +20,8 @@ import Icon, { IconText } from '../../Components/Icon';
 
 export default function StudentHome({ navigation, route }) {
   const { user } = useAuth();
-  const firstName = (user?.fullName || 'there').trim().split(' ')[0];
+  const displayName = user?.fullName || user?.full_name || user?.name || '';
+  const firstName = displayName.trim().split(/\s+/)[0] || 'there';
   const completion = Number(user?.profileCompletion || 0);
 
   const [query, setQuery] = useState('');
@@ -67,7 +68,7 @@ export default function StudentHome({ navigation, route }) {
             <Icon name="search" size={17} color={colors.slate400} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search courses, careers, or institutes…"
+              placeholder="Search courses, careers, or institutesï¿½"
               placeholderTextColor={colors.slate400}
               value={query}
               onChangeText={setQuery}
@@ -258,4 +259,3 @@ const styles = StyleSheet.create({
 
   pressed: { opacity: 0.78 },
 });
-
