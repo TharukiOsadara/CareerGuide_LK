@@ -5,10 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from '../../../components/Icon';
 import { useChild } from '../context/ChildContext';
 import { parentApi } from '../services/parentApi';
+import { api } from '../../../api/client';
 import { colors } from '../theme';
 
-// Notification bell for the parent portal: a badge counts counsellor replies the parent
-// hasn't seen yet for the selected child; tapping it opens "Your questions" with the replies.
+// Notification bell for the parent portal. The badge counts counsellor replies the parent
+// hasn't seen yet for the selected child plus unread CareerGuide announcements; tapping it
+// opens Notifications (announcements) with a shortcut to the counsellor replies.
 const seenKey = (studentId) => `cg_parent_replies_seen_${studentId}`;
 
 export default function ParentBell() {
@@ -16,8 +18,10 @@ export default function ParentBell() {
   const { selectedChild, version } = useChild();
   const studentId = selectedChild?.studentId;
   const [unseen, setUnseen] = useState(0);
+  const [announcements, setAnnouncements] = useState(0);
 
   const refresh = useCallback(async () => {
+    api('/api/notifications/unread-count').then((d) => setAnnouncements(d?.unread || 0)).catch(() => {});
     if (!studentId) return;
     try {
       const [{ inquiries = [] }, seenAt] = await Promise.all([
@@ -36,21 +40,30 @@ export default function ParentBell() {
 
   const open = async () => {
     if (studentId) await AsyncStorage.setItem(seenKey(studentId), new Date().toISOString()).catch(() => {});
+    const replies = unseen;
     setUnseen(0);
-    navigation.navigate('InquiryHistory');
+    navigation.navigate('StudentNotifications', {
+      shortcut: {
+        label: 'Counsellor replies',
+        hint: replies ? `${replies} new ${replies === 1 ? 'reply' : 'replies'} to your questions` : 'See your questions and replies',
+        route: 'ParentPortal',
+        params: { screen: 'InquiryHistory' },
+      },
+    });
   };
+  const total = unseen + announcements;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={unseen ? `Counsellor replies, ${unseen} new` : 'Counsellor replies'}
+      accessibilityLabel={total ? `Notifications, ${total} new` : 'Notifications'}
       hitSlop={8}
       onPress={open}
       style={({ pressed }) => [styles.bell, pressed && styles.pressed]}
     >
       <Icon name="bell" size={21} color={colors.navy} />
-      {unseen > 0 ? (
-        <View style={styles.badge}><Text style={styles.badgeText}>{unseen > 9 ? '9+' : unseen}</Text></View>
+      {total > 0 ? (
+        <View style={styles.badge}><Text style={styles.badgeText}>{total > 9 ? '9+' : total}</Text></View>
       ) : null}
     </Pressable>
   );
