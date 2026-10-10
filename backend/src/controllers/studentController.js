@@ -35,14 +35,16 @@ exports.getStudentProfile = async (req, res) => {
 
     const userResult = await db.query(
       `SELECT u.id, u.full_name, u.email, u.al_stream, u.status,
-              u.grade,
-              u.profile_picture AS "profilePicture",
+              sp.grade,
+              sp.profile_picture AS "profilePicture",
+              ap.full_name AS "academicFullName",
               ap.subject_stream AS "subjectStream",
               ap.district,
               ap.z_score AS "zScore",
               ap.subject_grades AS "subjectGrades"
        FROM users u
        LEFT JOIN academic_profiles ap ON ap.user_id = u.id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
        WHERE u.id = $1 AND u.role = 'student'`,
       [userId]
     );
@@ -63,6 +65,7 @@ exports.getStudentProfile = async (req, res) => {
       },
       academicProfile: userResult.rows[0].subjectStream
         ? {
+            fullName: userResult.rows[0].academicFullName,
             subjectStream: userResult.rows[0].subjectStream,
             district: userResult.rows[0].district,
             zScore: userResult.rows[0].zScore,
@@ -117,20 +120,36 @@ exports.saveAcademicProfile = async (req, res) => {
   try {
     client = await db.connect();
     await client.query('BEGIN');
+    const userResult = await client.query(
+      'SELECT full_name FROM users WHERE id = $1 AND role = $2',
+      [userId, 'student']
+    );
+    if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
     const result = await client.query(
-      `INSERT INTO academic_profiles (user_id, subject_stream, district, z_score, subject_grades)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO academic_profiles (user_id, full_name, subject_stream, district, z_score, subject_grades)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id) DO UPDATE SET
+         full_name = EXCLUDED.full_name,
          subject_stream = EXCLUDED.subject_stream,
          district = EXCLUDED.district,
          z_score = EXCLUDED.z_score,
          subject_grades = EXCLUDED.subject_grades
        RETURNING *`,
-      [userId, subjectStream.trim(), district.trim(), Number(zScore), JSON.stringify(subjectGrades || [])]
+      [userId, userResult.rows[0].full_name, subjectStream.trim(), district.trim(),
+        Number(zScore), JSON.stringify(subjectGrades || [])]
     );
     await client.query(
       'UPDATE users SET z_score = $1, al_stream = $2 WHERE id = $3',
       [Number(zScore), subjectStream.trim(), userId]
+    );
+    await client.query(
+      `UPDATE student_profiles
+       SET full_name = $1, updated_at = NOW()
+       WHERE user_id = $2`,
+      [userResult.rows[0].full_name, userId]
     );
     await client.query('COMMIT');
     return res.json({
@@ -158,7 +177,8 @@ exports.getAcademicProfile = async (req, res) => {
   }
   try {
     const result = await db.query(
-      `SELECT user_id AS "userId", subject_stream AS "subjectStream",
+      `SELECT user_id AS "userId", full_name AS "fullName",
+              subject_stream AS "subjectStream",
               district, z_score AS "zScore", subject_grades AS "subjectGrades"
        FROM academic_profiles WHERE user_id = $1`,
       [userId]
@@ -183,10 +203,18 @@ exports.deleteAcademicProfile = async (req, res) => {
       client = await db.connect();
       await client.query('BEGIN');
       const result = await client.query(
-        'DELETE FROM academic_profiles WHERE user_id = $1 RETURNING user_id',
+        `DELETE FROM academic_profiles
+         WHERE user_id = $1
+           AND EXISTS (SELECT 1 FROM users WHERE id = $1 AND role = 'student')
+         RETURNING user_id`,
         [userId]
       );
-      await client.query('UPDATE users SET z_score = NULL WHERE id = $1', [userId]);
+      await client.query(
+        `UPDATE users
+         SET z_score = NULL, al_stream = NULL
+         WHERE id = $1 AND role = 'student'`,
+        [userId]
+      );
       await client.query('COMMIT');
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Academic profile not found.' });
@@ -240,7 +268,10 @@ exports.updateUserProfile = async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(
       `UPDATE users
        SET full_name = CASE WHEN $1 THEN $2 ELSE full_name END,
            grade = CASE WHEN $3 THEN $4 ELSE grade END,
@@ -250,12 +281,36 @@ exports.updateUserProfile = async (req, res) => {
        RETURNING id, full_name, email, al_stream, grade, z_score AS "zScore",
                  profile_picture AS "profilePicture"`,
       [hasName, hasName ? fullName.trim() : null, hasGrade, hasGrade ? grade.trim() : null,
-        hasZScore, zScore, hasPicture, profilePicture, userId]
-    );
+        hasZScore, zScore, hasPicture, profilePicture, userId]);
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'User not found.' });
     }
-    return res.json({ success: true, data: result.rows[0] });
+      await client.query(
+        `INSERT INTO student_profiles (user_id, full_name, grade, profile_picture)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) DO UPDATE SET
+           full_name = COALESCE(EXCLUDED.full_name, student_profiles.full_name),
+           grade = CASE WHEN $5 THEN EXCLUDED.grade ELSE student_profiles.grade END,
+           profile_picture = CASE WHEN $6 THEN EXCLUDED.profile_picture ELSE student_profiles.profile_picture END,
+           updated_at = NOW()`,
+        [userId, hasName ? fullName.trim() : null, hasGrade ? grade.trim() : null,
+          hasPicture ? profilePicture : null, hasGrade, hasPicture]
+      );
+      if (hasName) {
+        await client.query(
+          'UPDATE academic_profiles SET full_name = $1, updated_at = NOW() WHERE user_id = $2',
+          [fullName.trim(), userId]
+        );
+      }
+      await client.query('COMMIT');
+      return res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     return sendServerError(res, error);
   }
@@ -293,6 +348,21 @@ exports.deleteUserProfile = async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'Student not found.' });
     }
+    await client.query(
+      `INSERT INTO student_profiles (user_id, grade, profile_picture)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET
+         grade = CASE WHEN $4 THEN NULL ELSE student_profiles.grade END,
+         profile_picture = CASE WHEN $5 THEN NULL ELSE student_profiles.profile_picture END,
+         updated_at = NOW()`,
+      [
+        userId,
+        fields.includes('grade') ? null : result.rows[0].grade,
+        fields.includes('profilePicture') ? null : result.rows[0].profilePicture,
+        fields.includes('grade'),
+        fields.includes('profilePicture'),
+      ]
+    );
     await client.query('COMMIT');
     return res.json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -428,11 +498,17 @@ exports.sendInquiry = async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO inquiries (user_id, counsellor_id, course_title, subject, message, course_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO inquiries
+         (user_id, student_full_name, counsellor_id, course_title, subject, message)
+       SELECT u.id, u.full_name, $2, $3, $4, $5
+       FROM users u
+       WHERE u.id = $1 AND u.role = 'student'
        RETURNING *`,
       [userId, assignedCounsellorId, courseTitle.trim(), subject.trim(), message.trim(), Number(courseId) || null]
     );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
     return res.status(201).json({
       success: true,
       message: 'Inquiry sent successfully.',

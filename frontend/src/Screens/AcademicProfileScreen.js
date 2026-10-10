@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNavigation from '../components/BottomNavigation';
 import { getAcademicProfile, saveAcademicProfile } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -53,7 +54,9 @@ function SelectField({ label, value, options, onChange }) {
         onPress={() => setIsOpen((current) => !current)}
         style={styles.selectInput}
       >
-        <Text style={styles.selectValue}>{value}</Text>
+        <Text style={[styles.selectValue, !value && styles.placeholderValue]}>
+          {value || `Select ${label.toLowerCase()}`}
+        </Text>
         <Text style={styles.chevron}>{isOpen ? '▲' : '▼'}</Text>
       </Pressable>
       {isOpen && (
@@ -89,16 +92,19 @@ function GradeChip({ subject, grade }) {
 }
 
 export default function AcademicProfileScreen({ navigation }) {
-  const [stream, setStream] = useState(STREAM_OPTIONS[0]);
-  const [district, setDistrict] = useState(DISTRICT_OPTIONS[0]);
-  const [zScore, setZScore] = useState('1.4250');
+  const { user } = useAuth();
+  const userId = user?.id;
+  const [stream, setStream] = useState(null);
+  const [district, setDistrict] = useState(null);
+  const [zScore, setZScore] = useState('');
   const [grades, setGrades] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    getAcademicProfile(42)
+    if (!userId) return undefined;
+    getAcademicProfile(userId)
       .then((response) => {
         const savedProfile = response?.academicProfile || response?.data;
         if (!isMounted || !savedProfile) {
@@ -123,12 +129,8 @@ export default function AcademicProfileScreen({ navigation }) {
           return result;
         }, {});
 
-        setStream(STREAM_OPTIONS.includes(profile.subjectStream)
-          ? profile.subjectStream
-          : STREAM_OPTIONS[0]);
-        setDistrict(DISTRICT_OPTIONS.includes(profile.district)
-          ? profile.district
-          : DISTRICT_OPTIONS[0]);
+        setStream(STREAM_OPTIONS.includes(profile.subjectStream) ? profile.subjectStream : null);
+        setDistrict(DISTRICT_OPTIONS.includes(profile.district) ? profile.district : null);
         if (profile.zScore !== undefined && profile.zScore !== null) {
           setZScore(String(profile.zScore));
         }
@@ -141,7 +143,7 @@ export default function AcademicProfileScreen({ navigation }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [userId]);
 
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
@@ -152,10 +154,10 @@ export default function AcademicProfileScreen({ navigation }) {
   };
 
   const handleSaveAcademicProfile = async () => {
-    const subjects = STREAM_SUBJECTS[stream];
+    const subjects = STREAM_SUBJECTS[stream] || [];
     const subjectGrades = subjects.map((subject) => ({ subject, grade: grades[subject] }));
     const zScoreValue = Number(zScore);
-    if (!district || !Number.isFinite(zScoreValue) || zScore.trim() === '' ||
+    if (!stream || !district || !Number.isFinite(zScoreValue) || zScore.trim() === '' ||
       subjectGrades.some(({ grade }) => !grade)) {
       Alert.alert(
         'Complete your academic profile',
@@ -167,7 +169,7 @@ export default function AcademicProfileScreen({ navigation }) {
     setIsSaving(true);
     try {
       const response = await saveAcademicProfile({
-        userId: 42,
+        userId,
         subjectStream: stream,
         district,
         zScore: zScoreValue,
@@ -255,7 +257,7 @@ export default function AcademicProfileScreen({ navigation }) {
 
           <View style={styles.field}>
             <Text style={styles.label}>Subject Grades</Text>
-            {STREAM_SUBJECTS[stream].map((subject) => (
+            {(STREAM_SUBJECTS[stream] || []).map((subject) => (
               <View key={subject} style={styles.subjectRow}>
                 <Text style={styles.subjectName}>{subject}</Text>
                 <SelectField
@@ -266,11 +268,11 @@ export default function AcademicProfileScreen({ navigation }) {
                 />
               </View>
             ))}
-            {STREAM_SUBJECTS[stream].some((subject) => grades[subject]) && (
+            {(STREAM_SUBJECTS[stream] || []).some((subject) => grades[subject]) && (
               <View style={styles.selectedGrades}>
                 <Text style={styles.selectedGradesLabel}>Selected grades</Text>
                 <View style={styles.gradeList}>
-                  {STREAM_SUBJECTS[stream]
+                  {(STREAM_SUBJECTS[stream] || [])
                     .filter((subject) => grades[subject])
                     .map((subject) => (
                       <GradeChip key={subject} subject={subject} grade={grades[subject]} />
@@ -397,6 +399,9 @@ const styles = StyleSheet.create({
     color: TEXT,
     flex: 1,
     fontSize: 14,
+  },
+  placeholderValue: {
+    color: MUTED,
     marginRight: 8,
   },
   chevron: {

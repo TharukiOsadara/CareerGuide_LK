@@ -25,11 +25,13 @@ import {
   updateUserProfile,
   getMyGuidance,
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
+const STUDENT_LEVELS = ['OL student', 'AL student', 'After A/L student', 'University Student'];
 
 const fallbackSkills = [
   { name: 'Logical Reasoning', percentage: 92 },
@@ -72,6 +74,7 @@ function normalizeAcademicProfile(value) {
   }
 
   return {
+    fullName: value.fullName ?? value.full_name,
     subjectStream: value.subjectStream ?? value.subject_stream,
     district: value.district,
     zScore: value.zScore ?? value.z_score,
@@ -80,6 +83,7 @@ function normalizeAcademicProfile(value) {
 }
 
 export default function StudentProfileScreen({ navigation, route }) {
+  const { user: loggedInUser, setUser, signOut } = useAuth();
   const [profile, setProfile] = useState(() => ({
     academicProfile: normalizeAcademicProfile(route?.params?.academicProfile),
   }));
@@ -90,17 +94,32 @@ export default function StudentProfileScreen({ navigation, route }) {
   const [isProfileEditorVisible, setIsProfileEditorVisible] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ fullName: '', grade: '' });
+  const [isGradePickerVisible, setIsGradePickerVisible] = useState(false);
   const [isDeleteDetailsVisible, setIsDeleteDetailsVisible] = useState(false);
   const [detailsToDelete, setDetailsToDelete] = useState([]);
   useEffect(() => {
     let mounted = true;
-    getStudentProfile()
-      .then((data) => mounted && setProfile({
-        ...data,
-        academicProfile: normalizeAcademicProfile(
-          data?.academicProfile || route?.params?.academicProfile,
-        ),
-      }))
+    getStudentProfile(loggedInUser?.id)
+      .then((data) => {
+        if (mounted) {
+          setProfile({
+            ...data,
+            academicProfile: normalizeAcademicProfile(
+              data?.academicProfile || route?.params?.academicProfile,
+            ),
+          });
+        }
+        if (mounted && data?.user) {
+          setUser((current) => current ? {
+            ...current,
+            id: data.user.id,
+            fullName: data.user.full_name,
+            email: data.user.email,
+            grade: data.user.grade,
+            profilePicture: data.user.profilePicture,
+          } : current);
+        }
+      })
       .catch((error) => console.warn('Unable to load student profile.', error))
       .finally(() => mounted && setIsLoading(false));
     // Assigned counsellor (matched through the chosen course) and their finalised guidance.
@@ -108,7 +127,7 @@ export default function StudentProfileScreen({ navigation, route }) {
       .then((data) => mounted && setMyCounsellor(data))
       .catch(() => mounted && setMyCounsellor({ counsellor: null, guidance: null }));
     return () => { mounted = false; };
-  }, []);
+  }, [loggedInUser?.id, setUser]);
 
   const skills = profile?.aptitude
     ? Object.entries(profile.aptitude).map(([name, percentage]) => ({
@@ -150,11 +169,25 @@ export default function StudentProfileScreen({ navigation, route }) {
         ...(current || {}),
         user: { ...(current?.user || {}), ...response.data },
       }));
+      setUser((current) => current ? {
+        ...current,
+        fullName: response.data.full_name,
+        grade: response.data.grade,
+        profilePicture: response.data.profilePicture,
+      } : current);
       setIsProfileEditorVisible(false);
     } catch (error) {
       Alert.alert('Unable to update profile', error.message);
     } finally {
       setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
     }
   };
 
@@ -222,7 +255,6 @@ export default function StudentProfileScreen({ navigation, route }) {
       setIsUpdatingPicture(true);
       const response = await updateUserProfile({
         userId: user?.id || 42,
-        zScore: academicProfile?.zScore ?? 0,
         profilePicture: value,
       });
       setProfile((current) => ({
@@ -232,6 +264,10 @@ export default function StudentProfileScreen({ navigation, route }) {
           profilePicture: response?.data?.profilePicture || value,
         },
       }));
+      setUser((current) => current ? {
+        ...current,
+        profilePicture: response?.data?.profilePicture || value,
+      } : current);
       setIsPictureEditorVisible(false);
     } catch (error) {
       Alert.alert('Unable to update picture', error.message);
@@ -566,12 +602,31 @@ export default function StudentProfileScreen({ navigation, route }) {
               style={styles.profileInput}
               value={profileForm.fullName}
             />
-            <TextInput
-              onChangeText={(grade) => setProfileForm((current) => ({ ...current, grade }))}
-              placeholder="Grade"
+            <Text style={styles.profileFieldLabel}>Student level</Text>
+            <Pressable
+              onPress={() => setIsGradePickerVisible((visible) => !visible)}
               style={styles.profileInput}
-              value={profileForm.grade}
-            />
+            >
+              <Text style={profileForm.grade ? styles.profileInputText : styles.profilePlaceholder}>
+                {profileForm.grade || 'Select student level'}
+              </Text>
+            </Pressable>
+            {isGradePickerVisible && (
+              <View style={styles.gradeOptions}>
+                {STUDENT_LEVELS.map((level) => (
+                  <Pressable
+                    key={level}
+                    onPress={() => {
+                      setProfileForm((current) => ({ ...current, grade: level }));
+                      setIsGradePickerVisible(false);
+                    }}
+                    style={styles.gradeOption}
+                  >
+                    <Text style={styles.gradeOptionText}>{level}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
             <View style={styles.modalActions}>
               <Pressable onPress={() => setIsProfileEditorVisible(false)} style={styles.cancelButton}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -1062,6 +1117,37 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  profileFieldLabel: {
+    color: TEXT,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 14,
+  },
+  profileInputText: {
+    color: TEXT,
+    fontSize: 14,
+  },
+  profilePlaceholder: {
+    color: MUTED,
+    fontSize: 14,
+  },
+  gradeOptions: {
+    borderColor: BORDER,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  gradeOption: {
+    borderBottomColor: BORDER,
+    borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  gradeOptionText: {
+    color: TEXT,
+    fontSize: 14,
   },
   modalActions: {
     flexDirection: 'row',
