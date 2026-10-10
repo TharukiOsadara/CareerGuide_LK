@@ -31,14 +31,15 @@ exports.getStudentProfile = async (req, res) => {
 
     const userResult = await db.query(
       `SELECT u.id, u.full_name, u.email, u.al_stream, u.status,
-              u.grade,
-              u.profile_picture AS "profilePicture",
+              sp.grade,
+              sp.profile_picture AS "profilePicture",
               ap.subject_stream AS "subjectStream",
               ap.district,
               ap.z_score AS "zScore",
               ap.subject_grades AS "subjectGrades"
        FROM users u
        LEFT JOIN academic_profiles ap ON ap.user_id = u.id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
        WHERE u.id = $1 AND u.role = 'student'`,
       [userId]
     );
@@ -236,7 +237,10 @@ exports.updateUserProfile = async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(
       `UPDATE users
        SET full_name = CASE WHEN $1 THEN $2 ELSE full_name END,
            grade = CASE WHEN $3 THEN $4 ELSE grade END,
@@ -246,12 +250,30 @@ exports.updateUserProfile = async (req, res) => {
        RETURNING id, full_name, email, al_stream, grade, z_score AS "zScore",
                  profile_picture AS "profilePicture"`,
       [hasName, hasName ? fullName.trim() : null, hasGrade, hasGrade ? grade.trim() : null,
-        hasZScore, zScore, hasPicture, profilePicture, userId]
-    );
+        hasZScore, zScore, hasPicture, profilePicture, userId]);
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'User not found.' });
     }
-    return res.json({ success: true, data: result.rows[0] });
+      await client.query(
+        `INSERT INTO student_profiles (user_id, full_name, grade, profile_picture)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) DO UPDATE SET
+           full_name = COALESCE(EXCLUDED.full_name, student_profiles.full_name),
+           grade = CASE WHEN $5 THEN EXCLUDED.grade ELSE student_profiles.grade END,
+           profile_picture = CASE WHEN $6 THEN EXCLUDED.profile_picture ELSE student_profiles.profile_picture END,
+           updated_at = NOW()`,
+        [userId, hasName ? fullName.trim() : null, hasGrade ? grade.trim() : null,
+          hasPicture ? profilePicture : null, hasGrade, hasPicture]
+      );
+      await client.query('COMMIT');
+      return res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     return sendServerError(res, error);
   }
@@ -289,6 +311,21 @@ exports.deleteUserProfile = async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'Student not found.' });
     }
+    await client.query(
+      `INSERT INTO student_profiles (user_id, grade, profile_picture)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET
+         grade = CASE WHEN $4 THEN NULL ELSE student_profiles.grade END,
+         profile_picture = CASE WHEN $5 THEN NULL ELSE student_profiles.profile_picture END,
+         updated_at = NOW()`,
+      [
+        userId,
+        fields.includes('grade') ? null : result.rows[0].grade,
+        fields.includes('profilePicture') ? null : result.rows[0].profilePicture,
+        fields.includes('grade'),
+        fields.includes('profilePicture'),
+      ]
+    );
     await client.query('COMMIT');
     return res.json({ success: true, data: result.rows[0] });
   } catch (error) {

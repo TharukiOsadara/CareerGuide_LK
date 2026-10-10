@@ -21,6 +21,7 @@ import {
   getStudentProfile,
   updateUserProfile,
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -76,6 +77,7 @@ function normalizeAcademicProfile(value) {
 }
 
 export default function StudentProfileScreen({ navigation, route }) {
+  const { user: loggedInUser, setUser } = useAuth();
   const [profile, setProfile] = useState(() => ({
     academicProfile: normalizeAcademicProfile(route?.params?.academicProfile),
   }));
@@ -89,17 +91,31 @@ export default function StudentProfileScreen({ navigation, route }) {
   const [detailsToDelete, setDetailsToDelete] = useState([]);
   useEffect(() => {
     let mounted = true;
-    getStudentProfile()
-      .then((data) => mounted && setProfile({
-        ...data,
-        academicProfile: normalizeAcademicProfile(
-          data?.academicProfile || route?.params?.academicProfile,
-        ),
-      }))
+    getStudentProfile(loggedInUser?.id)
+      .then((data) => {
+        if (mounted) {
+          setProfile({
+            ...data,
+            academicProfile: normalizeAcademicProfile(
+              data?.academicProfile || route?.params?.academicProfile,
+            ),
+          });
+        }
+        if (mounted && data?.user) {
+          setUser((current) => current ? {
+            ...current,
+            id: data.user.id,
+            fullName: data.user.full_name,
+            email: data.user.email,
+            grade: data.user.grade,
+            profilePicture: data.user.profilePicture,
+          } : current);
+        }
+      })
       .catch((error) => console.warn('Unable to load student profile.', error))
       .finally(() => mounted && setIsLoading(false));
     return () => { mounted = false; };
-  }, []);
+  }, [loggedInUser?.id, setUser]);
 
   const skills = profile?.aptitude
     ? Object.entries(profile.aptitude).map(([name, percentage]) => ({
@@ -141,6 +157,12 @@ export default function StudentProfileScreen({ navigation, route }) {
         ...(current || {}),
         user: { ...(current?.user || {}), ...response.data },
       }));
+      setUser((current) => current ? {
+        ...current,
+        fullName: response.data.full_name,
+        grade: response.data.grade,
+        profilePicture: response.data.profilePicture,
+      } : current);
       setIsProfileEditorVisible(false);
     } catch (error) {
       Alert.alert('Unable to update profile', error.message);
@@ -207,7 +229,6 @@ export default function StudentProfileScreen({ navigation, route }) {
       setIsUpdatingPicture(true);
       const response = await updateUserProfile({
         userId: user?.id || 42,
-        zScore: academicProfile?.zScore ?? 0,
         profilePicture: value,
       });
       setProfile((current) => ({
@@ -217,6 +238,10 @@ export default function StudentProfileScreen({ navigation, route }) {
           profilePicture: response?.data?.profilePicture || value,
         },
       }));
+      setUser((current) => current ? {
+        ...current,
+        profilePicture: response?.data?.profilePicture || value,
+      } : current);
       setIsPictureEditorVisible(false);
     } catch (error) {
       Alert.alert('Unable to update picture', error.message);
