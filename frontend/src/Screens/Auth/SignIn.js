@@ -3,17 +3,17 @@ import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../components/Brand';
-import RoleTabs from '../../components/RoleTabs';
+import Brand from '../../Components/Brand';
+import RoleTabs from '../../Components/RoleTabs';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { ROLES_WITH_ADMIN, homeRouteFor } from '../../config';
 import { collectErrors, hasErrors, validateEmail, validateLoginPassword } from '../../utils/validation';
 import { colors } from '../../styles/colors';
-import GoogleLogo from '../../components/GoogleLogo';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
-import FieldError, { errorBorder } from '../../components/FieldError';
+import GoogleLogo from '../../Components/GoogleLogo';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
+import FieldError, { errorBorder } from '../../Components/FieldError';
 
 const ROLE_LABEL = { student: 'Student', parent: 'Parent', counsellor: 'Counsellor', admin: 'Admin' };
 

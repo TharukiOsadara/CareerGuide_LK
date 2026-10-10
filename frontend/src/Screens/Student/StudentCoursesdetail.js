@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentHeader from '../../components/StudentHeader';
-import BottomNavigation from '../../components/BottomNavigation';
+import StudentHeader from '../../Components/StudentHeader';
+import BottomNavigation from '../../Components/BottomNavigation';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../components/Icon';
+import Icon, { IconText } from '../../Components/Icon';
 
 export default function StudentCourses({ navigation, route }) {
   const { user } = useAuth();

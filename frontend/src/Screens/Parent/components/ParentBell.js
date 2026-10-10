@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import Icon from '../../../components/Icon';
+import Icon from '../../../Components/Icon';
 import { useChild } from '../context/ChildContext';
 import { parentApi } from '../services/parentApi';
 import { colors } from '../theme';

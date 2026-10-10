@@ -13,7 +13,7 @@ import {
 import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
-import Icon from '../../components/Icon';
+import Icon from '../../Components/Icon';
 import ClipboardList from 'lucide-react-native/icons/clipboard-list';
 
 const TABS = [

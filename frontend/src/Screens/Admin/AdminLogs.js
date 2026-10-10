@@ -3,12 +3,12 @@ import {
   Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminNav from '../../components/AdminNav';
+import AdminNav from '../../Components/AdminNav';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import AdminHeader from '../../components/AdminHeader';
-import Icon, { IconText } from '../../components/Icon';
+import AdminHeader from '../../Components/AdminHeader';
+import Icon, { IconText } from '../../Components/Icon';
 
 const ROLE_CYCLE = ['all', 'student', 'parent', 'counsellor', 'admin'];
 const ACTION_CYCLE = ['all', 'login', 'failed_login', 'logout'];

@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../components/BottomNavigation';
-import Brand from '../components/Brand';
-import CourseMatchCard from '../components/CourseMatchCard';
-import WelcomeToast from '../components/WelcomeToast';
+import BottomNavigation from '../Components/BottomNavigation';
+import Brand from '../Components/Brand';
+import CourseMatchCard from '../Components/CourseMatchCard';
+import WelcomeToast from '../Components/WelcomeToast';
 import { useAuth } from '../context/AuthContext';
 import { getCourses, getNotifications, getStudentProfile, markNotificationsRead } from '../services/api';
 

@@ -6,9 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { colors } from '../../styles/colors';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Dropdown from '../../components/Dropdown';
-import Icon from '../../components/Icon';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Dropdown from '../../Components/Dropdown';
+import Icon from '../../Components/Icon';
 
 // Public "Verified Course Database" opened from the onboarding Core Utilities card.
 // Reads the read-only catalogue (/api/courses/public), so no login is needed.

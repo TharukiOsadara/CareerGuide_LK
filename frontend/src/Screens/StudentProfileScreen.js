@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../components/BottomNavigation';
-import ProfileHeader from '../components/ProfileHeader';
-import DeleteAccount from '../components/DeleteAccount';
+import BottomNavigation from '../Components/BottomNavigation';
+import ProfileHeader from '../Components/ProfileHeader';
+import DeleteAccount from '../Components/DeleteAccount';
 import { useAuth } from '../context/AuthContext';
 import {
   deleteAcademicProfile,
@@ -25,7 +25,6 @@ import {
   updateUserProfile,
   getMyGuidance,
 } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -216,12 +215,6 @@ export default function StudentProfileScreen({ navigation, route }) {
         : [...current, detail]
     ));
   };
-  const { signOut } = useAuth();
-  const handleSignOut = async () => {
-    try { await signOut(); } catch {}
-    navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
-  };
-
   const goBackToPreviousScreen = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();

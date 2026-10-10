@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../components/BottomNavigation';
+import BottomNavigation from '../Components/BottomNavigation';
 import { getAcademicProfile, saveAcademicProfile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 

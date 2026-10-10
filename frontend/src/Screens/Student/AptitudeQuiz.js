@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../../components/BottomNavigation';
-import ProfileHeader from '../../components/ProfileHeader';
-import Icon, { IconText } from '../../components/Icon';
+import BottomNavigation from '../../Components/BottomNavigation';
+import ProfileHeader from '../../Components/ProfileHeader';
+import Icon, { IconText } from '../../Components/Icon';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
 import { STREAM_SETS, scoreAnswers, streamKeyFor } from './aptitudeQuestions';

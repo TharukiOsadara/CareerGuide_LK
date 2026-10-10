@@ -5,11 +5,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
-import CoursePicker from '../../components/CoursePicker';
-import Dropdown from '../../components/Dropdown';
-import FieldError from '../../components/FieldError';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
+import CoursePicker from '../../Components/CoursePicker';
+import Dropdown from '../../Components/Dropdown';
+import FieldError from '../../Components/FieldError';
 
 // Admin: counsellors <-> the courses they guide, and which counsellor each student is matched to.
 // Tab "counsellors": edit each counsellor's courses. Tab "matches": create / change / remove matches.

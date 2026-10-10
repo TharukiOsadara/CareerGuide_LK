@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import Icon from '../../components/Icon';
+import Icon from '../../Components/Icon';
 
 const DURATION_MS = 3000;
 const useNativeDriver = Platform.OS !== 'web';

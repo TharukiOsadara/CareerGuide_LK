@@ -13,7 +13,7 @@ import { useParentData } from './hooks/useParentData';
 import { parentApi } from './services/parentApi';
 import { firstName, formatRelative } from './utils/format';
 import { colors, font, radius, space } from './theme';
-import { IconText } from '../../components/Icon';
+import { IconText } from '../../Components/Icon';
 
 const FIELDS = ['counsellorAccess', 'parentMonitoring', 'researchShare'];
 const pick = (p) => ({

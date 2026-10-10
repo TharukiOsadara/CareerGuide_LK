@@ -1,10 +1,10 @@
 import React from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
+import Header from '../../Components/Header';
+import Footer from '../../Components/Footer';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../components/Icon';
+import Icon, { IconText } from '../../Components/Icon';
 
 const utilities = [
   { icon: 'database', route: 'CourseDatabase', iconStyle: 'databaseIcon', tint: colors.blue, tag: 'VERIFIED', tagStyle: 'verifiedTag', description: 'DIRECT DIRECTORY', title: 'Verified Course Database' },

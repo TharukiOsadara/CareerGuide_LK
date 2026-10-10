@@ -6,8 +6,8 @@ import { useAuth } from '../../../context/AuthContext';
 import ChildSelector from './ChildSelector';
 import ParentBell from './ParentBell';
 import { colors, font, space, TOUCH } from '../theme';
-import BackButton from '../../../components/BackButton';
-import Icon from '../../../components/Icon';
+import BackButton from '../../../Components/BackButton';
+import Icon from '../../../Components/Icon';
 
 export default function ParentHeader({ title, onBack, showChild = true, right }) {
   const insets = useSafeAreaInsets();

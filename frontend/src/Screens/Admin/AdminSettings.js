@@ -3,8 +3,8 @@ import {
   Pressable, ScrollView, StatusBar, StyleSheet, Switch, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../../components/AdminHeader';
-import AdminNav from '../../components/AdminNav';
+import AdminHeader from '../../Components/AdminHeader';
+import AdminNav from '../../Components/AdminNav';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';

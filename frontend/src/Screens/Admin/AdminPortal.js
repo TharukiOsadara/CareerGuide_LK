@@ -3,15 +3,15 @@ import {
   ActivityIndicator, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../components/Brand';
-import RoleTabs from '../../components/RoleTabs';
+import Brand from '../../Components/Brand';
+import RoleTabs from '../../Components/RoleTabs';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES_WITH_ADMIN } from '../../config';
 import { colors } from '../../styles/colors';
 import { collectErrors, hasErrors, validateCode6, validateEmail, validateLoginPassword } from '../../utils/validation';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
-import FieldError, { errorBorder } from '../../components/FieldError';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
+import FieldError, { errorBorder } from '../../Components/FieldError';
 
 // Admin sign-in is two steps: (1) email + password, (2) the 6-digit code from an
 // authenticator app (Google / Microsoft Authenticator). On an admin's first login,
