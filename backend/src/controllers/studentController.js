@@ -114,16 +114,26 @@ exports.saveAcademicProfile = async (req, res) => {
   try {
     client = await db.connect();
     await client.query('BEGIN');
+    const userResult = await client.query(
+      'SELECT full_name FROM users WHERE id = $1 AND role = $2',
+      [userId, 'student']
+    );
+    if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
     const result = await client.query(
-      `INSERT INTO academic_profiles (user_id, subject_stream, district, z_score, subject_grades)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO academic_profiles (user_id, full_name, subject_stream, district, z_score, subject_grades)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id) DO UPDATE SET
+         full_name = EXCLUDED.full_name,
          subject_stream = EXCLUDED.subject_stream,
          district = EXCLUDED.district,
          z_score = EXCLUDED.z_score,
          subject_grades = EXCLUDED.subject_grades
        RETURNING *`,
-      [userId, subjectStream.trim(), district.trim(), Number(zScore), JSON.stringify(subjectGrades || [])]
+      [userId, userResult.rows[0].full_name, subjectStream.trim(), district.trim(),
+        Number(zScore), JSON.stringify(subjectGrades || [])]
     );
     await client.query(
       'UPDATE users SET z_score = $1, al_stream = $2 WHERE id = $3',
@@ -155,7 +165,8 @@ exports.getAcademicProfile = async (req, res) => {
   }
   try {
     const result = await db.query(
-      `SELECT user_id AS "userId", subject_stream AS "subjectStream",
+      `SELECT user_id AS "userId", full_name AS "fullName",
+              subject_stream AS "subjectStream",
               district, z_score AS "zScore", subject_grades AS "subjectGrades"
        FROM academic_profiles WHERE user_id = $1`,
       [userId]
@@ -266,6 +277,12 @@ exports.updateUserProfile = async (req, res) => {
         [userId, hasName ? fullName.trim() : null, hasGrade ? grade.trim() : null,
           hasPicture ? profilePicture : null, hasGrade, hasPicture]
       );
+      if (hasName) {
+        await client.query(
+          'UPDATE academic_profiles SET full_name = $1, updated_at = NOW() WHERE user_id = $2',
+          [fullName.trim(), userId]
+        );
+      }
       await client.query('COMMIT');
       return res.json({ success: true, data: result.rows[0] });
     } catch (error) {

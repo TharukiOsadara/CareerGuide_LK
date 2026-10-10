@@ -27,6 +27,7 @@ const BLUE = '#0052CC';
 const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
+const STUDENT_LEVELS = ['OL student', 'AL student', 'After A/L student', 'University Student'];
 
 const fallbackSkills = [
   { name: 'Logical Reasoning', percentage: 92 },
@@ -77,7 +78,7 @@ function normalizeAcademicProfile(value) {
 }
 
 export default function StudentProfileScreen({ navigation, route }) {
-  const { user: loggedInUser, setUser } = useAuth();
+  const { user: loggedInUser, setUser, signOut } = useAuth();
   const [profile, setProfile] = useState(() => ({
     academicProfile: normalizeAcademicProfile(route?.params?.academicProfile),
   }));
@@ -87,6 +88,7 @@ export default function StudentProfileScreen({ navigation, route }) {
   const [isProfileEditorVisible, setIsProfileEditorVisible] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ fullName: '', grade: '' });
+  const [isGradePickerVisible, setIsGradePickerVisible] = useState(false);
   const [isDeleteDetailsVisible, setIsDeleteDetailsVisible] = useState(false);
   const [detailsToDelete, setDetailsToDelete] = useState([]);
   useEffect(() => {
@@ -168,6 +170,14 @@ export default function StudentProfileScreen({ navigation, route }) {
       Alert.alert('Unable to update profile', error.message);
     } finally {
       setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
     }
   };
 
@@ -459,7 +469,7 @@ export default function StudentProfileScreen({ navigation, route }) {
           <Text style={styles.primaryButtonText}>Tap to send inquiry to counsellor</Text>
           <Text style={styles.primaryButtonArrow}>→</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton}>
+        <Pressable onPress={handleSignOut} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Sign Out</Text>
         </Pressable>
       </ScrollView>
@@ -554,12 +564,31 @@ export default function StudentProfileScreen({ navigation, route }) {
               style={styles.profileInput}
               value={profileForm.fullName}
             />
-            <TextInput
-              onChangeText={(grade) => setProfileForm((current) => ({ ...current, grade }))}
-              placeholder="Grade"
+            <Text style={styles.profileFieldLabel}>Student level</Text>
+            <Pressable
+              onPress={() => setIsGradePickerVisible((visible) => !visible)}
               style={styles.profileInput}
-              value={profileForm.grade}
-            />
+            >
+              <Text style={profileForm.grade ? styles.profileInputText : styles.profilePlaceholder}>
+                {profileForm.grade || 'Select student level'}
+              </Text>
+            </Pressable>
+            {isGradePickerVisible && (
+              <View style={styles.gradeOptions}>
+                {STUDENT_LEVELS.map((level) => (
+                  <Pressable
+                    key={level}
+                    onPress={() => {
+                      setProfileForm((current) => ({ ...current, grade: level }));
+                      setIsGradePickerVisible(false);
+                    }}
+                    style={styles.gradeOption}
+                  >
+                    <Text style={styles.gradeOptionText}>{level}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
             <View style={styles.modalActions}>
               <Pressable onPress={() => setIsProfileEditorVisible(false)} style={styles.cancelButton}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -1029,6 +1058,37 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  profileFieldLabel: {
+    color: TEXT,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 14,
+  },
+  profileInputText: {
+    color: TEXT,
+    fontSize: 14,
+  },
+  profilePlaceholder: {
+    color: MUTED,
+    fontSize: 14,
+  },
+  gradeOptions: {
+    borderColor: BORDER,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  gradeOption: {
+    borderBottomColor: BORDER,
+    borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  gradeOptionText: {
+    color: TEXT,
+    fontSize: 14,
   },
   modalActions: {
     flexDirection: 'row',
