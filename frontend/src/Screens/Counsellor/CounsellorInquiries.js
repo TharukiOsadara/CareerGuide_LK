@@ -5,9 +5,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
-import ProfileHeader from '../../components/ProfileHeader';
-import Icon, { IconText } from '../../components/Icon';
-import FieldError from '../../components/FieldError';
+import ProfileHeader from '../../Components/ProfileHeader';
+import Icon, { IconText } from '../../Components/Icon';
+import FieldError from '../../Components/FieldError';
 
 // Questions sent to this counsellor by their students (from course pages) and by parents
 // (from the Parent Portal). The counsellor reads and replies here; replies appear in the

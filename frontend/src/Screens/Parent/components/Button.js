@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, font, radius, TOUCH } from '../theme';
-import Icon from '../../../components/Icon';
+import Icon from '../../../Components/Icon';
 
 const VARIANTS = {
   primary: { bg: colors.blue, border: colors.blue, text: colors.white },

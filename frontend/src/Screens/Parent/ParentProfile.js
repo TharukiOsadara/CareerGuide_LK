@@ -2,12 +2,12 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from './components/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ProfileHeader from '../../components/ProfileHeader';
+import ProfileHeader from '../../Components/ProfileHeader';
 import SectionCard from './components/SectionCard';
 import { useChild } from './context/ChildContext';
 import { colors, font, radius, space } from './theme';
-import DeleteAccount from '../../components/DeleteAccount';
-import Icon from '../../components/Icon';
+import DeleteAccount from '../../Components/DeleteAccount';
+import Icon from '../../Components/Icon';
 import { useAuth } from '../../context/AuthContext';
 
 // Parent account page: who is signed in, linked children, sign out and delete account.

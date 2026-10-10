@@ -5,7 +5,7 @@ import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
 import { useAuth } from '../../context/AuthContext';
-import ProfileHeader from '../../components/ProfileHeader';
+import ProfileHeader from '../../Components/ProfileHeader';
 import { confirmAction } from './CounsellorGuidanceForm';
 
 const FIELDS = [

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ProfileHeader from '../components/ProfileHeader';
+import ProfileHeader from '../Components/ProfileHeader';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';

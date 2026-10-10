@@ -4,17 +4,17 @@ import {
   Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../../components/AdminHeader';
-import AdminNav from '../../components/AdminNav';
-import Field from '../../components/Field';
-import Dropdown from '../../components/Dropdown';
+import AdminHeader from '../../Components/AdminHeader';
+import AdminNav from '../../Components/AdminNav';
+import Field from '../../Components/Field';
+import Dropdown from '../../Components/Dropdown';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { AL_STREAMS } from '../../config';
 import { colors } from '../../styles/colors';
 import { hasErrors, validateCourse } from '../../utils/validation';
-import Icon, { IconText } from '../../components/Icon';
-import FieldError, { errorBorder } from '../../components/FieldError';
+import Icon, { IconText } from '../../Components/Icon';
+import FieldError, { errorBorder } from '../../Components/FieldError';
 
 const NUMERIC = ['zScore', 'minZScore', 'islandRank', 'districtRank', 'intakeYear', 'tuitionFee', 'nvqLevel', 'matchPercent'];
 

@@ -5,16 +5,16 @@ import Constants from 'expo-constants';
 //  - Web (expo start --web):       localhost works.
 //  - Android emulator:             10.0.2.2 maps to the host machine.
 //  - iOS simulator:                localhost works.
-//  - Physical device (Expo Go):    replace with your computer's LAN IP, e.g. http://192.168.1.5:5000
+//  - Physical device (Expo Go):    replace with your computer's LAN IP, e.g. http://192.168.1.5:3000
 //
 // Override any time by setting EXPO_PUBLIC_API_URL in the environment.
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
-const LAN_IP = expoHost ? `http://${expoHost}:5000` : 'http://192.168.1.104:5000';
+const LAN_IP = expoHost ? `http://${expoHost}:3000` : 'http://192.168.1.104:3000';
 
 const defaultByPlatform = Platform.select({
   android: LAN_IP,
-  ios: 'http://localhost:5000',
-  default: 'http://localhost:5000',
+  ios: 'http://localhost:3000',
+  default: 'http://localhost:3000',
 });
 
 // Server root without a trailing "/api" (callers add /api/... themselves).

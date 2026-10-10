@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, SafeAreaView, ScrollView
 import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
-import ProfileHeader from '../../components/ProfileHeader';
+import ProfileHeader from '../../Components/ProfileHeader';
 
 const PATHWAYS = [
   'Software Engineering', 'Biomedical Science', 'Data Science & AI',

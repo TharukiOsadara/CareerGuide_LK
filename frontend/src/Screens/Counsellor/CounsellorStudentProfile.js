@@ -4,7 +4,7 @@ import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
 import { StatusChip } from './CounsellorPortal';
-import ProfileHeader from '../../components/ProfileHeader';
+import ProfileHeader from '../../Components/ProfileHeader';
 
 export default function CounsellorStudentProfile({ route, navigation }) {
   const { studentId } = route?.params || {};

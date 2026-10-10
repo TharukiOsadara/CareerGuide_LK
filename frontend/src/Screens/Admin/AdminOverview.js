@@ -3,13 +3,13 @@ import {
   Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AdminHeader from '../../components/AdminHeader';
-import AdminNav from '../../components/AdminNav';
-import WelcomeToast from '../../components/WelcomeToast';
+import AdminHeader from '../../Components/AdminHeader';
+import AdminNav from '../../Components/AdminNav';
+import WelcomeToast from '../../Components/WelcomeToast';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
-import Icon, { IconText } from '../../components/Icon';
+import Icon, { IconText } from '../../Components/Icon';
 
 function timeAgo(iso) {
   if (!iso) return '';

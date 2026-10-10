@@ -13,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../styles/colors';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
 
 // Read-only notifications for every role (announcements from CareerGuide admins plus
 // personal updates). There is no reply here. `route.params.shortcut` adds a card at the top

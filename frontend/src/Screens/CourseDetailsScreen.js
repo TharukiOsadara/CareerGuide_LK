@@ -13,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getCourseDetails } from '../services/api';
-import CourseMatchCard from '../components/CourseMatchCard';
-import BottomNavigation from '../components/BottomNavigation';
+import CourseMatchCard from '../Components/CourseMatchCard';
+import BottomNavigation from '../Components/BottomNavigation';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';

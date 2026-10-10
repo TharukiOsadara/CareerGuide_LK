@@ -3,10 +3,10 @@ import {
   Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../components/Brand';
-import RoleTabs from '../../components/RoleTabs';
-import Dropdown from '../../components/Dropdown';
-import PasswordStrength from '../../components/PasswordStrength';
+import Brand from '../../Components/Brand';
+import RoleTabs from '../../Components/RoleTabs';
+import Dropdown from '../../Components/Dropdown';
+import PasswordStrength from '../../Components/PasswordStrength';
 import { api } from '../../api/client';
 import { AL_STREAMS, ROLES, homeRouteFor } from '../../config';
 import { useAuth } from '../../context/AuthContext';
@@ -14,11 +14,11 @@ import {
   collectErrors, hasErrors, required, validateEmail, validateName, validateNewPassword, validateNumber,
 } from '../../utils/validation';
 import { colors } from '../../styles/colors';
-import GoogleLogo from '../../components/GoogleLogo';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
-import FieldError, { errorBorder } from '../../components/FieldError';
-import CoursePicker from '../../components/CoursePicker';
+import GoogleLogo from '../../Components/GoogleLogo';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
+import FieldError, { errorBorder } from '../../Components/FieldError';
+import CoursePicker from '../../Components/CoursePicker';
 
 export default function SignUp({ navigation }) {
   const { googleAuth } = useAuth();

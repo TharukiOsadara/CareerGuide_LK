@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../components/BottomNavigation';
+import BottomNavigation from '../Components/BottomNavigation';
 import { getCourses } from '../services/api';
 
 const BLUE = '#0052CC';

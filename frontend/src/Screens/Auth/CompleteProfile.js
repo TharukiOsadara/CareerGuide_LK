@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Brand from '../../components/Brand';
-import Field from '../../components/Field';
-import Dropdown from '../../components/Dropdown';
-import FieldError from '../../components/FieldError';
-import CoursePicker from '../../components/CoursePicker';
-import Icon, { IconText } from '../../components/Icon';
+import Brand from '../../Components/Brand';
+import Field from '../../Components/Field';
+import Dropdown from '../../Components/Dropdown';
+import FieldError from '../../Components/FieldError';
+import CoursePicker from '../../Components/CoursePicker';
+import Icon, { IconText } from '../../Components/Icon';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { AL_STREAMS, homeRouteFor } from '../../config';

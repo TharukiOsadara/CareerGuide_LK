@@ -3,14 +3,14 @@ import {
   Alert, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Field from '../../components/Field';
-import Dropdown from '../../components/Dropdown';
+import Field from '../../Components/Field';
+import Dropdown from '../../Components/Dropdown';
 import { api } from '../../api/client';
 import { colors } from '../../styles/colors';
 import { hasErrors, validateNotification } from '../../utils/validation';
-import FieldError, { errorBorder } from '../../components/FieldError';
-import BackButton, { BACK_WIDTH } from '../../components/BackButton';
-import Icon, { IconText } from '../../components/Icon';
+import FieldError, { errorBorder } from '../../Components/FieldError';
+import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
+import Icon, { IconText } from '../../Components/Icon';
 
 const AUDIENCE = [
   { label: 'All Users', role: 'all' },
