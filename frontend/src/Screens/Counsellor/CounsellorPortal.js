@@ -14,6 +14,7 @@ import { counsellorApi } from './api';
 import { colors } from '../../styles/colors';
 import { styles } from './styles';
 import Icon from '../../components/Icon';
+import { api } from '../../api/client';
 import ClipboardList from 'lucide-react-native/icons/clipboard-list';
 
 const TABS = [
@@ -71,12 +72,14 @@ export default function CounsellorPortal({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pendingInquiries, setPendingInquiries] = useState(0);
+  const [announcements, setAnnouncements] = useState(0);
 
   // Badge on the bell: questions from students/parents still waiting for a reply.
   useEffect(() => {
-    const refreshBadge = () => counsellorApi.inquiries()
-      .then((d) => setPendingInquiries(d?.counts?.pending || 0))
-      .catch(() => {});
+    const refreshBadge = () => {
+      counsellorApi.inquiries().then((d) => setPendingInquiries(d?.counts?.pending || 0)).catch(() => {});
+      api('/api/notifications/unread-count').then((d) => setAnnouncements(d?.unread || 0)).catch(() => {});
+    };
     refreshBadge();
     const unsub = navigation.addListener?.('focus', refreshBadge);
     return unsub;
@@ -130,15 +133,21 @@ export default function CounsellorPortal({ navigation, route }) {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Inquiries, ${pendingInquiries} awaiting reply`}
+            accessibilityLabel={`Notifications, ${pendingInquiries} questions awaiting reply, ${announcements} unread announcements`}
             hitSlop={10}
-            onPress={() => navigation.navigate('CounsellorInquiries')}
+            onPress={() => navigation.navigate('StudentNotifications', {
+              shortcut: {
+                label: 'Student & parent questions',
+                hint: pendingInquiries ? `${pendingInquiries} awaiting your reply` : 'No questions waiting',
+                route: 'CounsellorInquiries',
+              },
+            })}
             style={{ padding: 6 }}
           >
             <Icon name="bell" size={23} color={colors.navy} />
-            {pendingInquiries > 0 ? (
+            {pendingInquiries + announcements > 0 ? (
               <View style={{ position: 'absolute', top: 0, right: 0, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                <Text style={{ color: colors.white, fontSize: 10.5, fontWeight: '800' }}>{pendingInquiries > 9 ? '9+' : pendingInquiries}</Text>
+                <Text style={{ color: colors.white, fontSize: 10.5, fontWeight: '800' }}>{pendingInquiries + announcements > 9 ? '9+' : pendingInquiries + announcements}</Text>
               </View>
             ) : null}
           </Pressable>

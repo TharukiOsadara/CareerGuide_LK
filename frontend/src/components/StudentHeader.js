@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 export default function StudentHeader({
   navigation, user,
   notificationsRoute = 'StudentNotifications',
+  notificationsParams,
   profileRoute,
   showUnread = true,
 }) {
@@ -64,7 +65,7 @@ export default function StudentHeader({
           accessibilityRole="button"
           accessibilityLabel="Notifications"
           hitSlop={8}
-          onPress={() => navigation.navigate(notificationsRoute)}
+          onPress={() => navigation.navigate(notificationsRoute, notificationsParams)}
           style={({ pressed }) => [styles.bellWrap, pressed && styles.pressed]}
         >
           <Icon name="bell" size={20} color={colors.slateDark} />
