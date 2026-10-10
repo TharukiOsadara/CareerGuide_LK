@@ -16,8 +16,13 @@ import { colors } from '../../styles/colors';
 import BackButton, { BACK_WIDTH } from '../../Components/BackButton';
 import Icon, { IconText } from '../../Components/Icon';
 
-export default function StudentNotifications({ navigation }) {
-  const { user } = useAuth(); // eslint-disable-line no-unused-vars
+// Read-only notifications for every role (announcements from CareerGuide admins plus
+// personal updates). There is no reply here. `route.params.shortcut` adds a card at the top
+// that opens the role's own items (parent: counsellor replies, counsellor: questions,
+// admin: compose a notification).
+export default function StudentNotifications({ navigation, route }) {
+  const { user } = useAuth();
+  const shortcut = route?.params?.shortcut;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,7 +41,10 @@ export default function StudentNotifications({ navigation }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    return navigation.addListener?.('focus', load);
+  }, [navigation]);
 
   const openItem = async (item) => {
     setActive(item);
@@ -74,6 +82,23 @@ export default function StudentNotifications({ navigation }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
         {error ? <View style={styles.banner}><Text style={styles.bannerText}>{error}</Text></View> : null}
 
+        {shortcut ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => navigation.navigate(shortcut.route, shortcut.params)}
+            style={({ pressed }) => [styles.shortcut, pressed && styles.pressed]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.shortcutTitle}>{shortcut.label}</Text>
+              {shortcut.hint ? <Text style={styles.shortcutHint}>{shortcut.hint}</Text> : null}
+            </View>
+            <Text style={styles.shortcutArrow}>›</Text>
+          </Pressable>
+        ) : null}
+
+        <Text style={styles.sectionLabel}>Announcements & updates</Text>
+        <Text style={styles.readOnly}>Sent by CareerGuide to {user?.role === 'admin' ? 'admins' : `${user?.role || 'user'}s`} or to everyone. Read only, no replies.</Text>
+
         {loading ? (
           <ActivityIndicator color={colors.blue} style={{ marginTop: 24 }} />
         ) : items.length === 0 && !error ? (
@@ -96,7 +121,7 @@ export default function StudentNotifications({ navigation }) {
                   {!n.read && <View style={styles.dot} />}
                 </View>
                 <Text style={styles.cardText} numberOfLines={2}>{n.body}</Text>
-                <Text style={styles.time}>{relativeTime(n.createdAt)}</Text>
+                <Text style={styles.time}>{senderLabel(n)} · {relativeTime(n.createdAt)}</Text>
               </View>
             </Pressable>
           ))
@@ -107,7 +132,7 @@ export default function StudentNotifications({ navigation }) {
         <Pressable style={styles.backdrop} onPress={() => setActive(null)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>{active?.title}</Text>
-            {active?.createdAt ? <Text style={styles.modalTime}>{relativeTime(active.createdAt)}</Text> : null}
+            {active?.createdAt ? <Text style={styles.modalTime}>{senderLabel(active)} · {relativeTime(active.createdAt)}</Text> : null}
             <Text style={styles.modalBody}>{active?.body}</Text>
             <Pressable
               accessibilityRole="button"
@@ -121,6 +146,11 @@ export default function StudentNotifications({ navigation }) {
       </Modal>
     </SafeAreaView>
   );
+}
+
+function senderLabel(n) {
+  if (n.senderRole === 'admin' || !n.senderName) return 'From CareerGuide Admin';
+  return `From ${n.senderName}`;
 }
 
 function relativeTime(iso) {
@@ -183,6 +213,16 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   closeText: { color: colors.white, fontSize: 13, fontWeight: '800' },
+
+  shortcut: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.white, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 16,
+  },
+  shortcutTitle: { color: colors.navy, fontSize: 14, fontWeight: '800' },
+  shortcutHint: { color: colors.blue, fontSize: 12, fontWeight: '700', marginTop: 3 },
+  shortcutArrow: { color: colors.slate400, fontSize: 24, marginLeft: 8 },
+  sectionLabel: { color: colors.navy, fontSize: 13, fontWeight: '800', marginBottom: 2 },
+  readOnly: { color: colors.slate400, fontSize: 11, marginBottom: 10 },
 
   pressed: { opacity: 0.78 },
 });

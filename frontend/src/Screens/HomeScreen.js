@@ -19,6 +19,7 @@ import CourseMatchCard from '../Components/CourseMatchCard';
 import WelcomeToast from '../Components/WelcomeToast';
 import { useAuth } from '../context/AuthContext';
 import { getCourses, getNotifications, getStudentProfile, markNotificationsRead } from '../services/api';
+import { api } from '../api/client';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -61,6 +62,7 @@ export default function HomeScreen({ navigation, route }) {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
@@ -102,7 +104,13 @@ export default function HomeScreen({ navigation, route }) {
       })
       .catch((error) => console.warn('Unable to load notifications.', error))
       .finally(() => mounted && setIsNotificationsLoading(false));
-    return () => { mounted = false; };
+    // Admin announcements (all users / students) for the bell dot.
+    const loadAnnouncements = () => api('/api/notifications/unread-count')
+      .then((d) => mounted && setUnreadAnnouncements(d?.unread || 0))
+      .catch(() => {});
+    loadAnnouncements();
+    const unsub = navigation.addListener?.('focus', loadAnnouncements);
+    return () => { mounted = false; unsub?.(); };
   }, []);
 
   const openNotification = async (notification) => {
@@ -138,7 +146,7 @@ export default function HomeScreen({ navigation, route }) {
             style={styles.notificationButton}
           >
             <Ionicons color={TEXT} name="notifications-outline" size={24} />
-            {notifications.length > 0 && <View style={styles.notificationDot} />}
+            {(notifications.length > 0 || unreadAnnouncements > 0) && <View style={styles.notificationDot} />}
           </Pressable>
           <Pressable
             accessibilityLabel="View student profile"
@@ -283,7 +291,7 @@ export default function HomeScreen({ navigation, route }) {
               style={styles.announcementsLink}
             >
               <Ionicons color={BLUE} name="megaphone-outline" size={18} />
-              <Text style={styles.announcementsText}>View announcements from CareerGuide</Text>
+              <Text style={styles.announcementsText}>View announcements from CareerGuide{unreadAnnouncements ? ` (${unreadAnnouncements} new)` : ''}</Text>
               <Ionicons color={BLUE} name="chevron-forward" size={16} />
             </Pressable>
             {isNotificationsLoading ? (
