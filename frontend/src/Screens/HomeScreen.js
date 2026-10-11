@@ -13,8 +13,13 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../components/BottomNavigation';
+import BottomNavigation from '../Components/BottomNavigation';
+import Brand from '../Components/Brand';
+import CourseMatchCard from '../Components/CourseMatchCard';
+import WelcomeToast from '../Components/WelcomeToast';
+import { useAuth } from '../context/AuthContext';
 import { getCourses, getNotifications, getStudentProfile, markNotificationsRead } from '../services/api';
+import { api } from '../api/client';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
@@ -49,11 +54,15 @@ function CourseCard({ course, navigation }) {
   );
 }
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
+  const { user } = useAuth();
+  // "Welcome back" popup right after signing in.
+  const [showToast, setShowToast] = useState(!!route?.params?.welcome);
   const [profile, setProfile] = useState(null);
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [isNotificationsVisible, setIsNotificationsVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
@@ -95,7 +104,13 @@ export default function HomeScreen({ navigation }) {
       })
       .catch((error) => console.warn('Unable to load notifications.', error))
       .finally(() => mounted && setIsNotificationsLoading(false));
-    return () => { mounted = false; };
+    // Admin announcements (all users / students) for the bell dot.
+    const loadAnnouncements = () => api('/api/notifications/unread-count')
+      .then((d) => mounted && setUnreadAnnouncements(d?.unread || 0))
+      .catch(() => {});
+    loadAnnouncements();
+    const unsub = navigation.addListener?.('focus', loadAnnouncements);
+    return () => { mounted = false; unsub?.(); };
   }, []);
 
   const openNotification = async (notification) => {
@@ -113,20 +128,16 @@ export default function HomeScreen({ navigation }) {
     setSelectedNotification(null);
   };
 
-  const studentName = profile?.user?.full_name || 'Savindi Piyarathna';
+  const studentName = profile?.user?.full_name || user?.fullName || 'Student';
+  const initials = user?.avatarInitials
+    || studentName.split(/\s+/).map((p) => p[0] || '').join('').slice(0, 2).toUpperCase();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BACKGROUND }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
-        <View style={styles.brand}>
-          <View style={styles.logo}>
-            <MaterialCommunityIcons color="#FFFFFF" name="compass-outline" size={21} />
-          </View>
-          <Text style={styles.brandText}>
-            CareerGuide <Text style={styles.brandAccent}>LK</Text>
-          </Text>
-        </View>
+        {/* Same app logo (graduation cap) as every other screen */}
+        <Brand size="sm" />
         <View style={styles.headerActions}>
           <Pressable
             accessibilityLabel="Notifications"
@@ -135,7 +146,7 @@ export default function HomeScreen({ navigation }) {
             style={styles.notificationButton}
           >
             <Ionicons color={TEXT} name="notifications-outline" size={24} />
-            {notifications.length > 0 && <View style={styles.notificationDot} />}
+            {(notifications.length > 0 || unreadAnnouncements > 0) && <View style={styles.notificationDot} />}
           </Pressable>
           <Pressable
             accessibilityLabel="View student profile"
@@ -150,92 +161,109 @@ export default function HomeScreen({ navigation }) {
             {profile?.user?.profilePicture ? (
               <Image source={{ uri: profile.user.profilePicture }} style={styles.avatarImage} />
             ) : (
-              <Text style={styles.avatarText}>TO</Text>
+              <Text style={styles.avatarText}>{initials}</Text>
             )}
           </Pressable>
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Pressable
-          accessibilityLabel="Open course search and filters"
-          accessibilityRole="button"
-          onPress={() => navigation.navigate('CourseFilter')}
-          style={styles.searchBar}
+      {/* Page body: the welcome popup sits here, just below the header. */}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons color={MUTED} name="search-outline" size={20} />
-          <TextInput
-            accessibilityLabel="Search courses, careers, or institutes"
-            editable={false}
-            placeholder="Search courses, careers, or institutes..."
-            placeholderTextColor={MUTED}
-            pointerEvents="none"
-            style={styles.searchInput}
-          />
-        </Pressable>
-
-        <View style={styles.progressCard}>
-          <Text style={styles.welcomeTitle}>Welcome back, {studentName}!</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Complete your profile to unlock verified course applications.
-          </Text>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>Profile Completion</Text>
-            <Text style={styles.progressValue}>65%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: '65%' }]} />
-          </View>
           <Pressable
-            accessibilityLabel="View profile"
+            accessibilityLabel="Open course search and filters"
             accessibilityRole="button"
-            onPress={openStudentProfile}
-            style={styles.viewProfileButton}
+            onPress={() => navigation.navigate('CourseFilter')}
+            style={styles.searchBar}
           >
-            <Text style={styles.viewProfileButtonText}>View Profile</Text>
-            <Ionicons color={BLUE} name="arrow-forward" size={16} />
+            <Ionicons color={MUTED} name="search-outline" size={20} />
+            <TextInput
+              accessibilityLabel="Search courses, careers, or institutes"
+              editable={false}
+              placeholder="Search courses, careers, or institutes..."
+              placeholderTextColor={MUTED}
+              pointerEvents="none"
+              style={styles.searchInput}
+            />
           </Pressable>
-        </View>
 
-        <View style={styles.assessmentBanner}>
-          <View style={styles.assessmentTopRow}>
-            <View style={styles.brainIcon}>
-              <MaterialCommunityIcons color={BLUE} name="brain" size={25} />
+          <View style={styles.progressCard}>
+            <Text style={styles.welcomeTitle}>Welcome back, {studentName}!</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Complete your profile to unlock verified course applications.
+            </Text>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressLabel}>Profile Completion</Text>
+              <Text style={styles.progressValue}>65%</Text>
             </View>
-            <View style={styles.assessmentCopy}>
-              <Text style={styles.assessmentTitle}>Aptitude Assessment</Text>
-              <Text style={styles.assessmentSubtitle}>
-                10-minute AI quiz to map your personality &amp; strengths.
-              </Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: '65%' }]} />
             </View>
+            <Pressable
+              accessibilityLabel="View profile"
+              accessibilityRole="button"
+              onPress={openStudentProfile}
+              style={styles.viewProfileButton}
+            >
+              <Text style={styles.viewProfileButtonText}>View Profile</Text>
+              <Ionicons color={BLUE} name="arrow-forward" size={16} />
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityLabel="Start aptitude quiz"
-            accessibilityRole="button"
-            style={styles.quizButton}
-          >
-            <Text style={styles.quizButtonText}>Start Quiz Now</Text>
-            <Ionicons color="#FFFFFF" name="arrow-forward" size={18} />
-          </Pressable>
-        </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Recommended Courses</Text>
-          <Pressable accessibilityRole="button">
-            <Text style={styles.seeAll}>See all</Text>
-          </Pressable>
-        </View>
-        {isLoading && <ActivityIndicator color={BLUE} />}
+          <View style={styles.assessmentBanner}>
+            <View style={styles.assessmentTopRow}>
+              <View style={styles.brainIcon}>
+                <MaterialCommunityIcons color={BLUE} name="brain" size={25} />
+              </View>
+              <View style={styles.assessmentCopy}>
+                <Text style={styles.assessmentTitle}>Aptitude Assessment</Text>
+                <Text style={styles.assessmentSubtitle}>
+                  10-minute AI quiz to map your personality &amp; strengths.
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              accessibilityLabel="Start aptitude quiz"
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('AptitudeQuiz')}
+              style={styles.quizButton}
+            >
+              <Text style={styles.quizButtonText}>Start Quiz Now</Text>
+              <Ionicons color="#FFFFFF" name="arrow-forward" size={18} />
+            </Pressable>
+          </View>
 
-        {courses.map((course) => (
-          <CourseCard course={course} key={course.title} navigation={navigation} />
-        ))}
-      </ScrollView>
+          {/* The student's chosen course and their matched counsellor */}
+          <CourseMatchCard navigation={navigation} />
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Top Recommended Courses</Text>
+            <Pressable accessibilityRole="button" onPress={() => navigation.navigate('StudentCourses')}>
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
+          {isLoading && <ActivityIndicator color={BLUE} />}
+
+          {courses.map((course) => (
+            <CourseCard course={course} key={course.title} navigation={navigation} />
+          ))}
+        </ScrollView>
+        <WelcomeToast
+          visible={showToast}
+          name={studentName.split(' ')[0]}
+          loginTime={user?.lastLoginAt}
+          onHide={() => {
+            setShowToast(false);
+            navigation.setParams({ welcome: false });
+          }}
+        />
+      </View>
 
       <BottomNavigation activeRoute="Main" navigation={navigation} />
+
 
       <Modal
         animationType="slide"
@@ -256,6 +284,16 @@ export default function HomeScreen({ navigation }) {
                 <Ionicons color={MUTED} name="close" size={23} />
               </Pressable>
             </View>
+            {/* Announcements sent by the CareerGuide admins */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => { closeNotifications(); navigation.navigate('StudentNotifications'); }}
+              style={styles.announcementsLink}
+            >
+              <Ionicons color={BLUE} name="megaphone-outline" size={18} />
+              <Text style={styles.announcementsText}>View announcements from CareerGuide{unreadAnnouncements ? ` (${unreadAnnouncements} new)` : ''}</Text>
+              <Ionicons color={BLUE} name="chevron-forward" size={16} />
+            </Pressable>
             {isNotificationsLoading ? (
               <ActivityIndicator color={BLUE} style={styles.notificationsLoading} />
             ) : notifications.length === 0 && !selectedNotification ? (
@@ -381,6 +419,8 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   notificationsTitle: { color: TEXT, flex: 1, fontSize: 17, fontWeight: '800' },
+  announcementsLink: { alignItems: 'center', backgroundColor: '#DEEBFF', borderRadius: 10, flexDirection: 'row', marginBottom: 12, padding: 12 },
+  announcementsText: { color: BLUE, flex: 1, fontSize: 13, fontWeight: '700', marginLeft: 8 },
   closeNotificationsButton: { padding: 4 },
   notificationsLoading: { margin: 28 },
   emptyNotifications: { color: MUTED, padding: 28, textAlign: 'center' },

@@ -14,18 +14,23 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomNavigation from '../components/BottomNavigation';
+import BottomNavigation from '../Components/BottomNavigation';
+import ProfileHeader from '../Components/ProfileHeader';
+import DeleteAccount from '../Components/DeleteAccount';
+import { useAuth } from '../context/AuthContext';
 import {
   deleteAcademicProfile,
   deleteUserProfile,
   getStudentProfile,
   updateUserProfile,
+  getMyGuidance,
 } from '../services/api';
 
 const BLUE = '#0052CC';
 const TEXT = '#172B4D';
 const MUTED = '#6B778C';
 const BORDER = '#DFE1E6';
+const STUDENT_LEVELS = ['OL student', 'AL student', 'After A/L student', 'University Student'];
 
 const fallbackSkills = [
   { name: 'Logical Reasoning', percentage: 92 },
@@ -68,6 +73,7 @@ function normalizeAcademicProfile(value) {
   }
 
   return {
+    fullName: value.fullName ?? value.full_name,
     subjectStream: value.subjectStream ?? value.subject_stream,
     district: value.district,
     zScore: value.zScore ?? value.z_score,
@@ -76,30 +82,51 @@ function normalizeAcademicProfile(value) {
 }
 
 export default function StudentProfileScreen({ navigation, route }) {
+  const { user: loggedInUser, setUser, signOut } = useAuth();
   const [profile, setProfile] = useState(() => ({
     academicProfile: normalizeAcademicProfile(route?.params?.academicProfile),
   }));
   const [isLoading, setIsLoading] = useState(true);
+  const [myCounsellor, setMyCounsellor] = useState(null);
   const [isPictureEditorVisible, setIsPictureEditorVisible] = useState(false);
   const [isUpdatingPicture, setIsUpdatingPicture] = useState(false);
   const [isProfileEditorVisible, setIsProfileEditorVisible] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ fullName: '', grade: '' });
+  const [isGradePickerVisible, setIsGradePickerVisible] = useState(false);
   const [isDeleteDetailsVisible, setIsDeleteDetailsVisible] = useState(false);
   const [detailsToDelete, setDetailsToDelete] = useState([]);
   useEffect(() => {
     let mounted = true;
-    getStudentProfile()
-      .then((data) => mounted && setProfile({
-        ...data,
-        academicProfile: normalizeAcademicProfile(
-          data?.academicProfile || route?.params?.academicProfile,
-        ),
-      }))
+    getStudentProfile(loggedInUser?.id)
+      .then((data) => {
+        if (mounted) {
+          setProfile({
+            ...data,
+            academicProfile: normalizeAcademicProfile(
+              data?.academicProfile || route?.params?.academicProfile,
+            ),
+          });
+        }
+        if (mounted && data?.user) {
+          setUser((current) => current ? {
+            ...current,
+            id: data.user.id,
+            fullName: data.user.full_name,
+            email: data.user.email,
+            grade: data.user.grade,
+            profilePicture: data.user.profilePicture,
+          } : current);
+        }
+      })
       .catch((error) => console.warn('Unable to load student profile.', error))
       .finally(() => mounted && setIsLoading(false));
+    // Assigned counsellor (matched through the chosen course) and their finalised guidance.
+    getMyGuidance()
+      .then((data) => mounted && setMyCounsellor(data))
+      .catch(() => mounted && setMyCounsellor({ counsellor: null, guidance: null }));
     return () => { mounted = false; };
-  }, []);
+  }, [loggedInUser?.id, setUser]);
 
   const skills = profile?.aptitude
     ? Object.entries(profile.aptitude).map(([name, percentage]) => ({
@@ -141,11 +168,25 @@ export default function StudentProfileScreen({ navigation, route }) {
         ...(current || {}),
         user: { ...(current?.user || {}), ...response.data },
       }));
+      setUser((current) => current ? {
+        ...current,
+        fullName: response.data.full_name,
+        grade: response.data.grade,
+        profilePicture: response.data.profilePicture,
+      } : current);
       setIsProfileEditorVisible(false);
     } catch (error) {
       Alert.alert('Unable to update profile', error.message);
     } finally {
       setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigation.reset({ index: 0, routes: [{ name: 'SignIn' }] });
     }
   };
 
@@ -207,7 +248,6 @@ export default function StudentProfileScreen({ navigation, route }) {
       setIsUpdatingPicture(true);
       const response = await updateUserProfile({
         userId: user?.id || 42,
-        zScore: academicProfile?.zScore ?? 0,
         profilePicture: value,
       });
       setProfile((current) => ({
@@ -217,6 +257,10 @@ export default function StudentProfileScreen({ navigation, route }) {
           profilePicture: response?.data?.profilePicture || value,
         },
       }));
+      setUser((current) => current ? {
+        ...current,
+        profilePicture: response?.data?.profilePicture || value,
+      } : current);
       setIsPictureEditorVisible(false);
     } catch (error) {
       Alert.alert('Unable to update picture', error.message);
@@ -251,26 +295,7 @@ export default function StudentProfileScreen({ navigation, route }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F7FC' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#F7F9FC" />
 
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={goBackToPreviousScreen}
-          style={styles.backButton}
-        >
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Student Profile</Text>
-        <Pressable
-          accessibilityLabel="Follow up with student"
-          accessibilityRole="button"
-          style={styles.followButton}
-        >
-          <Text style={styles.followIcon}>⚑</Text>
-          <Text style={styles.followText}>Follow-up</Text>
-        </Pressable>
-      </View>
+      <ProfileHeader title="Student Profile" onBack={goBackToPreviousScreen} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -408,22 +433,62 @@ export default function StudentProfileScreen({ navigation, route }) {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHeadingRow}>
-            <Text style={styles.sectionTitle}>Counsellor Recommendation Notes</Text>
-            <Pressable
-              accessibilityLabel="Edit recommendation notes"
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <Text style={styles.editIcon}>✎</Text>
-            </Pressable>
-          </View>
+          <Text style={styles.sectionTitle}>My Counsellor</Text>
+          {!myCounsellor ? (
+            <ActivityIndicator color="#0B57D0" style={{ marginVertical: 12 }} />
+          ) : myCounsellor.counsellor ? (
+            <View style={styles.counsellorCard}>
+              <View style={styles.counsellorAvatar}>
+                <Text style={styles.counsellorAvatarText}>
+                  {myCounsellor.counsellor.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.counsellorName}>{myCounsellor.counsellor.name}</Text>
+                <Text style={styles.counsellorMeta}>{myCounsellor.counsellor.email}</Text>
+                {myCounsellor.course ? (
+                  <Text style={styles.counsellorMeta}>Guides your course: {myCounsellor.course.title}</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.notesBox}>
+              <Text style={styles.notesText}>
+                You don't have a counsellor yet. Choose a course in the Courses tab and a counsellor who guides it will be assigned to you.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Counsellor Recommendation Notes</Text>
           <View style={styles.notesBox}>
-            <Text style={styles.notesText}>
-              Savindi shows strong potential in technology-focused careers. Encourage
-              further practice in communication and participation in collaborative
-              projects.
-            </Text>
+            {myCounsellor?.guidance ? (
+              <>
+                <Text style={styles.counsellorMeta}>
+                  From {myCounsellor.guidance.counsellor?.name || 'your counsellor'}
+                  {myCounsellor.guidance.lastReviewedAt ? ` · ${new Date(myCounsellor.guidance.lastReviewedAt).toLocaleDateString()}` : ''}
+                  {myCounsellor.guidance.reviewed ? ' · Reviewed' : ''}
+                </Text>
+                {myCounsellor.guidance.summary ? (
+                  <Text style={[styles.notesText, { marginTop: 6 }]}>{myCounsellor.guidance.summary}</Text>
+                ) : null}
+                {myCounsellor.guidance.recommendedPathways?.length ? (
+                  <>
+                    <Text style={[styles.counsellorName, { fontSize: 13, marginTop: 10 }]}>Recommended pathways</Text>
+                    {myCounsellor.guidance.recommendedPathways.map((pathway) => (
+                      <Text key={pathway} style={styles.notesText}>• {pathway}</Text>
+                    ))}
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.notesText}>
+                {myCounsellor?.counsellor
+                  ? `${myCounsellor.counsellor.name} hasn't finalised your career guidance yet. It will appear here once it's ready.`
+                  : 'Guidance from your counsellor will appear here.'}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -434,9 +499,10 @@ export default function StudentProfileScreen({ navigation, route }) {
           <Text style={styles.primaryButtonText}>Tap to send inquiry to counsellor</Text>
           <Text style={styles.primaryButtonArrow}>→</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton}>
+        <Pressable onPress={handleSignOut} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>Sign Out</Text>
         </Pressable>
+        <DeleteAccount onDeleted={() => navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })} />
       </ScrollView>
 
       <Modal
@@ -529,12 +595,31 @@ export default function StudentProfileScreen({ navigation, route }) {
               style={styles.profileInput}
               value={profileForm.fullName}
             />
-            <TextInput
-              onChangeText={(grade) => setProfileForm((current) => ({ ...current, grade }))}
-              placeholder="Grade"
+            <Text style={styles.profileFieldLabel}>Student level</Text>
+            <Pressable
+              onPress={() => setIsGradePickerVisible((visible) => !visible)}
               style={styles.profileInput}
-              value={profileForm.grade}
-            />
+            >
+              <Text style={profileForm.grade ? styles.profileInputText : styles.profilePlaceholder}>
+                {profileForm.grade || 'Select student level'}
+              </Text>
+            </Pressable>
+            {isGradePickerVisible && (
+              <View style={styles.gradeOptions}>
+                {STUDENT_LEVELS.map((level) => (
+                  <Pressable
+                    key={level}
+                    onPress={() => {
+                      setProfileForm((current) => ({ ...current, grade: level }));
+                      setIsGradePickerVisible(false);
+                    }}
+                    style={styles.gradeOption}
+                  >
+                    <Text style={styles.gradeOptionText}>{level}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
             <View style={styles.modalActions}>
               <Pressable onPress={() => setIsProfileEditorVisible(false)} style={styles.cancelButton}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -555,6 +640,27 @@ export default function StudentProfileScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  counsellorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+  },
+  counsellorAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#0B57D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  counsellorAvatarText: { color: '#FFFFFF', fontWeight: '800' },
+  counsellorName: { color: '#0F172A', fontSize: 15, fontWeight: '800' },
+  counsellorMeta: { color: '#64748B', fontSize: 12, marginTop: 2 },
   container: {
     flex: 1,
     backgroundColor: '#F7F9FC',
@@ -1004,6 +1110,37 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  profileFieldLabel: {
+    color: TEXT,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 14,
+  },
+  profileInputText: {
+    color: TEXT,
+    fontSize: 14,
+  },
+  profilePlaceholder: {
+    color: MUTED,
+    fontSize: 14,
+  },
+  gradeOptions: {
+    borderColor: BORDER,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  gradeOption: {
+    borderBottomColor: BORDER,
+    borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  gradeOptionText: {
+    color: TEXT,
+    fontSize: 14,
   },
   modalActions: {
     flexDirection: 'row',

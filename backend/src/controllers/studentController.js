@@ -1,5 +1,6 @@
 const db = require('../config/db');
-const { notifyInquiryCreated } = require('../services/counsellorInquiryNotifications');
+const matching = require('../services/counsellorMatching');
+const { getStudentGuidance } = require('../services/studentResults');
 
 const DEFAULT_USER_ID = 42;
 
@@ -18,6 +19,8 @@ function requiredString(value, fieldName) {
   return null;
 }
 
+// When the request carries a valid login token, req.authUserId is that user's id and is
+// used instead of any userId the client sends (see optionalAuth in studentRoutes.js).
 function parseUserId(value) {
   const userId = Number(value || DEFAULT_USER_ID);
   return Number.isInteger(userId) && userId > 0 ? userId : null;
@@ -25,21 +28,23 @@ function parseUserId(value) {
 
 exports.getStudentProfile = async (req, res) => {
   try {
-    const userId = parseUserId(req.query.userId);
+    const userId = parseUserId(req.authUserId || req.query.userId);
     if (!userId) {
       return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
     }
 
     const userResult = await db.query(
       `SELECT u.id, u.full_name, u.email, u.al_stream, u.status,
-              u.grade,
-              u.profile_picture AS "profilePicture",
+              sp.grade,
+              sp.profile_picture AS "profilePicture",
+              ap.full_name AS "academicFullName",
               ap.subject_stream AS "subjectStream",
               ap.district,
               ap.z_score AS "zScore",
               ap.subject_grades AS "subjectGrades"
        FROM users u
        LEFT JOIN academic_profiles ap ON ap.user_id = u.id
+       LEFT JOIN student_profiles sp ON sp.user_id = u.id
        WHERE u.id = $1 AND u.role = 'student'`,
       [userId]
     );
@@ -60,6 +65,7 @@ exports.getStudentProfile = async (req, res) => {
       },
       academicProfile: userResult.rows[0].subjectStream
         ? {
+            fullName: userResult.rows[0].academicFullName,
             subjectStream: userResult.rows[0].subjectStream,
             district: userResult.rows[0].district,
             zScore: userResult.rows[0].zScore,
@@ -96,7 +102,7 @@ exports.getCounsellors = async (req, res) => {
 
 exports.saveAcademicProfile = async (req, res) => {
   const { userId: rawUserId, subjectStream, district, zScore, subjectGrades } = req.body || {};
-  const userId = parseUserId(rawUserId);
+  const userId = parseUserId(req.authUserId || rawUserId);
   const validationError =
     !userId ? 'userId must be a positive integer.' :
     requiredString(subjectStream, 'subjectStream') ||
@@ -114,20 +120,36 @@ exports.saveAcademicProfile = async (req, res) => {
   try {
     client = await db.connect();
     await client.query('BEGIN');
+    const userResult = await client.query(
+      'SELECT full_name FROM users WHERE id = $1 AND role = $2',
+      [userId, 'student']
+    );
+    if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
     const result = await client.query(
-      `INSERT INTO academic_profiles (user_id, subject_stream, district, z_score, subject_grades)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO academic_profiles (user_id, full_name, subject_stream, district, z_score, subject_grades)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id) DO UPDATE SET
+         full_name = EXCLUDED.full_name,
          subject_stream = EXCLUDED.subject_stream,
          district = EXCLUDED.district,
          z_score = EXCLUDED.z_score,
          subject_grades = EXCLUDED.subject_grades
        RETURNING *`,
-      [userId, subjectStream.trim(), district.trim(), Number(zScore), JSON.stringify(subjectGrades || [])]
+      [userId, userResult.rows[0].full_name, subjectStream.trim(), district.trim(),
+        Number(zScore), JSON.stringify(subjectGrades || [])]
     );
     await client.query(
       'UPDATE users SET z_score = $1, al_stream = $2 WHERE id = $3',
       [Number(zScore), subjectStream.trim(), userId]
+    );
+    await client.query(
+      `UPDATE student_profiles
+       SET full_name = $1, updated_at = NOW()
+       WHERE user_id = $2`,
+      [userResult.rows[0].full_name, userId]
     );
     await client.query('COMMIT');
     return res.json({
@@ -149,13 +171,14 @@ exports.saveAcademicProfile = async (req, res) => {
 };
 
 exports.getAcademicProfile = async (req, res) => {
-  const userId = parseUserId(req.params.userId);
+  const userId = parseUserId(req.authUserId || req.params.userId);
   if (!userId) {
     return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
   try {
     const result = await db.query(
-      `SELECT user_id AS "userId", subject_stream AS "subjectStream",
+      `SELECT user_id AS "userId", full_name AS "fullName",
+              subject_stream AS "subjectStream",
               district, z_score AS "zScore", subject_grades AS "subjectGrades"
        FROM academic_profiles WHERE user_id = $1`,
       [userId]
@@ -170,7 +193,7 @@ exports.getAcademicProfile = async (req, res) => {
 };
 
 exports.deleteAcademicProfile = async (req, res) => {
-  const userId = parseUserId(req.params.userId);
+  const userId = parseUserId(req.authUserId || req.params.userId);
   if (!userId) {
     return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
@@ -180,10 +203,18 @@ exports.deleteAcademicProfile = async (req, res) => {
       client = await db.connect();
       await client.query('BEGIN');
       const result = await client.query(
-        'DELETE FROM academic_profiles WHERE user_id = $1 RETURNING user_id',
+        `DELETE FROM academic_profiles
+         WHERE user_id = $1
+           AND EXISTS (SELECT 1 FROM users WHERE id = $1 AND role = 'student')
+         RETURNING user_id`,
         [userId]
       );
-      await client.query('UPDATE users SET z_score = NULL WHERE id = $1', [userId]);
+      await client.query(
+        `UPDATE users
+         SET z_score = NULL, al_stream = NULL
+         WHERE id = $1 AND role = 'student'`,
+        [userId]
+      );
       await client.query('COMMIT');
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Academic profile not found.' });
@@ -205,7 +236,7 @@ exports.deleteAcademicProfile = async (req, res) => {
 };
 
 exports.updateUserProfile = async (req, res) => {
-  const userId = parseUserId(req.body?.userId);
+  const userId = parseUserId(req.authUserId || req.body?.userId);
   const body = req.body || {};
   const hasName = body.fullName !== undefined || body.full_name !== undefined || body.name !== undefined;
   const hasGrade = body.grade !== undefined;
@@ -237,7 +268,10 @@ exports.updateUserProfile = async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(
       `UPDATE users
        SET full_name = CASE WHEN $1 THEN $2 ELSE full_name END,
            grade = CASE WHEN $3 THEN $4 ELSE grade END,
@@ -247,19 +281,43 @@ exports.updateUserProfile = async (req, res) => {
        RETURNING id, full_name, email, al_stream, grade, z_score AS "zScore",
                  profile_picture AS "profilePicture"`,
       [hasName, hasName ? fullName.trim() : null, hasGrade, hasGrade ? grade.trim() : null,
-        hasZScore, zScore, hasPicture, profilePicture, userId]
-    );
+        hasZScore, zScore, hasPicture, profilePicture, userId]);
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'User not found.' });
     }
-    return res.json({ success: true, data: result.rows[0] });
+      await client.query(
+        `INSERT INTO student_profiles (user_id, full_name, grade, profile_picture)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) DO UPDATE SET
+           full_name = COALESCE(EXCLUDED.full_name, student_profiles.full_name),
+           grade = CASE WHEN $5 THEN EXCLUDED.grade ELSE student_profiles.grade END,
+           profile_picture = CASE WHEN $6 THEN EXCLUDED.profile_picture ELSE student_profiles.profile_picture END,
+           updated_at = NOW()`,
+        [userId, hasName ? fullName.trim() : null, hasGrade ? grade.trim() : null,
+          hasPicture ? profilePicture : null, hasGrade, hasPicture]
+      );
+      if (hasName) {
+        await client.query(
+          'UPDATE academic_profiles SET full_name = $1, updated_at = NOW() WHERE user_id = $2',
+          [fullName.trim(), userId]
+        );
+      }
+      await client.query('COMMIT');
+      return res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     return sendServerError(res, error);
   }
 };
 
 exports.deleteUserProfile = async (req, res) => {
-  const userId = parseUserId(req.params.userId);
+  const userId = parseUserId(req.authUserId || req.params.userId);
   const fields = Array.isArray(req.body?.fields) ? req.body.fields : [];
   const allowedFields = ['grade', 'profilePicture'];
   const invalidField = fields.find((field) => !allowedFields.includes(field));
@@ -290,6 +348,21 @@ exports.deleteUserProfile = async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(404).json({ success: false, error: 'Student not found.' });
     }
+    await client.query(
+      `INSERT INTO student_profiles (user_id, grade, profile_picture)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET
+         grade = CASE WHEN $4 THEN NULL ELSE student_profiles.grade END,
+         profile_picture = CASE WHEN $5 THEN NULL ELSE student_profiles.profile_picture END,
+         updated_at = NOW()`,
+      [
+        userId,
+        fields.includes('grade') ? null : result.rows[0].grade,
+        fields.includes('profilePicture') ? null : result.rows[0].profilePicture,
+        fields.includes('grade'),
+        fields.includes('profilePicture'),
+      ]
+    );
     await client.query('COMMIT');
     return res.json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -377,7 +450,7 @@ exports.sendInquiry = async (req, res) => {
     subject,
     message,
   } = req.body || {};
-  const userId = parseUserId(rawUserId);
+  const userId = parseUserId(req.authUserId || rawUserId);
   const validationError =
     !userId ? 'userId must be a positive integer.' :
     requiredString(courseTitle, 'courseTitle') ||
@@ -389,37 +462,57 @@ exports.sendInquiry = async (req, res) => {
   }
 
   try {
-    let assignedCounsellorId = counsellorId;
-    if (!assignedCounsellorId && courseId) {
-      const courseResult = await db.query(
-        'SELECT counsellor_id FROM courses_list WHERE id = $1',
-        [courseId]
-      );
-      assignedCounsellorId = courseResult.rows[0]?.counsellor_id;
-    }
-    if (assignedCounsellorId) {
-      const counsellor = await db.query(
-        "SELECT id FROM users WHERE id = $1 AND role = 'counsellor' AND status = 'active'",
-        [assignedCounsellorId]
-      );
-      if (counsellor.rows.length === 0) {
-        return res.status(404).json({ success: false, error: 'Active counsellor not found.' });
+    // A student's questions go to their ONE matched counsellor. If they have not chosen a
+    // course yet, asking about a course chooses it (and matches a counsellor).
+    let assignedCounsellorId = null;
+    const isStudent = (await db.query("SELECT 1 FROM users WHERE id = $1 AND role = 'student'", [userId])).rowCount > 0;
+    if (isStudent) {
+      let selection = await matching.getSelection(userId);
+      if ((!selection || !selection.counsellor) && courseId) {
+        try {
+          selection = await matching.selectCourse(userId, courseId);
+        } catch (err) {
+          if (err instanceof matching.MatchingError) {
+            return res.status(err.status).json({ success: false, error: err.message });
+          }
+          throw err;
+        }
       }
+      assignedCounsellorId = selection?.counsellor?.id || null;
+    } else {
+      assignedCounsellorId = counsellorId || null;
+      if (!assignedCounsellorId && courseId) {
+        const courseResult = await db.query('SELECT counsellor_id FROM courses_list WHERE id = $1', [courseId]);
+        assignedCounsellorId = courseResult.rows[0]?.counsellor_id;
+      }
+    }
+    if (!assignedCounsellorId) {
+      return res.status(400).json({ success: false, error: 'No counsellor is assigned to this course.' });
+    }
+    const counsellor = await db.query(
+      "SELECT id FROM users WHERE id = $1 AND role = 'counsellor' AND status = 'active'",
+      [assignedCounsellorId]
+    );
+    if (counsellor.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Active counsellor not found.' });
     }
 
     const result = await db.query(
-      `INSERT INTO inquiries (user_id, counsellor_id, course_id, course_title, subject, message)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO inquiries
+         (user_id, student_full_name, counsellor_id, course_title, subject, message)
+       SELECT u.id, u.full_name, $2, $3, $4, $5
+       FROM users u
+       WHERE u.id = $1 AND u.role = 'student'
        RETURNING *`,
-      [userId, assignedCounsellorId, courseId || null, courseTitle.trim(), subject.trim(), message.trim()]
+      [userId, assignedCounsellorId, courseTitle.trim(), subject.trim(), message.trim(), Number(courseId) || null]
     );
-    await notifyInquiryCreated(result.rows[0]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Student not found.' });
+    }
     return res.status(201).json({
       success: true,
       message: 'Inquiry sent successfully.',
-      counsellorMessage: assignedCounsellorId
-        ? 'Your assigned counsellor has been notified and will reply shortly via the Student Portal.'
-        : 'Senior counsellors have been notified and will reply shortly via the Student Portal.',
+      counsellorMessage: 'Your assigned counsellor has been notified and will reply shortly via the Student Portal.',
       inquiry: result.rows[0],
     });
   } catch (error) {
@@ -427,8 +520,106 @@ exports.sendInquiry = async (req, res) => {
   }
 };
 
+// ---------- Aptitude test results (signed-in students only) ----------
+// Saves the latest result so the student's parents and matched counsellor can see it.
+exports.saveAptitudeResults = async (req, res) => {
+  if (!req.authUserId) return res.status(401).json({ success: false, error: 'Please sign in as a student first.' });
+  const { stream, scores, matches } = req.body || {};
+  const clean = (list, max) => (Array.isArray(list) ? list.slice(0, max) : []);
+  const okScores = clean(scores, 10).every((s) => s && typeof s.area === 'string' && Number.isFinite(Number(s.percent)));
+  const okMatches = clean(matches, 5).every((m) => m && typeof m.title === 'string' && Number.isFinite(Number(m.matchPercent)));
+  if (typeof stream !== 'string' || !stream.trim() || !okScores || !okMatches || !clean(matches, 5).length) {
+    return res.status(400).json({ success: false, error: 'Invalid aptitude result.' });
+  }
+  try {
+    const isStudent = (await db.query("SELECT 1 FROM users WHERE id = $1 AND role = 'student'", [req.authUserId])).rowCount > 0;
+    if (!isStudent) return res.status(403).json({ success: false, error: 'Only students can save aptitude results.' });
+    const toScores = clean(scores, 10).map((s) => ({ area: s.area.slice(0, 80), percent: Math.max(0, Math.min(100, Math.round(Number(s.percent)))) }));
+    const toMatches = clean(matches, 5).map((m) => ({
+      title: m.title.slice(0, 120),
+      matchPercent: Math.max(0, Math.min(100, Math.round(Number(m.matchPercent)))),
+      note: typeof m.note === 'string' ? m.note.slice(0, 300) : null,
+    }));
+    await db.query(
+      `INSERT INTO aptitude_results (student_id, stream, scores, matches, completed_at)
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, NOW())
+       ON CONFLICT (student_id) DO UPDATE
+         SET stream = EXCLUDED.stream, scores = EXCLUDED.scores, matches = EXCLUDED.matches, completed_at = NOW()`,
+      [req.authUserId, stream.trim().slice(0, 60), JSON.stringify(toScores), JSON.stringify(toMatches)]
+    );
+    return res.json({ success: true });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
+// ---------- My counsellor + their finalised guidance (signed-in students only) ----------
+exports.getMyGuidance = async (req, res) => {
+  if (!req.authUserId) return res.status(401).json({ success: false, error: 'Please sign in as a student first.' });
+  try {
+    const [selection, guidance] = await Promise.all([
+      matching.getSelection(req.authUserId),
+      getStudentGuidance(req.authUserId),
+    ]);
+    return res.json({
+      success: true,
+      counsellor: selection?.counsellor || null,
+      course: selection?.course || null,
+      guidance,
+    });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
+// ---------- Course choice and matched counsellor (signed-in students only) ----------
+
+function requireLogin(req, res) {
+  if (!req.authUserId) {
+    res.status(401).json({ success: false, error: 'Please sign in as a student first.' });
+    return false;
+  }
+  return true;
+}
+
+exports.getCourseSelection = async (req, res) => {
+  if (!requireLogin(req, res)) return;
+  try {
+    return res.json({ success: true, selection: await matching.getSelection(req.authUserId) });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
+exports.setCourseSelection = async (req, res) => {
+  if (!requireLogin(req, res)) return;
+  try {
+    const selection = await matching.selectCourse(req.authUserId, req.body?.courseId);
+    return res.json({
+      success: true,
+      selection,
+      message: `You're matched with ${selection.counsellor?.name || 'a counsellor'} for ${selection.course.title}.`,
+    });
+  } catch (error) {
+    if (error instanceof matching.MatchingError) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
+    return sendServerError(res, error);
+  }
+};
+
+exports.deleteCourseSelection = async (req, res) => {
+  if (!requireLogin(req, res)) return;
+  try {
+    await matching.clearSelection(req.authUserId);
+    return res.json({ success: true, selection: null });
+  } catch (error) {
+    return sendServerError(res, error);
+  }
+};
+
 exports.getNotifications = async (req, res) => {
-  const userId = parseUserId(req.query.userId);
+  const userId = parseUserId(req.authUserId || req.query.userId);
   if (!userId) {
     return res.status(400).json({ success: false, error: 'userId must be a positive integer.' });
   }
@@ -461,7 +652,7 @@ exports.getNotifications = async (req, res) => {
 };
 
 exports.markNotificationsRead = async (req, res) => {
-  const userId = parseUserId(req.body?.userId);
+  const userId = parseUserId(req.authUserId || req.body?.userId);
   const notificationIds = Array.isArray(req.body?.notificationIds)
     ? req.body.notificationIds.map(Number).filter((id) => Number.isInteger(id) && id > 0)
     : [];

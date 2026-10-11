@@ -51,7 +51,33 @@ const PLACEHOLDER_NOTES = {
   },
 };
 
+// Real results from the student's aptitude test (Quiz tab), stored in aptitude_results.
+// Falls back to the old placeholder data for students who haven't taken the test.
 async function getQuizResults(studentId) {
+  const sid = Number(studentId);
+  if (Number.isSafeInteger(sid)) {
+    const { rows } = await pool.query(
+      `SELECT a.stream, a.scores, a.matches, a.completed_at, u.z_score, ap.district
+       FROM aptitude_results a
+       JOIN users u ON u.id = a.student_id
+       LEFT JOIN academic_profiles ap ON ap.user_id = a.student_id
+       WHERE a.student_id = $1`,
+      [sid]
+    );
+    const row = rows[0];
+    if (row) {
+      return {
+        status: 'completed',
+        completedAt: row.completed_at,
+        zScore: row.z_score == null ? null : Number(row.z_score),
+        district: row.district || null,
+        stream: row.stream,
+        scores: Array.isArray(row.scores) ? row.scores : [],
+        matchedCareers: Array.isArray(row.matches) ? row.matches : [],
+        source: 'aptitude_test',
+      };
+    }
+  }
   const r = PLACEHOLDER_RESULTS[studentId];
   return r
     ? { ...r, source: 'placeholder' }
@@ -59,38 +85,53 @@ async function getQuizResults(studentId) {
         scores: [], matchedCareers: [], source: 'placeholder' };
 }
 
-async function getCounsellorNote(studentId, parentId) {
-  if (!Number.isSafeInteger(Number(studentId)) || !Number.isSafeInteger(Number(parentId))) return null;
-
-  const { rows } = await pool.query(
-    `SELECT g.recommended_pathways, g.reviewed_at
-     FROM counsellor_guidance_records g
-     JOIN parent_student_links l
-       ON l.student_id = g.student_id
-      AND l.counsellor_id = g.counsellor_id
-      AND l.parent_id = $2
-     JOIN privacy_preferences pp
-       ON pp.parent_id = l.parent_id
-      AND pp.student_id = l.student_id
-      AND pp.counsellor_access = TRUE
-     WHERE g.student_id = $1
-       AND g.guidance_status = 'final'
-       AND g.reviewed_at IS NOT NULL
-       AND g.shared_with_parent = TRUE
-     ORDER BY g.reviewed_at DESC
-     LIMIT 1`,
-    [studentId, parentId]
-  );
-
-  if (!rows[0]) return null;
+function toNote(row) {
+  if (!row) return null;
+  const pathways = Array.isArray(row.recommended_pathways) ? row.recommended_pathways : [];
   return {
-    // Assessment summaries are counsellor-private and are intentionally not
-    // included in any parent-facing response.
-    summary: null,
-    recommendedPathways: rows[0].recommended_pathways,
-    lastReviewedAt: rows[0].reviewed_at,
+    summary: row.assessment_summary?.trim() || null,
+    nextSteps: pathways,
+    recommendedPathways: pathways,
+    status: row.guidance_status,
+    reviewed: Boolean(row.reviewed_at),
+    lastReviewedAt: row.reviewed_at || row.updated_at,
+    counsellor: { id: row.counsellor_id, name: row.counsellor_name },
     source: 'counsellor_guidance',
   };
 }
 
-module.exports = { getQuizResults, getCounsellorNote };
+// Guidance a counsellor finalised and chose to share with the parent ("Share with Parent"
+// switch, or "Mark as Reviewed & Notify Parent"). The parent-child link is already checked
+// by the parent middleware; the newest shared record wins if the student changed counsellor.
+async function getCounsellorNote(studentId) {
+  if (!Number.isSafeInteger(Number(studentId))) return null;
+  const { rows } = await pool.query(
+    `SELECT g.*, c.full_name AS counsellor_name
+     FROM counsellor_guidance_records g
+     JOIN users c ON c.id = g.counsellor_id
+     WHERE g.student_id = $1
+       AND g.guidance_status = 'final'
+       AND g.shared_with_parent = TRUE
+     ORDER BY COALESCE(g.reviewed_at, g.updated_at) DESC
+     LIMIT 1`,
+    [studentId]
+  );
+  return toNote(rows[0]);
+}
+
+// The student sees their own counsellor's finalised guidance (sharing with the parent not required).
+async function getStudentGuidance(studentId) {
+  if (!Number.isSafeInteger(Number(studentId))) return null;
+  const { rows } = await pool.query(
+    `SELECT g.*, c.full_name AS counsellor_name
+     FROM counsellor_guidance_records g
+     JOIN users c ON c.id = g.counsellor_id
+     WHERE g.student_id = $1 AND g.guidance_status = 'final'
+     ORDER BY COALESCE(g.reviewed_at, g.updated_at) DESC
+     LIMIT 1`,
+    [studentId]
+  );
+  return toNote(rows[0]);
+}
+
+module.exports = { getQuizResults, getCounsellorNote, getStudentGuidance };

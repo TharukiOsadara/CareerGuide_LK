@@ -9,7 +9,7 @@ const BORDER = '#DFE1E6';
 
 const tabs = [
   { label: 'Home', icon: 'home-outline', route: 'Main' },
-  { label: 'Quiz', icon: 'brain' },
+  { label: 'Quiz', icon: 'brain', route: 'AptitudeQuiz' },
   { label: 'Courses', icon: 'book-open-variant', route: 'StudentCourses' },
   { label: 'Profile', icon: 'account-outline', route: 'StudentProfile' },
 ];

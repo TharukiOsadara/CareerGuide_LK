@@ -13,6 +13,8 @@ const mapNotif = (n) => ({
   targetRole: n.target_role,
   targetUserId: n.target_user_id,
   senderId: n.sender_id,
+  senderName: n.sender_name || null,
+  senderRole: n.sender_role || null,
   createdAt: n.created_at,
   read: n.read_at != null,
 });
@@ -20,12 +22,11 @@ const mapNotif = (n) => ({
 // Feed for the current user: notifications targeted to their role, to "all", or to them directly.
 router.get('/', authenticate, async (req, res) => {
   const { rows } = await query(
-    `SELECT n.*, r.read_at
+    `SELECT n.*, r.read_at, s.full_name AS sender_name, s.role AS sender_role
        FROM notifications n
        LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = $1
-      WHERE n.target_role = 'all'
-         OR n.target_role = $2
-         OR n.target_user_id = $1
+       LEFT JOIN users s ON s.id = n.sender_id
+      WHERE (n.target_user_id = $1 OR (n.target_user_id IS NULL AND n.target_role IN ('all', $2)))
       ORDER BY n.created_at DESC`,
     [req.user.id, req.user.role]
   );
@@ -38,7 +39,7 @@ router.get('/unread-count', authenticate, async (req, res) => {
     `SELECT COUNT(*)::int AS c
        FROM notifications n
        LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = $1
-      WHERE (n.target_role = 'all' OR n.target_role = $2 OR n.target_user_id = $1)
+      WHERE (n.target_user_id = $1 OR (n.target_user_id IS NULL AND n.target_role IN ('all', $2)))
         AND r.read_at IS NULL`,
     [req.user.id, req.user.role]
   );
@@ -59,7 +60,7 @@ router.post('/read-all', authenticate, async (req, res) => {
   await query(
     `INSERT INTO notification_reads (notification_id, user_id)
      SELECT n.id, $1 FROM notifications n
-      WHERE (n.target_role = 'all' OR n.target_role = $2 OR n.target_user_id = $1)
+      WHERE (n.target_user_id = $1 OR (n.target_user_id IS NULL AND n.target_role IN ('all', $2)))
      ON CONFLICT DO NOTHING`,
     [req.user.id, req.user.role]
   );

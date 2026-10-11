@@ -54,13 +54,14 @@ async function requireParentAndChild(req, res, next) {
 
   const { rows } = await pool.query(
     `SELECT p.id, p.full_name, p.role,
-            l.student_id, l.counsellor_id, l.relationship,
+            l.student_id, COALESCE(sel.counsellor_id, l.counsellor_id) AS counsellor_id, l.relationship,
             s.full_name AS student_name, s.al_stream, s.z_score, s.avatar_initials,
             c.full_name AS counsellor_name
      FROM users p
      LEFT JOIN parent_student_links l ON l.parent_id = p.id AND l.student_id = $2
      LEFT JOIN users s ON s.id = l.student_id
-     LEFT JOIN users c ON c.id = l.counsellor_id
+     LEFT JOIN student_course_selections sel ON sel.student_id = l.student_id
+     LEFT JOIN users c ON c.id = COALESCE(sel.counsellor_id, l.counsellor_id)
      WHERE p.id = $1 AND p.status = 'active'`,
     [userId, studentId]
   );

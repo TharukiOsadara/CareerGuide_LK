@@ -1,7 +1,14 @@
 const ALLOWED_PATHWAYS = [
   'Software Engineering',
+  'Biomedical Science',
   'Data Science & AI',
   'Information Technology',
+  'Business Management',
+  'Marketing',
+  'Accounting & Finance',
+  'International Relations',
+  'Mechanical Engineering',
+  'Medicine & Surgery',
 ];
 
 const MAX_SUMMARY = 4000;

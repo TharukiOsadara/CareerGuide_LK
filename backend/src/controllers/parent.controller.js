@@ -32,7 +32,6 @@ function initialsOf(name = '') {
 }
 
 function toInquiry(row) {
-  const zScore = child.zScore ?? quiz.zScore ?? null;
   return {
     id: row.id,
     studentId: row.student_id,
@@ -85,7 +84,10 @@ async function fetchCourses(alStream) {
     `SELECT id, degree_name, uni_name, min_z_score, district, duration, tuition_fee,
             ugc_approved, nvq_level, match_percent, career_path, updated_at
      FROM courses
-     WHERE al_stream = $1
+     -- Loose match: ignores case, punctuation and the word "stream", so
+     -- "Physical Science (Maths Stream)" matches "Physical Science (Maths)".
+     WHERE regexp_replace(regexp_replace(lower(al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
+         = regexp_replace(regexp_replace(lower($1), 'stream', '', 'g'), '[^a-z]', '', 'g')
      ORDER BY match_percent DESC NULLS LAST, min_z_score DESC
      LIMIT 10`,
     [alStream]
@@ -121,6 +123,8 @@ async function buildProgress(child) {
     getQuizResults(child.student_id),
     fetchCourses(child.al_stream),
   ]);
+  // The student's own Z-score (entered at sign-up) is the real figure; fall back to the quiz data.
+  const zScore = child.z_score ?? quiz.zScore ?? null;
   return {
     child: toChild(child),
     assessment: {
@@ -141,12 +145,13 @@ async function buildProgress(child) {
 
 async function listChildren(req, res) {
   const { rows } = await pool.query(
-    `SELECT l.student_id, l.counsellor_id, l.relationship,
+    `SELECT l.student_id, COALESCE(sel.counsellor_id, l.counsellor_id) AS counsellor_id, l.relationship,
             s.full_name AS student_name, s.al_stream, s.z_score, s.avatar_initials,
             c.full_name AS counsellor_name
      FROM parent_student_links l
      JOIN users s ON s.id = l.student_id
-     LEFT JOIN users c ON c.id = l.counsellor_id
+     LEFT JOIN student_course_selections sel ON sel.student_id = l.student_id
+     LEFT JOIN users c ON c.id = COALESCE(sel.counsellor_id, l.counsellor_id)
      WHERE l.parent_id = $1
      ORDER BY s.full_name`,
     [req.user.id]
@@ -206,7 +211,7 @@ async function getProgress(req, res) {
 }
 
 async function getGuidance(req, res) {
-  const note = await getCounsellorNote(req.child.student_id, req.user.id);
+  const note = await getCounsellorNote(req.child.student_id);
   res.json({
     counsellor: req.child.counsellor_id
       ? { id: req.child.counsellor_id, name: req.child.counsellor_name }

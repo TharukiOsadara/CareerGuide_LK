@@ -1,7 +1,7 @@
 const pool = require('../db');
-const bcrypt = require('bcryptjs');
 const { getQuizResults } = require('../services/studentResults');
 const { parseId, validateGuidance, validateSettings } = require('../validators/counsellor.validators');
+const matching = require('../services/counsellorMatching');
 
 const NOT_SHARED = {
   access: 'not_shared',
@@ -14,9 +14,6 @@ function parseListFilters(query) {
     search: typeof query.search === 'string' ? query.search.trim() : '',
     stream: typeof query.stream === 'string' ? query.stream.trim() : '',
     status: ['pending', 'reviewed'].includes(status) ? status : null,
-    courseId: query.courseId ? Number(query.courseId) : null,
-    page: query.page ? Number(query.page) : 1,
-    pageSize: query.pageSize ? Math.min(Number(query.pageSize), 50) : 20,
   };
 }
 
@@ -43,45 +40,32 @@ function toStudent(row) {
   };
 }
 
-async function isSeniorCounsellor(counsellorId) {
-  const { rows } = await pool.query(
-    `SELECT is_senior FROM users WHERE id = $1 AND role = 'counsellor' AND status = 'active'`, [counsellorId]
-  );
-  return rows[0]?.is_senior === true;
-}
-
-async function findAuthorizedInquiry(inquiryId, counsellorId) {
-  const { rows } = await pool.query(
-    `SELECT i.id, i.user_id AS "studentId", u.full_name AS "studentName", i.course_title AS "courseTitle",
-            i.subject, i.message, i.reply_message AS "replyMessage", i.replied_at AS "repliedAt",
-            i.replied_by AS "repliedBy", rb.full_name AS "repliedByName", i.is_read AS "isRead"
-       FROM inquiries i
-       JOIN users u ON u.id = i.user_id
-       LEFT JOIN users rb ON rb.id = i.replied_by
-       LEFT JOIN courses_list c ON (i.course_id IS NOT NULL AND c.id = i.course_id)
-                                OR (i.course_id IS NULL AND c.title = i.course_title)
-       JOIN users viewer ON viewer.id = $2 AND viewer.role = 'counsellor' AND viewer.status = 'active'
-      WHERE i.id = $1 AND (viewer.is_senior = TRUE OR c.counsellor_id = $2)
-      ORDER BY c.id LIMIT 1`, [inquiryId, counsellorId]
-  );
-  return rows[0] || null;
-}
-
 // Single source of truth for counsellor assignment and consent scope.
-// Assignment currently comes from parent_student_links.counsellor_id.
+// A counsellor's students are the ones MATCHED to them through the course the student chose
+// (student_course_selections). Students who haven't chosen a course yet fall back to the
+// counsellor on their parent link. Consent: parents' privacy setting when the student has a
+// linked parent; a student with no parent link consented by choosing the course themselves.
 async function getAssignedStudents(counsellorId) {
   const { rows } = await pool.query(
-    `SELECT s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
-            COALESCE(BOOL_OR(pp.counsellor_access), FALSE) AS counsellor_access,
+    `WITH assigned AS (
+       SELECT sel.student_id FROM student_course_selections sel WHERE sel.counsellor_id = $1
+       UNION
+       SELECT l.student_id FROM parent_student_links l
+       WHERE l.counsellor_id = $1
+         AND NOT EXISTS (SELECT 1 FROM student_course_selections x WHERE x.student_id = l.student_id)
+     )
+     SELECT s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
+            CASE WHEN COUNT(l.parent_id) = 0 THEN TRUE
+                 ELSE COALESCE(BOOL_OR(pp.counsellor_access), FALSE) END AS counsellor_access,
             COALESCE(
               ARRAY_AGG(DISTINCT l.parent_id) FILTER (WHERE pp.counsellor_access = TRUE),
               ARRAY[]::INTEGER[]
             ) AS consent_parent_ids
-     FROM parent_student_links l
-     JOIN users s ON s.id = l.student_id
+     FROM assigned a
+     JOIN users s ON s.id = a.student_id AND s.role = 'student'
+     LEFT JOIN parent_student_links l ON l.student_id = s.id
      LEFT JOIN privacy_preferences pp
        ON pp.parent_id = l.parent_id AND pp.student_id = l.student_id
-     WHERE l.counsellor_id = $1 AND s.role = 'student'
      GROUP BY s.id, s.full_name, s.avatar_initials, s.al_stream
      ORDER BY s.id, s.full_name`,
     [counsellorId]
@@ -108,15 +92,6 @@ async function queryStudents(counsellorId, filters = {}) {
     values.push(filters.stream);
     where.push(`s.al_stream = $${values.length}`);
   }
-  if (filters.courseId) {
-    values.push(filters.courseId);
-    where.push(`EXISTS (
-      SELECT 1 FROM inquiries course_inquiry
-      JOIN courses_list assigned_course ON assigned_course.title = course_inquiry.course_title
-       AND assigned_course.counsellor_id = $1
-      WHERE course_inquiry.user_id = s.id AND assigned_course.id = $${values.length}
-    )`);
-  }
 
   const statusExpression = "CASE WHEN g.guidance_status = 'final' AND g.reviewed_at IS NOT NULL THEN 'reviewed' ELSE 'pending' END";
   if (filters.status === 'reviewed') where.push(`${statusExpression} = 'reviewed'`);
@@ -127,15 +102,18 @@ async function queryStudents(counsellorId, filters = {}) {
             s.id AS student_id, s.full_name AS student_name, s.avatar_initials, s.al_stream,
             g.id AS guidance_id, g.guidance_status, g.reviewed_at, g.updated_at AS guidance_updated_at,
             g.shared_with_parent,
-            top_course.degree_name AS top_match_name,
-            top_course.match_percent AS top_match_percent
+            -- Top match: the student's aptitude-test result first, else the best course for their stream.
+            COALESCE(ar.matches->0->>'title', top_course.degree_name) AS top_match_name,
+            COALESCE((ar.matches->0->>'matchPercent')::int, top_course.match_percent) AS top_match_percent
      FROM users s
+     LEFT JOIN aptitude_results ar ON ar.student_id = s.id
      LEFT JOIN counsellor_guidance_records g
        ON g.student_id = s.id AND g.counsellor_id = $1
      LEFT JOIN LATERAL (
        SELECT degree_name, match_percent
        FROM courses
-       WHERE courses.al_stream = s.al_stream
+       WHERE regexp_replace(regexp_replace(lower(courses.al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
+           = regexp_replace(regexp_replace(lower(s.al_stream), 'stream', '', 'g'), '[^a-z]', '', 'g')
        ORDER BY match_percent DESC NULLS LAST, id
        LIMIT 1
      ) top_course ON TRUE
@@ -152,20 +130,7 @@ async function queryStudents(counsellorId, filters = {}) {
 async function listStudents(req, res) {
   const filters = parseListFilters(req.query);
   const rows = await queryStudents(req.user.id, filters);
-  const start = (filters.page - 1) * filters.pageSize;
-  res.json({
-    students: rows.slice(start, start + filters.pageSize).map(toStudent),
-    pagination: { page: filters.page, pageSize: filters.pageSize, total: rows.length, pages: Math.ceil(rows.length / filters.pageSize) },
-  });
-}
-
-async function listAssignedCourses(req, res) {
-  const senior = await isSeniorCounsellor(req.user.id);
-  const { rows } = await pool.query(
-    `SELECT id, title, stream, institute FROM courses_list
-      WHERE ($1 = TRUE OR counsellor_id = $2) ORDER BY title, institute`, [senior, req.user.id]
-  );
-  res.json({ courses: rows });
+  res.json({ students: rows.map(toStudent) });
 }
 
 async function getDashboard(req, res) {
@@ -189,7 +154,7 @@ async function getDashboard(req, res) {
   ]);
   const stats = statsResult.rows[0];
   res.json({
-    counsellor: { id: req.user.id, name: req.user.fullName, title: req.user.isSenior ? 'Senior Counsellor' : 'Counsellor', isSenior: req.user.isSenior === true },
+    counsellor: { id: req.user.id, name: req.user.fullName, title: 'Senior Counsellor' },
     stats: {
       totalStudents: stats.total,
       reviewed: stats.reviewed,
@@ -219,26 +184,35 @@ function toGuidance(row) {
   };
 }
 
+function suggestedPathways(assessment, student) {
+  const text = `${student?.stream || ''} ${(assessment?.matchedCareers || []).map((item) => item.title).join(' ')}`.toLowerCase();
+  const suggestions = [];
+  const add = (value) => { if (!suggestions.includes(value)) suggestions.push(value); };
+  if (/commerce|business|management|marketing|account/.test(text)) {
+    add('Business Management'); add('Marketing'); add('Accounting & Finance');
+  }
+  if (/biology|medical|health|biomed/.test(text)) {
+    add('Biomedical Science'); add('Medicine & Surgery');
+  }
+  if (/mechanical|engineering/.test(text)) add('Mechanical Engineering');
+  if (/relation|politic|arts/.test(text)) add('International Relations');
+  if (/data|ai|computer|software|math|technology|physical/.test(text)) {
+    add('Data Science & AI'); add('Software Engineering'); add('Information Technology');
+  }
+  return suggestions;
+}
+
 async function getStudentProfile(req, res) {
   const studentId = parseId(req.params.studentId);
   if (!studentId) return res.status(400).json({ error: 'Invalid student id', code: 'VALIDATION' });
   const student = await findAssignedStudent(req.user.id, studentId);
   if (!student) return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
 
-  const [quiz, guidanceResult, academicResult, inquiryResult] = await Promise.all([
+  const [quiz, guidanceResult] = await Promise.all([
     student.counsellor_access ? getQuizResults(studentId) : null,
     pool.query(
       `SELECT * FROM counsellor_guidance_records WHERE counsellor_id = $1 AND student_id = $2`,
       [req.user.id, studentId]
-    ),
-    pool.query(
-      `SELECT subject_stream AS "subjectStream", district, z_score AS "zScore", subject_grades AS "subjectGrades"
-         FROM academic_profiles WHERE user_id = $1`, [studentId]
-    ),
-    pool.query(
-      `SELECT id, course_title AS "courseTitle", subject, message,
-              reply_message AS "replyMessage", replied_at AS "repliedAt"
-         FROM inquiries WHERE user_id = $1 AND counsellor_id = $2 ORDER BY id DESC`, [studentId, req.user.id]
     ),
   ]);
 
@@ -264,10 +238,20 @@ async function getStudentProfile(req, res) {
         }
       : NOT_SHARED,
     guidance: toGuidance(guidance),
-    academicProfile: academicResult.rows[0] || null,
-    inquiries: inquiryResult.rows,
+    suggestedPathways: suggestedPathways(quiz, student),
     decisionSupportDisclaimer: "These matches support, not replace, your counsellor's advice.",
   });
+}
+
+async function notifyStudentGuidance(client, counsellorId, studentId, guidance) {
+  const pathways = Array.isArray(guidance.recommended_pathways) ? guidance.recommended_pathways : [];
+  const summary = guidance.assessment_summary?.trim() || 'Your counsellor has completed your career guidance.';
+  const pathText = pathways.length ? ` Recommended pathways: ${pathways.join(', ')}.` : '';
+  await client.query(
+    `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
+     VALUES ($1, $2, $3, 'student', $4)`,
+    ['Career guidance completed', `${summary}${pathText}`, counsellorId, studentId]
+  );
 }
 
 async function getGuidance(req, res) {
@@ -292,9 +276,6 @@ async function saveGuidance(req, res) {
   }
   const { value, error } = validateGuidance(req.body);
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
-  if (value.sharedWithParent === true && !assignedStudent.counsellor_access) {
-    return res.status(409).json({ error: 'Parent sharing requires counsellor access consent', code: 'CONSENT_REQUIRED' });
-  }
 
   const existing = await pool.query(
     `SELECT guidance_status, reviewed_at
@@ -337,9 +318,6 @@ async function updateGuidance(req, res) {
   if (error) return res.status(400).json({ error, code: 'VALIDATION' });
   const student = await findAssignedStudent(req.user.id, studentId);
   if (!student) return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
-  if (value.sharedWithParent === true && !student.counsellor_access) {
-    return res.status(409).json({ error: 'Parent sharing requires counsellor access consent', code: 'CONSENT_REQUIRED' });
-  }
 
   const existing = await pool.query(
     `SELECT guidance_status, reviewed_at
@@ -378,49 +356,41 @@ async function deleteGuidance(req, res) {
   if (!(await findAssignedStudent(req.user.id, studentId))) {
     return res.status(404).json({ error: 'Assigned student not found', code: 'NOT_FOUND' });
   }
+  // Draft or final: the counsellor can remove their own record and start again.
   const { rows } = await pool.query(
     `DELETE FROM counsellor_guidance_records
-     WHERE counsellor_id = $1 AND student_id = $2 AND guidance_status = 'draft'
-     RETURNING id`,
+     WHERE counsellor_id = $1 AND student_id = $2
+     RETURNING id, guidance_status`,
     [req.user.id, studentId]
-  );
-  if (rows[0]) return res.json({ deleted: true, id: rows[0].id });
-  const existing = await pool.query(
-    `SELECT guidance_status FROM counsellor_guidance_records WHERE counsellor_id = $1 AND student_id = $2`,
-    [req.user.id, studentId]
-  );
-  if (!existing.rows[0]) return res.status(404).json({ error: 'Guidance record not found', code: 'NOT_FOUND' });
-  return res.status(409).json({ error: 'Reviewed guidance cannot be deleted', code: 'REVIEW_LOCKED' });
-}
-
-async function listGuidance(req, res) {
-  const { rows } = await pool.query(
-    `SELECT g.*, s.full_name AS student_name
-       FROM counsellor_guidance_records g JOIN users s ON s.id = g.student_id
-      WHERE g.counsellor_id = $1 ORDER BY g.updated_at DESC`, [req.user.id]
-  );
-  res.json({ guidance: rows.map((row) => ({ ...toGuidance(row), studentId: row.student_id, studentName: row.student_name })) });
-}
-
-async function getGuidanceById(req, res) {
-  const id = parseId(req.params.guidanceId);
-  if (!id) return res.status(400).json({ error: 'Invalid guidance id', code: 'VALIDATION' });
-  const { rows } = await pool.query(
-    `SELECT g.*, s.full_name AS student_name FROM counsellor_guidance_records g
-      JOIN users s ON s.id = g.student_id WHERE g.id = $1 AND g.counsellor_id = $2`, [id, req.user.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Guidance record not found', code: 'NOT_FOUND' });
-  res.json({ guidance: { ...toGuidance(rows[0]), studentId: rows[0].student_id, studentName: rows[0].student_name } });
+  res.json({ deleted: true, id: rows[0].id, guidanceStatus: rows[0].guidance_status });
 }
 
-async function deleteGuidanceById(req, res) {
-  const id = parseId(req.params.guidanceId);
-  if (!id) return res.status(400).json({ error: 'Invalid guidance id', code: 'VALIDATION' });
+// All guidance records this counsellor has written, for students still assigned to them,
+// plus the assigned students who have no record yet (so the counsellor can create one).
+async function listGuidance(req, res) {
+  const assigned = await getAssignedStudents(req.user.id);
+  const ids = assigned.map((s) => s.student_id);
+  if (!ids.length) return res.json({ records: [], studentsWithout: [] });
   const { rows } = await pool.query(
-    `DELETE FROM counsellor_guidance_records WHERE id = $1 AND counsellor_id = $2 AND guidance_status = 'draft' RETURNING id`, [id, req.user.id]
+    `SELECT g.*, s.full_name AS student_name, s.al_stream
+     FROM counsellor_guidance_records g
+     JOIN users s ON s.id = g.student_id
+     WHERE g.counsellor_id = $1 AND g.student_id = ANY($2::int[])
+     ORDER BY g.updated_at DESC`,
+    [req.user.id, ids]
   );
-  if (!rows[0]) return res.status(409).json({ error: 'Guidance record not found or is review-locked', code: 'REVIEW_LOCKED' });
-  res.json({ deleted: true, id });
+  const withRecord = new Set(rows.map((r) => r.student_id));
+  res.json({
+    records: rows.map((r) => ({
+      ...toGuidance(r),
+      student: { id: r.student_id, name: r.student_name, stream: r.al_stream },
+    })),
+    studentsWithout: assigned
+      .filter((s) => !withRecord.has(s.student_id))
+      .map((s) => ({ id: s.student_id, name: s.student_name, stream: s.al_stream })),
+  });
 }
 
 async function markReviewed(req, res) {
@@ -440,7 +410,7 @@ async function markReviewed(req, res) {
            reviewed_at = NOW(), updated_at = NOW()
        WHERE counsellor_id = $1 AND student_id = $2
        RETURNING *`,
-      [req.user.id, studentId, assignedStudent.consent_parent_ids.length > 0]
+      [req.user.id, studentId, true]
     );
     if (!guidance.rows[0]) {
       await client.query('ROLLBACK');
@@ -450,14 +420,14 @@ async function markReviewed(req, res) {
     const notifications = await client.query(
       `INSERT INTO notifications (title, body, sender_id, target_role, target_user_id)
         SELECT 'Guidance reviewed',
-               'Your counsellor has reviewed the student guidance profile.',
+               'Your counsellor has reviewed your child''s career guidance.',
                $1, 'parent', l.parent_id
         FROM parent_student_links l
         WHERE l.student_id = $2
-          AND l.parent_id = ANY($3::int[])
         RETURNING id, target_user_id`,
-      [req.user.id, studentId, assignedStudent.consent_parent_ids]
+      [req.user.id, studentId]
     );
+    await notifyStudentGuidance(client, req.user.id, studentId, guidance.rows[0]);
     await client.query('COMMIT');
     res.json({ guidance: toGuidance(guidance.rows[0]), notificationsCreated: notifications.rowCount });
   } catch (error) {
@@ -528,323 +498,246 @@ async function updateSettings(req, res) {
   } });
 }
 
-async function getProfile(req, res) {
+function toSettings(row) {
+  return {
+    counsellorId: row.counsellor_id,
+    schoolAffiliation: row.school_affiliation,
+    zone: row.zone,
+    notificationsEnabled: row.notifications_enabled,
+    emailAlertsEnabled: row.email_alerts_enabled,
+    ugcHandbookVersion: row.ugc_handbook_version,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// Create the profile details (first save). 409 if they already exist - use PUT to change them.
+async function createSettings(req, res) {
+  const { value, error } = validateSettings(req.body);
+  if (error) return res.status(400).json({ error, code: 'VALIDATION' });
   const { rows } = await pool.query(
-    `SELECT id, full_name AS "fullName", email, role, status, is_senior AS "isSenior", al_stream AS "alStream",
-            profile_picture AS "profilePicture", avatar_initials AS initials
-       FROM users WHERE id = $1 AND role = 'counsellor'`,
+    `INSERT INTO counsellor_settings
+       (counsellor_id, school_affiliation, zone, notifications_enabled, email_alerts_enabled, ugc_handbook_version)
+     VALUES ($1, $2, $3, COALESCE($4, TRUE), COALESCE($5, FALSE), $6)
+     ON CONFLICT (counsellor_id) DO NOTHING
+     RETURNING *`,
+    [req.user.id, value.schoolAffiliation ?? null, value.zone ?? null,
+      value.notificationsEnabled ?? null, value.emailAlertsEnabled ?? null, value.ugcHandbookVersion ?? null]
+  );
+  if (!rows[0]) return res.status(409).json({ error: 'Profile details already exist. Update them instead.', code: 'EXISTS' });
+  res.status(201).json({ settings: toSettings(rows[0]) });
+}
+
+// Clear the saved profile details and go back to the defaults.
+async function deleteSettings(req, res) {
+  const { rowCount } = await pool.query('DELETE FROM counsellor_settings WHERE counsellor_id = $1', [req.user.id]);
+  if (!rowCount) return res.status(404).json({ error: 'No saved profile details to clear', code: 'NOT_FOUND' });
+  res.json({ deleted: true });
+}
+
+// ---------- Courses this counsellor guides (drives student matching) ----------
+
+async function listMyCourses(req, res) {
+  const { rows } = await pool.query(
+    `SELECT c.id, c.title, c.institute, c.stream,
+            EXISTS (SELECT 1 FROM counsellor_courses cc WHERE cc.course_id = c.id AND cc.counsellor_id = $1) AS mine,
+            (SELECT COUNT(*)::int FROM student_course_selections s
+             WHERE s.course_id = c.id AND s.counsellor_id = $1) AS my_students
+     FROM courses_list c
+     ORDER BY c.title`,
     [req.user.id]
   );
-  if (!rows[0]) return res.status(404).json({ error: 'Counsellor profile not found', code: 'NOT_FOUND' });
-  res.json({ profile: rows[0] });
+  const map = (r) => ({ id: r.id, title: r.title, institute: r.institute, stream: r.stream, myStudents: r.my_students });
+  res.json({ courses: rows.filter((r) => r.mine).map(map), available: rows.filter((r) => !r.mine).map(map) });
 }
 
-async function updateProfile(req, res) {
-  const { fullName, profilePicture } = req.body || {};
-  if (fullName !== undefined && (typeof fullName !== 'string' || !fullName.trim())) {
-    return res.status(400).json({ error: 'fullName must be a non-empty string', code: 'VALIDATION' });
-  }
-  if (profilePicture !== undefined && profilePicture !== null && typeof profilePicture !== 'string') {
-    return res.status(400).json({ error: 'profilePicture must be text or null', code: 'VALIDATION' });
-  }
-  if (fullName === undefined && profilePicture === undefined) {
-    return res.status(400).json({ error: 'Nothing to update', code: 'VALIDATION' });
-  }
-  const { rows } = await pool.query(
-    `UPDATE users SET full_name = CASE WHEN $1::boolean THEN $2 ELSE full_name END,
-                      profile_picture = CASE WHEN $3::boolean THEN $4 ELSE profile_picture END
-     WHERE id = $5 AND role = 'counsellor'
-     RETURNING id, full_name AS "fullName", email, role, status, al_stream AS "alStream",
-               profile_picture AS "profilePicture", avatar_initials AS initials`,
-    [fullName !== undefined, fullName === undefined ? null : fullName.trim(),
-      profilePicture !== undefined, profilePicture === undefined ? null : profilePicture, req.user.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Counsellor profile not found', code: 'NOT_FOUND' });
-  res.json({ profile: rows[0] });
+async function currentCourseIds(counsellorId) {
+  const { rows } = await pool.query('SELECT course_id FROM counsellor_courses WHERE counsellor_id = $1', [counsellorId]);
+  return rows.map((r) => r.course_id);
 }
 
-async function changePassword(req, res) {
-  const { currentPassword, newPassword } = req.body || {};
-  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length < 8) {
-    return res.status(400).json({ error: 'currentPassword is required and newPassword must be at least 8 characters', code: 'VALIDATION' });
+async function addMyCourse(req, res) {
+  const courseId = parseId(req.body?.courseId);
+  if (!courseId) return res.status(400).json({ error: 'Choose a course', code: 'VALIDATION' });
+  const ids = await currentCourseIds(req.user.id);
+  if (ids.includes(courseId)) return res.status(409).json({ error: 'You already guide this course', code: 'EXISTS' });
+  try {
+    await matching.setCounsellorCourses(req.user.id, [...ids, courseId]);
+  } catch (err) {
+    if (err instanceof matching.MatchingError) return res.status(err.status).json({ error: err.message });
+    throw err;
   }
-  const { rows } = await pool.query('SELECT password_hash FROM users WHERE id = $1 AND role = \'counsellor\'', [req.user.id]);
-  if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash || ''))) {
-    return res.status(401).json({ error: 'Current password is incorrect', code: 'INVALID_PASSWORD' });
+  res.status(201).json({ added: courseId });
+}
+
+// Students matched on a removed course are re-matched to another counsellor who guides it.
+async function removeMyCourse(req, res) {
+  const courseId = parseId(req.params.courseId);
+  if (!courseId) return res.status(400).json({ error: 'Invalid course', code: 'VALIDATION' });
+  const ids = await currentCourseIds(req.user.id);
+  if (!ids.includes(courseId)) return res.status(404).json({ error: 'You do not guide this course', code: 'NOT_FOUND' });
+  if (ids.length === 1) {
+    return res.status(409).json({ error: 'Keep at least one course so students can be matched to you', code: 'LAST_COURSE' });
   }
-  const passwordHash = await bcrypt.hash(newPassword, 12);
-  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, req.user.id]);
-  res.json({ message: 'Password updated successfully' });
+  const result = await matching.setCounsellorCourses(req.user.id, ids.filter((id) => id !== courseId));
+  res.json({ removed: courseId, rematched: result.rematched, unmatched: result.unmatched });
+}
+
+// ---------- Inquiries sent to this counsellor ----------
+// Students ask through the course screens (table `inquiries`); parents ask through the
+// Parent Portal (table `counsellor_inquiries`). A counsellor only sees inquiries addressed to them.
+
+const TOPIC_LABEL = { fees: 'Fees', intake_dates: 'Intake dates', course_choice: 'Course choice', other: 'Other' };
+const inquiryId = (v) => (Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null);
+
+function validReply(text) {
+  const t = typeof text === 'string' ? text.trim() : '';
+  if (t.length < 2) return 'Write a reply first.';
+  if (t.length > 1000) return 'Replies can be up to 1000 characters.';
+  return '';
 }
 
 async function listInquiries(req, res) {
-  const senior = await isSeniorCounsellor(req.user.id);
-  const courseId = req.query.courseId ? parseId(req.query.courseId) : null;
-  if (req.query.courseId !== undefined && !courseId) return res.status(400).json({ error: 'Invalid course id', code: 'VALIDATION' });
-  const { rows } = await pool.query(
-    `SELECT DISTINCT ON (i.id) i.id, i.user_id AS "studentId", u.full_name AS "studentName", i.course_title AS "courseTitle",
-            i.subject, i.message, i.reply_message AS "replyMessage", i.replied_at AS "repliedAt",
-            i.replied_by AS "repliedBy", rb.full_name AS "repliedByName", i.is_read AS "isRead"
-       FROM inquiries i JOIN users u ON u.id = i.user_id
-       LEFT JOIN users rb ON rb.id = i.replied_by
-       LEFT JOIN courses_list c ON (i.course_id IS NOT NULL AND c.id = i.course_id)
-                                OR (i.course_id IS NULL AND c.title = i.course_title)
-      WHERE ($1 = TRUE OR c.counsellor_id = $2)
-        AND ($3::int IS NULL OR c.id = $3)
-      ORDER BY i.id DESC, c.id`, [senior, req.user.id, courseId]
-  );
-  res.json({ inquiries: rows, isSenior: senior });
+  const me = req.user.id;
+  const [student, parent] = await Promise.all([
+    pool.query(
+      `SELECT i.id, i.subject, i.message, i.course_title, i.created_at, i.reply_message, i.replied_at,
+              u.id AS student_id, u.full_name AS student_name, u.email AS student_email
+       FROM inquiries i
+       JOIN users u ON u.id = i.user_id
+       WHERE i.counsellor_id = $1
+       ORDER BY (i.reply_message IS NULL) DESC, i.created_at DESC`,
+      [me]
+    ),
+    pool.query(
+      `SELECT q.id, q.topic, q.message, q.status, q.reply, q.replied_at, q.created_at,
+              p.full_name AS parent_name, p.email AS parent_email,
+              s.id AS student_id, s.full_name AS student_name
+       FROM counsellor_inquiries q
+       JOIN users p ON p.id = q.parent_id
+       JOIN users s ON s.id = q.student_id
+       WHERE q.counsellor_id = $1
+       ORDER BY (q.status = 'answered') ASC, q.created_at DESC`,
+      [me]
+    ),
+  ]);
+  const items = [
+    ...student.rows.map((r) => ({
+      type: 'student',
+      id: r.id,
+      from: r.student_name,
+      fromEmail: r.student_email,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      subject: r.subject,
+      context: r.course_title,
+      message: r.message,
+      reply: r.reply_message,
+      repliedAt: r.replied_at,
+      status: r.reply_message ? 'answered' : 'pending',
+      createdAt: r.created_at,
+    })),
+    ...parent.rows.map((r) => ({
+      type: 'parent',
+      id: r.id,
+      from: r.parent_name,
+      fromEmail: r.parent_email,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      subject: `${TOPIC_LABEL[r.topic] || 'Question'} - about ${r.student_name}`,
+      context: TOPIC_LABEL[r.topic] || r.topic,
+      message: r.message,
+      reply: r.reply,
+      repliedAt: r.replied_at,
+      status: r.status === 'answered' ? 'answered' : 'pending',
+      createdAt: r.created_at,
+    })),
+  ].sort((a, b) => (a.status === b.status ? new Date(b.createdAt) - new Date(a.createdAt) : a.status === 'pending' ? -1 : 1));
+  res.json({
+    inquiries: items,
+    counts: {
+      total: items.length,
+      pending: items.filter((i) => i.status === 'pending').length,
+      answered: items.filter((i) => i.status === 'answered').length,
+    },
+  });
 }
 
-async function getInquiry(req, res) {
-  const id = parseId(req.params.inquiryId);
-  if (!id) return res.status(400).json({ error: 'Invalid inquiry id', code: 'VALIDATION' });
-  const inquiry = await findAuthorizedInquiry(id, req.user.id);
-  if (!inquiry) return res.status(403).json({ error: 'You are not assigned to this inquiry', code: 'FORBIDDEN' });
-  res.json({ inquiry });
+// Opening a parent's question marks it "read" (the parent can no longer edit it).
+async function markParentInquiryRead(req, res) {
+  const id = inquiryId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid inquiry', code: 'VALIDATION' });
+  await pool.query(
+    // updated_at is the parent's own edit time (shown as "Edited"), so it is not touched here.
+    `UPDATE counsellor_inquiries SET status = 'read'
+     WHERE id = $1 AND counsellor_id = $2 AND status = 'sent'`,
+    [id, req.user.id]
+  );
+  res.json({ ok: true });
 }
 
 async function replyToInquiry(req, res) {
-  const id = parseId(req.params.inquiryId);
-  const reply = req.body?.replyMessage;
-  if (!id || typeof reply !== 'string' || !reply.trim()) return res.status(400).json({ error: 'A reply is required', code: 'VALIDATION' });
-  const authorizedInquiry = await findAuthorizedInquiry(id, req.user.id);
-  if (!authorizedInquiry) return res.status(403).json({ error: 'You are not assigned to this inquiry', code: 'FORBIDDEN' });
-  if (authorizedInquiry.replyMessage && authorizedInquiry.repliedBy !== req.user.id) {
-    return res.status(403).json({ error: 'Only the counsellor who wrote the reply can edit it', code: 'FORBIDDEN' });
+  const id = inquiryId(req.params.id);
+  const { type } = req.params;
+  const invalid = !id ? 'Invalid inquiry' : validReply(req.body?.reply);
+  if (invalid) return res.status(400).json({ error: invalid, code: 'VALIDATION' });
+  const reply = req.body.reply.trim();
+
+  let result;
+  if (type === 'student') {
+    // is_read = false so the reply shows as new in the student's notifications.
+    result = await pool.query(
+      `UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $2, is_read = FALSE
+       WHERE id = $3 AND counsellor_id = $2 RETURNING id`,
+      [reply, req.user.id, id]
+    );
+  } else if (type === 'parent') {
+    result = await pool.query(
+      `UPDATE counsellor_inquiries SET reply = $1, replied_at = NOW(), status = 'answered'
+       WHERE id = $3 AND counsellor_id = $2 RETURNING id`,
+      [reply, req.user.id, id]
+    );
+  } else {
+    return res.status(400).json({ error: 'Unknown inquiry type', code: 'VALIDATION' });
   }
-  const { rows } = await pool.query(
-    `UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $3, is_read = FALSE
-      WHERE id = $2 RETURNING id, reply_message AS "replyMessage", replied_at AS "repliedAt", replied_by AS "repliedBy"`,
-    [reply.trim(), id, req.user.id]
-  );
-  res.json({ inquiry: rows[0] });
+
+  if (!result.rowCount) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
+  res.json({ ok: true, message: type === 'student' ? 'Reply sent to the student.' : 'Reply sent to the parent.' });
 }
 
-async function deleteInquiryReply(req, res) {
-  const id = parseId(req.params.inquiryId);
-  if (!id) return res.status(400).json({ error: 'Invalid inquiry id', code: 'VALIDATION' });
-  const authorizedInquiry = await findAuthorizedInquiry(id, req.user.id);
-  if (!authorizedInquiry) return res.status(403).json({ error: 'You are not assigned to this inquiry', code: 'FORBIDDEN' });
-  if (authorizedInquiry.repliedBy && authorizedInquiry.repliedBy !== req.user.id) {
-    return res.status(403).json({ error: 'Only the counsellor who wrote the reply can delete it', code: 'FORBIDDEN' });
+async function deleteInquiry(req, res) {
+  const id = inquiryId(req.params.id);
+  if (!id || !['student', 'parent'].includes(req.params.type)) {
+    return res.status(400).json({ error: 'Invalid inquiry', code: 'VALIDATION' });
   }
-  const { rows } = await pool.query(
-    `UPDATE inquiries SET reply_message = NULL, replied_at = NULL, replied_by = NULL, is_read = FALSE
-      WHERE id = $1 RETURNING id`, [id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
-  res.json({ deleted: true, id });
-}
-
-async function findNotificationInquiry(notificationId, counsellorId) {
-  const { rows } = await pool.query(
-    `SELECT n.id AS notification_id, i.id AS inquiry_id, i.user_id AS student_id,
-            i.course_title, i.subject, i.message, i.created_at AS inquiry_created_at,
-            s.full_name AS student_name, s.email AS student_email, viewer.is_senior
-       FROM notifications n
-       JOIN inquiries i ON i.id = n.inquiry_id
-       JOIN users s ON s.id = i.user_id AND s.role = 'student'
-       LEFT JOIN courses_list c ON (i.course_id IS NOT NULL AND c.id = i.course_id)
-                                OR (i.course_id IS NULL AND c.title = i.course_title)
-       JOIN users viewer ON viewer.id = $2 AND viewer.role = 'counsellor' AND viewer.status = 'active'
-      WHERE n.id = $1
-        AND ((viewer.is_senior = TRUE AND (n.target_user_id = $2 OR n.target_role = 'counsellor'))
-          OR (viewer.is_senior = FALSE AND n.target_user_id = $2))
-        AND (viewer.is_senior = TRUE OR c.counsellor_id = $2)`,
-    [notificationId, counsellorId]
-  );
-  return rows[0] || null;
-}
-
-async function markOwnedNotificationRead(notificationId, counsellorId) {
-  await pool.query(
-    `INSERT INTO notification_reads (notification_id, user_id)
-       SELECT n.id, $2 FROM notifications n
-        WHERE n.id = $1 AND (n.target_user_id = $2 OR n.target_role IN ('counsellor', 'all'))
-      ON CONFLICT DO NOTHING`, [notificationId, counsellorId]
-  );
-}
-
-async function getNotificationDetail(req, res) {
-  const notificationId = parseId(req.params.notificationId);
-  if (!notificationId) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
-  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
-  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
-  await markOwnedNotificationRead(notificationId, req.user.id);
-  const { rows: replies } = await pool.query(
-    `SELECT r.id, r.author_id AS "authorId", r.author_role AS "authorRole", r.body,
-            r.created_at AS "createdAt", r.updated_at AS "updatedAt"
-       FROM inquiry_replies r WHERE r.inquiry_id = $1 AND r.deleted_at IS NULL
-      ORDER BY r.created_at ASC, r.id ASC`, [inquiry.inquiry_id]
-  );
-  res.json({ notification: { id: notificationId, inquiryId: inquiry.inquiry_id, read: true }, inquiry: {
-    id: inquiry.inquiry_id, studentId: inquiry.student_id, studentName: inquiry.student_name,
-    studentEmail: inquiry.student_email, courseTitle: inquiry.course_title, subject: inquiry.subject,
-    message: inquiry.message, createdAt: inquiry.inquiry_created_at, replies,
-  } });
-}
-
-function validateReplyText(value) {
-  if (typeof value !== 'string' || !value.trim()) return 'replyMessage is required';
-  if (value.trim().length > 4000) return 'replyMessage must be 4000 characters or fewer';
-  return null;
-}
-
-async function replyToNotification(req, res) {
-  const notificationId = parseId(req.params.notificationId);
-  const error = validateReplyText(req.body?.replyMessage);
-  if (!notificationId) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
-  if (error) return res.status(400).json({ error, code: 'VALIDATION' });
-  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
-  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const { rows } = await client.query(
-      `INSERT INTO inquiry_replies (inquiry_id, author_id, author_role, body)
-       VALUES ($1, $2, 'counsellor', $3) RETURNING id, author_id AS "authorId", author_role AS "authorRole",
-       body, created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [inquiry.inquiry_id, req.user.id, req.body.replyMessage.trim()]
-    );
-    await client.query(
-      `UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $3, is_read = FALSE
-        WHERE id = $2`, [req.body.replyMessage.trim(), inquiry.inquiry_id, req.user.id]
-    );
-    await client.query(
-      `INSERT INTO notification_reads (notification_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [notificationId, req.user.id]
-    );
-    await client.query('COMMIT');
-    res.status(201).json({ reply: rows[0], inquiryId: inquiry.inquiry_id });
-  } catch (e) {
-    await client.query('ROLLBACK');
-    throw e;
-  } finally { client.release(); }
-}
-
-async function editNotificationReply(req, res) {
-  const notificationId = parseId(req.params.notificationId);
-  const replyId = parseId(req.params.replyId);
-  const error = validateReplyText(req.body?.replyMessage);
-  if (!notificationId || !replyId) return res.status(400).json({ error: 'Invalid notification or reply id', code: 'VALIDATION' });
-  if (error) return res.status(400).json({ error, code: 'VALIDATION' });
-  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
-  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
-  const { rows } = await pool.query(
-    `UPDATE inquiry_replies SET body = $1, updated_at = NOW()
-      WHERE id = $2 AND inquiry_id = $3 AND author_id = $4 AND author_role = 'counsellor' AND deleted_at IS NULL
-      RETURNING id, author_id AS "authorId", author_role AS "authorRole", body, created_at AS "createdAt", updated_at AS "updatedAt"`,
-    [req.body.replyMessage.trim(), replyId, inquiry.inquiry_id, req.user.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Reply not found or not owned by counsellor', code: 'NOT_FOUND' });
-  await pool.query(`UPDATE inquiries SET reply_message = $1, replied_at = NOW(), replied_by = $3, is_read = FALSE WHERE id = $2`, [req.body.replyMessage.trim(), inquiry.inquiry_id, req.user.id]);
-  await markOwnedNotificationRead(notificationId, req.user.id);
-  res.json({ reply: rows[0], inquiryId: inquiry.inquiry_id });
-}
-
-async function deleteNotificationReply(req, res) {
-  const notificationId = parseId(req.params.notificationId);
-  const replyId = parseId(req.params.replyId);
-  if (!notificationId || !replyId) return res.status(400).json({ error: 'Invalid notification or reply id', code: 'VALIDATION' });
-  const inquiry = await findNotificationInquiry(notificationId, req.user.id);
-  if (!inquiry) return res.status(404).json({ error: 'Inquiry notification not found', code: 'NOT_FOUND' });
-  const { rows } = await pool.query(
-    `UPDATE inquiry_replies SET deleted_at = NOW(), updated_at = NOW()
-      WHERE id = $1 AND inquiry_id = $2 AND author_id = $3 AND author_role = 'counsellor' AND deleted_at IS NULL
-      RETURNING body`, [replyId, inquiry.inquiry_id, req.user.id]
-  );
-  if (!rows[0]) return res.status(404).json({ error: 'Reply not found or not owned by counsellor', code: 'NOT_FOUND' });
-  await pool.query(`UPDATE inquiries SET reply_message = NULL, replied_at = NULL, replied_by = NULL, is_read = FALSE WHERE id = $1 AND reply_message = $2`, [inquiry.inquiry_id, rows[0].body]);
-  await markOwnedNotificationRead(notificationId, req.user.id);
-  res.json({ deleted: true, id: replyId });
-}
-
-async function listNotifications(req, res) {
-  const { rows } = await pool.query(
-    `SELECT n.id, n.title, n.body, n.inquiry_id AS "inquiryId", n.sender_id AS "senderId", n.created_at AS "createdAt",
-            i.course_title AS "courseTitle", i.replied_by AS "repliedBy", rb.full_name AS "repliedByName",
-            (r.read_at IS NOT NULL) AS read
-       FROM notifications n
-       JOIN users viewer ON viewer.id = $1 AND viewer.role = 'counsellor' AND viewer.status = 'active'
-       LEFT JOIN inquiries i ON i.id = n.inquiry_id
-       LEFT JOIN users rb ON rb.id = i.replied_by
-       LEFT JOIN courses_list c ON c.title = i.course_title
-       LEFT JOIN notification_reads r
-         ON r.notification_id = n.id AND r.user_id = $1
-      WHERE (n.inquiry_id IS NULL
-             AND (n.target_role IN ('all', 'counsellor') OR n.target_user_id = $1)
-             AND (n.title <> 'New student inquiry' OR n.target_user_id = $1))
-         OR (n.inquiry_id IS NOT NULL
-             AND ((viewer.is_senior = TRUE AND (n.target_user_id = $1 OR n.target_role = 'counsellor'))
-               OR (viewer.is_senior = FALSE AND n.target_user_id = $1))
-             AND (viewer.is_senior = TRUE OR c.counsellor_id = $1))
-      ORDER BY n.created_at DESC`, [req.user.id]
-  );
-  res.json({ notifications: rows, unreadCount: rows.filter((row) => !row.read).length });
-}
-
-async function markNotificationRead(req, res) {
-  const id = parseId(req.params.notificationId);
-  if (!id) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
+  const table = req.params.type === 'student' ? 'inquiries' : 'counsellor_inquiries';
   const result = await pool.query(
-    `INSERT INTO notification_reads (notification_id, user_id)
-       SELECT n.id, $2 FROM notifications n
-        WHERE n.id = $1 AND (n.target_role IN ('all', 'counsellor') OR n.target_user_id = $2)
-      ON CONFLICT DO NOTHING RETURNING notification_id`, [id, req.user.id]
+    `DELETE FROM ${table} WHERE id = $1 AND counsellor_id = $2 RETURNING id`,
+    [id, req.user.id]
   );
-  if (!result.rows[0]) return res.status(404).json({ error: 'Notification not found', code: 'NOT_FOUND' });
-  res.json({ read: true, id });
-}
-
-async function markAllNotificationsRead(req, res) {
-  await pool.query(
-    `INSERT INTO notification_reads (notification_id, user_id)
-       SELECT n.id, $1 FROM notifications n
-        WHERE n.target_role IN ('all', 'counsellor') OR n.target_user_id = $1
-      ON CONFLICT DO NOTHING`, [req.user.id]
-  );
-  res.json({ read: true });
-}
-
-async function deleteNotification(req, res) {
-  const id = parseId(req.params.notificationId);
-  if (!id) return res.status(400).json({ error: 'Invalid notification id', code: 'VALIDATION' });
-  const result = await pool.query(
-    `DELETE FROM notifications WHERE id = $1 AND target_user_id = $2 RETURNING id`, [id, req.user.id]
-  );
-  if (!result.rows[0]) return res.status(404).json({ error: 'Notification not found', code: 'NOT_FOUND' });
+  if (!result.rowCount) return res.status(404).json({ error: 'Inquiry not found', code: 'NOT_FOUND' });
   res.json({ deleted: true, id });
 }
 
 module.exports = {
+  listInquiries,
+  markParentInquiryRead,
+  replyToInquiry,
+  deleteInquiry,
   getDashboard,
   listStudents,
-  listAssignedCourses,
   getStudentProfile,
   getGuidance,
   saveGuidance,
   updateGuidance,
   deleteGuidance,
   listGuidance,
-  getGuidanceById,
-  deleteGuidanceById,
   markReviewed,
   getSettings,
+  createSettings,
   updateSettings,
-  getProfile,
-  updateProfile,
-  changePassword,
-  listInquiries,
-  getInquiry,
-  replyToInquiry,
-  deleteInquiryReply,
-  listNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
-  deleteNotification,
-  getNotificationDetail,
-  replyToNotification,
-  editNotificationReply,
-  deleteNotificationReply,
+  deleteSettings,
+  listMyCourses,
+  addMyCourse,
+  removeMyCourse,
 };

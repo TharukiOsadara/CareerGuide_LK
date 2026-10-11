@@ -1,7 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Button from './components/Button';
-import ParentHeader from './components/ParentHeader';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import ProfileHeader from '../../Components/ProfileHeader';
 import SectionCard from './components/SectionCard';
 import { useChild } from './context/ChildContext';
 import { colors, font, radius, space } from './theme';
@@ -26,8 +27,8 @@ export default function ParentProfile({ navigation }) {
   };
 
   return (
-    <View style={styles.screen}>
-      <ParentHeader title="My Profile" onBack={() => navigation.goBack()} showChild={false} />
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <ProfileHeader title="My Profile" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.avatar}>
@@ -57,7 +58,7 @@ export default function ParentProfile({ navigation }) {
 
         <DeleteAccount onDeleted={() => leavePortal('Onboarding')} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
